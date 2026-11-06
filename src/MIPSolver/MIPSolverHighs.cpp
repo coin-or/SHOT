@@ -91,6 +91,16 @@ HighsCallbackFunctionType highsCallback
     if(callback_type == kCallbackSimplexInterrupt || callback_type == kCallbackIpmInterrupt
         || callback_type == kCallbackMipInterrupt)
     {
+        // Check the shared solve budget before throttling user callbacks. Some HiGHS solves without presolve do
+        // not enforce their native time limit reliably, including when only a few iterations have been performed.
+        if(std::chrono::duration<double>(std::chrono::steady_clock::now() - callback_data.solveStarted).count()
+            >= callback_data.timeLimit)
+        {
+            MIPSolver->interruptedByTimeLimit = true;
+            data_in->user_interrupt = true;
+            return;
+        }
+
         // For LP/IPM solves, only check termination every 1000 iterations to avoid overhead
         if(callback_type == kCallbackSimplexInterrupt && data_out->simplex_iteration_count % 1000 != 0)
             return;
@@ -681,6 +691,11 @@ bool MIPSolverHighs::isFailedSolve(HighsModelStatus modelStatus)
 
 E_ProblemSolutionStatus MIPSolverHighs::getSolutionStatus()
 {
+    if(interruptedByTimeLimit)
+        return E_ProblemSolutionStatus::TimeLimit;
+    if(unsafeIntegerDomainWithoutPresolve)
+        return E_ProblemSolutionStatus::Numeric;
+
     E_ProblemSolutionStatus MIPSolutionStatus;
 
     auto modelStatus = highsInstance.getModelStatus();
@@ -756,7 +771,11 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
 
     interruptedBySolutionLimit = false;
     interruptedByTermination = false;
+    interruptedByTimeLimit = false;
+    unsafeIntegerDomainWithoutPresolve = false;
     numberOfPartialMIPStartSolutions = 0;
+    highsCallbackData.solveStarted = std::chrono::steady_clock::now();
+    highsInstance.getOptionValue("time_limit", highsCallbackData.timeLimit);
 
     for(auto& I : variableBoundsToRestore)
         highsInstance.changeColBounds(I, variableLowerBounds[I], variableUpperBounds[I]);
@@ -768,7 +787,7 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
     // HiGHS gives no status, or a solve error, when it runs into numerical trouble, which it does e.g. when a warm
     // started simplex does not converge on a badly scaled problem. Solving again from a clean state, which lets it
     // presolve and factorize from scratch, often succeeds.
-    if(isFailedSolve(highsInstance.getModelStatus()))
+    if(isFailedSolve(highsInstance.getModelStatus()) && !unsafeIntegerDomainWithoutPresolve && !interruptedByTimeLimit)
     {
         env->output->outputDebug(
             "        The MIP solver did not return a solution, solving again from a clean state.");
@@ -899,7 +918,55 @@ HighsStatus MIPSolverHighs::runSolver()
     highsInstance.getOptionValue("threads", numberOfThreads);
     prepareGlobalScheduler(numberOfThreads);
 
-    return (highsInstance.run());
+    double remainingTime = highsCallbackData.timeLimit
+        - std::chrono::duration<double>(std::chrono::steady_clock::now() - highsCallbackData.solveStarted).count();
+
+    if(remainingTime <= 0.0)
+    {
+        // Clear stale solutions and bounds from the preceding attempt before returning without another solve.
+        highsInstance.clearSolver();
+        currentSolutions.clear();
+        interruptedByTimeLimit = true;
+        return HighsStatus::kOk;
+    }
+
+    std::string presolve;
+    highsInstance.getOptionValue("presolve", presolve);
+    if(presolve == "off")
+    {
+        auto& lp = highsInstance.getLp();
+        // HiGHS 1.15.1 root reduced-cost probing computes (range + 1023) in HighsInt and increments integral
+        // bounds in the same type. Overflow can cause a loop with no interrupt callbacks or time-limit checks.
+        const long double limit = std::numeric_limits<HighsInt>::max();
+        for(size_t i = 0; i < lp.integrality_.size(); ++i)
+        {
+            if(lp.integrality_[i] == HighsVarType::kContinuous || lp.integrality_[i] == HighsVarType::kSemiContinuous)
+                continue;
+            long double lower = lp.col_lower_[i];
+            long double upper = lp.col_upper_[i];
+            if(lower == upper)
+                continue;
+            long double range = upper - lower;
+            // The probing routine takes between 32 and 1024 steps, including one increment beyond its last bound.
+            long double maxStep = std::max(1.0L, std::ceil(range / 32.0L));
+            if(lower - maxStep <= -limit || upper + maxStep >= limit || range + 1024 >= limit)
+            {
+                env->output->outputWarning("        HiGHS solve without presolve skipped: an integer domain risks "
+                                           "overflow in reduced-cost probing. Returning a numerical status.");
+                highsInstance.clearSolver();
+                currentSolutions.clear();
+                unsafeIntegerDomainWithoutPresolve = true;
+                return HighsStatus::kOk;
+            }
+        }
+    }
+
+    double originalLimit;
+    highsInstance.getOptionValue("time_limit", originalLimit);
+    highsInstance.setOptionValue("time_limit", remainingTime);
+    auto status = highsInstance.run();
+    highsInstance.setOptionValue("time_limit", originalLimit);
+    return status;
 }
 
 E_ProblemSolutionStatus MIPSolverHighs::resolveInfeasibleOrUnbounded(E_ProblemSolutionStatus status)
@@ -1680,6 +1747,9 @@ double MIPSolverHighs::getDualObjectiveValue()
 {
     bool isMIP = getDiscreteVariableStatus();
     double objVal = (isMinimizationProblem ? SHOT_DBL_MIN : SHOT_DBL_MAX);
+
+    if(!highsInstance.getInfo().valid)
+        return objVal;
 
     if(!isDualBoundAvailable(getSolutionStatus(), isMIP))
         return (objVal);

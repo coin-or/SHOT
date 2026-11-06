@@ -18,6 +18,8 @@
 #include "../src/Utilities.h"
 
 #include "../src/MIPSolver/IMIPSolver.h"
+#include "../src/MIPSolver/MIPSolverHighs.h"
+#include "../src/Tasks/TaskCreateMIPProblem.h"
 
 #include "../src/Model/Problem.h"
 #include "../src/Model/ObjectiveFunction.h"
@@ -26,6 +28,89 @@
 #include <iostream>
 
 using namespace SHOT;
+
+namespace SHOT
+{
+extern HighsCallbackFunctionType highsCallback;
+}
+
+bool HighsCallbackTimeLimitTest()
+{
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    auto backend = std::make_shared<MIPSolverHighs>(env);
+    env->dualSolver->MIPSolver = backend;
+    HighsMipData data;
+    data.env = env;
+    data.solveStarted = std::chrono::steady_clock::now() - std::chrono::seconds(2);
+    data.timeLimit = 1.0;
+
+    for(int type : { kCallbackSimplexInterrupt, kCallbackIpmInterrupt, kCallbackMipInterrupt })
+    {
+        HighsCallbackOutput output;
+        output.simplex_iteration_count = 1;
+        output.ipm_iteration_count = 1;
+        HighsCallbackInput input;
+        backend->interruptedByTimeLimit = false;
+        highsCallback(type, "", &output, &input, &data);
+        if(!input.user_interrupt || backend->getSolutionStatus() != E_ProblemSolutionStatus::TimeLimit
+            || backend->interruptedByTermination || backend->interruptedBySolutionLimit)
+            return false;
+    }
+
+    // A fresh budget must not interrupt the next solve or be confused with a solution/user limit.
+    data.solveStarted = std::chrono::steady_clock::now();
+    data.timeLimit = 10.0;
+    HighsCallbackOutput output;
+    output.simplex_iteration_count = 1;
+    HighsCallbackInput input;
+    backend->interruptedByTimeLimit = false;
+    highsCallback(kCallbackSimplexInterrupt, "", &output, &input, &data);
+    return !input.user_interrupt && !backend->interruptedByTimeLimit;
+}
+
+bool HighsLargeIntegerDomainWithoutPresolveTest()
+{
+    for(bool presolve : { false, true })
+    {
+        auto solver = std::make_unique<Solver>();
+        auto env = solver->getEnvironment();
+        solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Highs));
+        solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+        solver->updateSetting("Subsolver.Highs.Presolve", presolve ? 1 : 0);
+        solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        auto problem = std::make_shared<Problem>(env);
+        double upper = static_cast<double>(std::numeric_limits<HighsInt>::max());
+        auto x = std::make_shared<Variable>("x", E_VariableType::Integer, 0.0, upper);
+        problem->add(x);
+        auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+        objective->add(std::make_shared<LinearTerm>(1.0, x));
+        problem->add(objective);
+        problem->finalize();
+        if(!solver->setProblem(problem))
+            return false;
+        auto backend = std::make_shared<MIPSolverHighs>(env);
+        env->dualSolver->MIPSolver = backend;
+        if(!backend->initializeProblem())
+            return false;
+        TaskCreateMIPProblem(env, backend, problem).run();
+        backend->setTimeLimit(1.0);
+        backend->setSolutionLimit(2100000000);
+        auto status = backend->solveProblem();
+        if(presolve)
+        {
+            if(status != E_ProblemSolutionStatus::Optimal || std::abs(backend->getObjectiveValue()) > 1e-6)
+                return false;
+        }
+        else if(status != E_ProblemSolutionStatus::Numeric || backend->getNumberOfSolutions() != 0
+            || backend->getDualObjectiveValue() != SHOT_DBL_MIN)
+            return false;
+        if(backend->getCurrentVariableBounds(0).second != upper)
+            return false;
+    }
+    return true;
+}
 
 bool HighsTest1(std::string filename, double correctObjectiveValue)
 {
@@ -440,6 +525,14 @@ int HighsTest(int argc, char* argv[])
         std::cout << "Starting test with another number of threads in HiGHS during a solve." << std::endl;
         passed = HighsSchedulerChangedDuringSolveTest("data/synthes1.osil", "data/tls2.osil", 6.00976);
         std::cout << "Finished test with another number of threads in HiGHS during a solve." << std::endl;
+        break;
+    case 13:
+        std::cout << "Testing HiGHS callback time limits before iteration throttling." << std::endl;
+        passed = HighsCallbackTimeLimitTest();
+        break;
+    case 14:
+        std::cout << "Testing unsafe integer domains without HiGHS presolve." << std::endl;
+        passed = HighsLargeIntegerDomainWithoutPresolveTest();
         break;
     default:
         passed = false;

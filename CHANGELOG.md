@@ -158,6 +158,14 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- Binary and integer bilinear products stay in their original expressions
+  when linearization would require big-M values of 1e15 or larger. A warning
+  reports the skipped linearizations. This avoids rejected or poorly scaled
+  MIP models without introducing nonconvex auxiliary equalities.
+- HiGHS recovery attempts share the remaining solve time, with additional
+  time checks in interrupt callbacks. Solves without presolve stop with a
+  numerical status when large integer domains risk overflow in HiGHS's
+  reduced-cost probing, avoiding a loop that ignores time limits.
 - Gurobi, CPLEX and Cbc retry apparently infeasible dual problems with more
   robust numerical settings, avoiding false infeasibility from badly scaled cuts.
   Artificial variable bounds are removed before accepting infeasibility of

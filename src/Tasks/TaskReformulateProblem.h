@@ -68,6 +68,10 @@ private:
     // Model.Reformulation.Bilinear.IntegerFormulation.MaxDomain
     bool isDiscretizableInBilinearTerm(const VariablePtr& variable);
 
+    // Keep a product in its original expression if its binary/integer linearization would require an unsafe big-M.
+    bool hasSafeBilinearLinearizationBounds(const VariablePtr& firstVariable, const VariablePtr& secondVariable);
+    std::set<std::pair<int, int>> unsafeBilinearLinearizations;
+
     // The bilinear terms, as pairs of variable indexes, whose integer variables are not discretized because of their
     // bounds or Model.Reformulation.Bilinear.IntegerFormulation.MaxDomain
     std::set<std::pair<int, int>> nonDiscretizedIntegerBilinearTerms;
