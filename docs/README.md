@@ -1,6 +1,6 @@
 # Building the public documentation
 
-The public site is assembled from `site/`, the five guides explicitly listed in
+The public site is assembled from `site/`, the guides explicitly listed in
 `build.py`, C++ headers, and an importable SHOTpy module. Internal plans and reports
 in this directory are never copied. Generated HTML is not committed.
 
@@ -21,6 +21,21 @@ Open http://localhost:8000. Use the matching Python interpreter and module from
 the same source revision; do not silently substitute a different PyPI release.
 The build fails on Sphinx warnings and missing module/Doxygen dependencies.
 Notebook execution is disabled: run changed examples separately before publishing.
+
+Run the complete Python examples in the first-model, results, configuration,
+and modeling guides with the matching module:
+
+```bash
+PYTHONPATH="$PWD/build" .venv-docs/bin/python docs/check_examples.py
+```
+
+This check also validates setting names in inline configuration examples against
+that module. The documentation workflow runs it before building the site. The
+notebook has its own execution test, `test/python/test_tutorial.py`; run it with
+`pytest` when changing notebook code (it also needs NumPy, Matplotlib, and IPython).
+For external-link maintenance, run Sphinx's `linkcheck` builder on an assembled
+source tree when network access is available; the normal warning-as-error HTML
+build checks internal document links without depending on external services.
 
 ## Website integration
 

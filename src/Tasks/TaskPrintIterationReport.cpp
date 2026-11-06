@@ -56,7 +56,7 @@ void TaskPrintIterationReport::run()
         tmpType << "MIQP";
         break;
     case E_DualProblemClass::MIQCQP:
-        tmpType << "MIQPCP";
+        tmpType << "MIQCQP";
         break;
     default:
         break;

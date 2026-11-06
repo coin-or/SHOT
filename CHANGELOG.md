@@ -43,6 +43,9 @@ Changes since SHOT 1.1.
 
 ### Added
 
+- Guides to interpreting terminal output, configuring solves, and understanding
+  modeling and reformulation, with expanded result handling and C++ examples
+  ([#295]).
 - HiGHS as MIP solver ([#182], [#191], [#194], [4f096597]).
 - Uno ([#200]) and CONOPT ([#225]) as NLP solvers for the fixed-integer
   primal heuristic.
@@ -158,6 +161,8 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- The iteration table labels MIQCQP subproblems correctly instead of `MIQPCP`
+  ([#295]).
 - Ipopt NLP solves stop when iteration values become NaN or infinite, avoiding
   a numerical stall in the linear solver that could exceed the time limit.
   The failed solve is reported as an error without retaining its solution
@@ -471,6 +476,7 @@ Changes since SHOT 1.1.
 [#292]: https://github.com/coin-or/SHOT/pull/292
 [#293]: https://github.com/coin-or/SHOT/pull/293
 [#294]: https://github.com/coin-or/SHOT/pull/294
+[#295]: https://github.com/coin-or/SHOT/pull/295
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
