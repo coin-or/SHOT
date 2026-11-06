@@ -163,7 +163,7 @@ Changes since SHOT 1.1.
   fixed values preserved. Oversized square and product auxiliaries use
   continuous columns, and very loose interval objective bounds are not used
   as cutoffs. This prevents incorrect optimality claims from poorly scaled
-  dual problems while preserving original variable bounds.
+  dual problems while preserving original variable bounds ([#286]).
 - Integer cuts after a feasible fixed-integer NLP solve of a convex
   problem are added only when the NLP status is optimal and its point is
   accepted as a primal solution. Rejected or merely feasible points no
@@ -427,6 +427,7 @@ Changes since SHOT 1.1.
 [#283]: https://github.com/coin-or/SHOT/pull/283
 [#284]: https://github.com/coin-or/SHOT/pull/284
 [#285]: https://github.com/coin-or/SHOT/pull/285
+[#286]: https://github.com/coin-or/SHOT/pull/286
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
