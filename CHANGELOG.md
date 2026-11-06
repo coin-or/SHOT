@@ -160,7 +160,8 @@ Changes since SHOT 1.1.
 
 - Antiepigraph reformulation reconstructs the objective variable correctly for
   scaled and offset objectives and normalizes maximization objectives consistently.
-  Each MIP solution uses its own objective value to reconstruct the variable.
+  Each MIP solution uses its own objective value to reconstruct the variable
+  ([#293]).
 - Antiepigraph reformulation preserves the defining constraint when its direction,
   ranged bounds or objective-variable domain make the reformulation unsafe,
   preventing incorrect global optimality claims and lost variable restrictions
@@ -464,6 +465,7 @@ Changes since SHOT 1.1.
 [#290]: https://github.com/coin-or/SHOT/pull/290
 [#291]: https://github.com/coin-or/SHOT/pull/291
 [#292]: https://github.com/coin-or/SHOT/pull/292
+[#293]: https://github.com/coin-or/SHOT/pull/293
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
