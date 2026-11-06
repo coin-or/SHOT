@@ -158,6 +158,9 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- Ipopt NLP solves stop when iteration values become NaN or infinite, avoiding
+  a numerical stall in the linear solver that could exceed the time limit.
+  The failed solve is reported as an error without retaining its solution.
 - Antiepigraph reformulation reconstructs the objective variable correctly for
   scaled and offset objectives and normalizes maximization objectives consistently.
   Each MIP solution uses its own objective value to reconstruct the variable

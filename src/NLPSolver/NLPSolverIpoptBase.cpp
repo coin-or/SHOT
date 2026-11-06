@@ -11,6 +11,7 @@
 #include "NLPSolverIpoptBase.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <fstream>
@@ -632,6 +633,23 @@ bool IpoptProblem::get_scaling_parameters(Number& obj_scaling, [[maybe_unused]] 
     return (true);
 }*/
 
+bool IpoptProblem::intermediate_callback([[maybe_unused]] AlgorithmMode mode, [[maybe_unused]] Index iter,
+    Number obj_value, Number inf_pr, Number inf_du, Number mu, Number d_norm, Number regularization_size,
+    Number alpha_du, Number alpha_pr, [[maybe_unused]] Index ls_trials, [[maybe_unused]] const IpoptData* ip_data,
+    [[maybe_unused]] IpoptCalculatedQuantities* ip_cq)
+{
+    for(Number value : { obj_value, inf_pr, inf_du, mu, d_norm, regularization_size, alpha_du, alpha_pr })
+    {
+        if(!std::isfinite(value))
+        {
+            invalidIterationDetected = true;
+            return false;
+        }
+    }
+
+    return true;
+}
+
 void IpoptProblem::finalize_solution(SolverReturn status, [[maybe_unused]] Index n, const Number* x,
     [[maybe_unused]] const Number* z_L, [[maybe_unused]] const Number* z_U, [[maybe_unused]] Index m,
     [[maybe_unused]] const Number* g, [[maybe_unused]] const Number* lambda, Number obj_value,
@@ -741,6 +759,16 @@ void IpoptProblem::finalize_solution(SolverReturn status, [[maybe_unused]] Index
         break;
 
     case USER_REQUESTED_STOP:
+
+        if(invalidIterationDetected)
+        {
+            solutionDescription = "Algorithm stopped because an iteration contained non-finite values.";
+            solutionStatus = E_NLPSolutionStatus::Error;
+            hasSolution = false;
+            variableSolution.clear();
+            break;
+        }
+
         solutionDescription = "The user requested a premature termination of the optimization.";
 
         solutionStatus = E_NLPSolutionStatus::Error;
@@ -873,6 +901,7 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
 
     E_NLPSolutionStatus status;
     ipoptProblem->variableSolution.clear();
+    ipoptProblem->invalidIterationDetected = false;
 
     // Ipopt is given the time left of the time limit of SHOT, since it otherwise solves without any limit of its
     // own: a single NLP problem could then take longer than the whole solution time allowed, e.g. when its linear
@@ -935,6 +964,13 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
         case Ipopt::ApplicationReturnStatus::Diverging_Iterates:
             status = E_NLPSolutionStatus::Unbounded;
             env->output->outputDebug("        No solution found to problem with Ipopt: Diverging iterates.");
+            break;
+
+        case Ipopt::ApplicationReturnStatus::User_Requested_Stop:
+            status = E_NLPSolutionStatus::Error;
+            env->output->outputDebug(ipoptProblem->invalidIterationDetected
+                    ? "        Ipopt stopped because an iteration contained non-finite values."
+                    : "        Ipopt stopped at the user's request.");
             break;
 
         default:

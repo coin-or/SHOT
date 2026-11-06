@@ -245,7 +245,7 @@ endif()
 
 if(HAS_IPOPT)
   set(cpptests ${cpptests} Ipopt)
-  set(Ipopt_parts 1 2 3)
+  set(Ipopt_parts 1 2 3 4)
 endif()
 
 if(HAS_UNO)
