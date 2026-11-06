@@ -89,6 +89,7 @@ bool ModelTestSOS2();
 bool ModelTestObjectiveEpigraphStrategy();
 bool ModelTestAntiEpigraphReformulation();
 bool ModelTestAntiEpigraphEligibility();
+bool ModelTestAntiEpigraphReconstruction();
 bool ModelTestObjectivePartitioningStrategy();
 bool ModelTestSignomialElementBounds();
 bool ModelTestTermAndExpressionBounds();
@@ -551,6 +552,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 75:
         passed = ModelTestAntiEpigraphEligibility();
+        break;
+    case 76:
+        passed = ModelTestAntiEpigraphReconstruction();
         break;
     default:
         passed = false;
@@ -12771,6 +12775,185 @@ bool ModelTestAntiEpigraphEligibility()
                             || !problem->areVariableBoundsFulfilled(point, 1e-5)
                             || !problem->areIntegralityConstraintsFulfilled(point, 1e-5)
                             || std::abs(problem->objectiveFunction->calculateValue(point) - primal) > tolerance)
+                        {
+                            std::cout << "  FAILED (" << description << "): primal " << primal << ", dual " << dual
+                                      << ", expected " << expected << ".\n";
+                            passed = false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return passed;
+}
+
+bool ModelTestAntiEpigraphReconstruction()
+{
+    bool passed = true;
+
+    for(const auto& mip : AvailableMIPSolversForEpigraphTests())
+    {
+        const auto mipSolver = mip.first;
+        const auto& solverName = mip.second;
+
+        for(bool nonlinear : { false, true })
+        {
+
+            for(bool maximize : { false, true })
+            {
+
+                for(const auto& parameters : std::vector<std::pair<double, double>> {
+                        { 1.0, 0.0 }, { 2.5, 0.0 }, { 1.0, -3.25 }, { 2.5, -3.25 }, { -2.5, 3.25 } })
+                {
+                    const double coefficient = parameters.first;
+                    const double constant = parameters.second;
+
+                    for(bool useNLP : { false, true })
+                    {
+                        const double objectiveSign = maximize ? -1.0 : 1.0;
+                        const double variableSign = objectiveSign * (coefficient > 0.0 ? 1.0 : -1.0);
+                        const double minimum = nonlinear ? 9.0 : 4.0;
+                        const double expected = objectiveSign * std::abs(coefficient) * minimum + constant;
+                        const std::string description = solverName + (nonlinear ? "/exp" : "/quadratic")
+                            + (maximize ? "/max" : "/min") + "/a=" + std::to_string(coefficient)
+                            + "/b=" + std::to_string(constant) + (useNLP ? "/NLP" : "/MIP");
+
+                        auto buildProblem = [=](const EnvironmentPtr& env)
+                        {
+                            auto problem = std::make_shared<Problem>(env);
+                            auto x = std::make_shared<Variable>("x", E_VariableType::Real, -1.0, 1.0);
+                            auto y = std::make_shared<Variable>("y", E_VariableType::Integer, -1.0, 1.0);
+                            auto t = std::make_shared<Variable>("t", E_VariableType::Real, -100.0, 100.0);
+                            problem->add({ x, y, t });
+
+                            auto objective = std::make_shared<LinearObjectiveFunction>(maximize
+                                    ? E_ObjectiveFunctionDirection::Maximize
+                                    : E_ObjectiveFunctionDirection::Minimize);
+                            objective->add(std::make_shared<LinearTerm>(coefficient, t));
+                            objective->constant = constant;
+                            problem->add(objective);
+
+                            QuadraticConstraintPtr definition;
+
+                            if(nonlinear)
+                            {
+                                auto constraint
+                                    = std::make_shared<NonlinearConstraint>("definition", SHOT_DBL_MIN, 0.0);
+                                auto exprX = std::make_shared<ExpressionVariable>(x);
+                                auto exprY = std::make_shared<ExpressionVariable>(y);
+                                auto sum = std::make_shared<ExpressionSum>(exprX, exprY);
+                                auto terms = std::make_shared<ExpressionSum>(std::make_shared<ExpressionExp>(exprX),
+                                    std::make_shared<ExpressionExp>(std::make_shared<ExpressionNegate>(exprX)),
+                                    std::make_shared<ExpressionExp>(sum));
+                                terms->children.push_back(
+                                    std::make_shared<ExpressionExp>(std::make_shared<ExpressionNegate>(sum)));
+                                constraint->add(terms);
+                                constraint->constant = 5.0;
+                                definition = constraint;
+                            }
+                            else
+                            {
+                                definition = std::make_shared<QuadraticConstraint>("definition", SHOT_DBL_MIN, 0.0);
+                                definition->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+                                definition->add(std::make_shared<QuadraticTerm>(1.0, x, y));
+                                definition->add(std::make_shared<QuadraticTerm>(1.0, y, y));
+                                definition->constant = 4.0;
+                            }
+
+                            definition->add(std::make_shared<LinearTerm>(-variableSign, t));
+                            problem->add(std::static_pointer_cast<NumericConstraint>(definition));
+
+                            return problem;
+                        };
+
+                        auto [solver, env] = SolveWithEpigraphStrategy(ES_ObjectiveEpigraphStrategy::ObjectiveFunction,
+                            buildProblem, false, mipSolver,
+                            [=](Solver& solver)
+                            {
+                                solver.updateSetting("Dual.MIP.NumberOfThreads", 1);
+                                solver.updateSetting("Termination.TimeLimit", 5.0);
+                                solver.updateSetting("Termination.ObjectiveGap.Absolute", 1e-6);
+                                solver.updateSetting("Termination.ObjectiveGap.Relative", 1e-6);
+                                solver.updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+                                solver.updateSetting("Primal.FixedInteger.Use", useNLP);
+                                solver.updateSetting("Primal.PolishSolution.NumberOfPoints", 0);
+                                solver.updateSetting("Primal.FixedInteger.SourceProblem", 1);
+                                solver.updateSetting("Primal.FixedInteger.CallStrategy", 0);
+                                solver.updateSetting("Primal.FixedInteger.Enumeration.UseInitially", useNLP);
+                                solver.updateSetting("Dual.TreeStrategy",
+                                    useNLP && (mipSolver == ES_MIPSolver::Cplex || mipSolver == ES_MIPSolver::Gurobi)
+                                        ? 0
+                                        : 1);
+                            });
+
+                        if(!env->reformulatedProblem || !env->reformulatedProblem->antiEpigraphObjectiveVariable)
+                        {
+                            std::cout << "  FAILED (" << description << "): no antiepigraph reformulation.\n";
+                            passed = false;
+                            continue;
+                        }
+
+                        bool graphPassed = true;
+
+                        for(const auto& [x, y] :
+                            std::vector<std::pair<double, double>> { { 0.0, 0.0 }, { 0.25, 1.0 }, { -0.5, -1.0 } })
+                        {
+                            const double value = nonlinear
+                                ? std::exp(x) + std::exp(-x) + std::exp(x + y) + std::exp(-x - y) + 5.0
+                                : x * x + x * y + y * y + 4.0;
+                            VectorDouble point { x, y, -17.0 };
+                            env->reformulatedProblem->augmentAuxiliaryVariableValues(point);
+
+                            if(std::abs(point[2] - variableSign * value) > 1e-9
+                                || !env->problem->areNumericConstraintsFulfilled(point, 1e-8)
+                                || std::abs(env->problem->objectiveFunction->calculateValue(point)
+                                       - (objectiveSign * std::abs(coefficient) * value + constant))
+                                    > 1e-8)
+                            {
+                                std::cout << "  FAILED (" << description << "): reconstructed t=" << point[2]
+                                          << ", expected " << variableSign * value << ".\n";
+                                graphPassed = false;
+                            }
+
+                            // A MIP relaxation can underestimate the nonlinear value. Reconstruction must use the
+                            // value of this solution, rather than replacing it by an exact function evaluation.
+                            const double relaxationValue
+                                = std::abs(coefficient) * (value - 0.5) + objectiveSign * constant;
+                            env->reformulatedProblem->updateAntiEpigraphObjectiveVariableValue(point, relaxationValue);
+
+                            if(std::abs(point[2] - variableSign * (value - 0.5)) > 1e-9)
+                            {
+                                std::cout << "  FAILED (" << description << "): MIP objective value not preserved.\n";
+                                graphPassed = false;
+                            }
+                        }
+
+                        if(!graphPassed)
+                        {
+                            passed = false;
+                            continue;
+                        }
+
+                        if(!solver->solveProblem() || !solver->hasPrimalSolution())
+                        {
+                            std::cout << "  FAILED (" << description << "): no solution.\n";
+                            passed = false;
+                            continue;
+                        }
+
+                        const auto point = solver->getPrimalSolution().point;
+                        const double primal = solver->getPrimalBound();
+                        const double dual = solver->getGlobalDualBound();
+                        const double tolerance = 1e-4;
+
+                        if(std::abs(primal - expected) > tolerance || std::abs(dual - expected) > tolerance
+                            || !env->problem->areNumericConstraintsFulfilled(point, 1e-5)
+                            || !env->problem->areVariableBoundsFulfilled(point, 1e-5)
+                            || !env->problem->areIntegralityConstraintsFulfilled(point, 1e-5)
+                            || std::abs(env->problem->objectiveFunction->calculateValue(point) - primal) > tolerance
+                            || (useNLP && env->solutionStatistics.numberOfProblemsFixedNLP == 0))
                         {
                             std::cout << "  FAILED (" << description << "): primal " << primal << ", dual " << dual
                                       << ", expected " << expected << ".\n";

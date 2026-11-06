@@ -544,7 +544,10 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
                 if(definition && epigraphConstraintTerm && definition->valueLHS == SHOT_DBL_MIN
                     && definition->valueRHS != SHOT_DBL_MAX && std::isfinite(definition->valueRHS))
                 {
-                    double epigraphFactor = -originalObjectiveCoefficient / epigraphConstraintTerm->coefficient;
+                    const double objectiveSign
+                        = sourceObjective->direction == E_ObjectiveFunctionDirection::Maximize ? -1.0 : 1.0;
+                    double epigraphFactor
+                        = -objectiveSign * originalObjectiveCoefficient / epigraphConstraintTerm->coefficient;
 
                     ObjectiveFunctionPtr destinationObjective;
 
@@ -657,10 +660,10 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
                     }
 
                     destinationObjective->ownerProblem = reformulatedProblem;
-                    destinationObjective->direction = sourceObjective->direction;
+                    destinationObjective->direction = E_ObjectiveFunctionDirection::Minimize;
 
                     // The constant already contains the terms of the fixed variables added above
-                    destinationObjective->constant += env->problem->objectiveFunction->constant
+                    destinationObjective->constant += objectiveSign * sourceObjective->constant
                         + epigraphFactor
                             * (std::dynamic_pointer_cast<LinearConstraint>(epigraphConstraint)->constant
                                 - std::dynamic_pointer_cast<LinearConstraint>(epigraphConstraint)->valueRHS);
@@ -695,6 +698,9 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
                     }
 
                     reformulatedProblem->antiEpigraphObjectiveVariable = epigraphConstraintTerm->variable;
+                    reformulatedProblem->antiEpigraphObjectiveCoefficient
+                        = objectiveSign * originalObjectiveCoefficient;
+                    reformulatedProblem->antiEpigraphObjectiveConstant = objectiveSign * sourceObjective->constant;
 
                     reformulatedProblem->add(std::move(destinationObjective));
 

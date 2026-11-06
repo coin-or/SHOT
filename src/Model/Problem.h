@@ -160,6 +160,9 @@ public:
     AuxiliaryVariablePtr auxiliaryObjectiveVariable; // This is not the same as one created in the dual problem
 
     VariablePtr antiEpigraphObjectiveVariable; // This is the objective variable used before anti epigraph formulation
+    // The antiepigraph objective is coefficient * variable + constant, in the reformulated objective direction.
+    double antiEpigraphObjectiveCoefficient = 1.0;
+    double antiEpigraphObjectiveConstant = 0.0;
 
     VectorDouble variableLowerBounds;
     VectorDouble variableUpperBounds;
@@ -314,6 +317,10 @@ public:
     bool doFBBTOnConstraint(NumericConstraintPtr constraint, double timeEnd);
 
     void augmentAuxiliaryVariableValues(VectorDouble& point);
+
+    // Updates the original objective variable's value in point.
+    // objectiveValue uses the reformulated objective direction.
+    void updateAntiEpigraphObjectiveVariableValue(VectorDouble& point, double objectiveValue);
 
     friend std::ostream& operator<<(std::ostream& stream, const Problem& problem);
 

@@ -158,6 +158,9 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- Antiepigraph reformulation reconstructs the objective variable correctly for
+  scaled and offset objectives and normalizes maximization objectives consistently.
+  Each MIP solution uses its own objective value to reconstruct the variable.
 - Antiepigraph reformulation preserves the defining constraint when its direction,
   ranged bounds or objective-variable domain make the reformulation unsafe,
   preventing incorrect global optimality claims and lost variable restrictions

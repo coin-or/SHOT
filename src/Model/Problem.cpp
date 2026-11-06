@@ -3156,6 +3156,17 @@ NumericConstraintPtr Problem::createConstraintSide(const NumericConstraintPtr& s
     return (constraint);
 }
 
+void Problem::updateAntiEpigraphObjectiveVariableValue(VectorDouble& point, double objectiveValue)
+{
+    if(!antiEpigraphObjectiveVariable)
+        return;
+
+    assert(point.size() >= allVariables.size());
+
+    point.at(antiEpigraphObjectiveVariable->getIndex())
+        = (objectiveValue - antiEpigraphObjectiveConstant) / antiEpigraphObjectiveCoefficient;
+}
+
 void Problem::augmentAuxiliaryVariableValues(VectorDouble& point)
 {
     if(!this->properties.isReformulated)
@@ -3179,8 +3190,8 @@ void Problem::augmentAuxiliaryVariableValues(VectorDouble& point)
         point.push_back(value);
     }
 
-    if(this->antiEpigraphObjectiveVariable)
-        point.at(this->antiEpigraphObjectiveVariable->getIndex()) = this->objectiveFunction->calculateValue(point);
+    if(antiEpigraphObjectiveVariable)
+        updateAntiEpigraphObjectiveVariableValue(point, objectiveFunction->calculateValue(point));
 
     assert(point.size() == static_cast<size_t>(this->properties.numberOfVariables));
 
