@@ -160,7 +160,8 @@ Changes since SHOT 1.1.
 
 - Ipopt NLP solves stop when iteration values become NaN or infinite, avoiding
   a numerical stall in the linear solver that could exceed the time limit.
-  The failed solve is reported as an error without retaining its solution.
+  The failed solve is reported as an error without retaining its solution
+  ([#294]).
 - Antiepigraph reformulation reconstructs the objective variable correctly for
   scaled and offset objectives and normalizes maximization objectives consistently.
   Each MIP solution uses its own objective value to reconstruct the variable
@@ -469,6 +470,7 @@ Changes since SHOT 1.1.
 [#291]: https://github.com/coin-or/SHOT/pull/291
 [#292]: https://github.com/coin-or/SHOT/pull/292
 [#293]: https://github.com/coin-or/SHOT/pull/293
+[#294]: https://github.com/coin-or/SHOT/pull/294
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
