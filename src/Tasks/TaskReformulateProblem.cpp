@@ -392,6 +392,82 @@ std::string TaskReformulateProblem::getType()
     return (type);
 }
 
+// Antiepigraph reformulation is safe only when the defining inequality is tight at an optimum and the objective
+// variable's value always satisfies its domain. Inspect the original row: partitioning or splitting a ranged row
+// can change which constraint contains the variable in the reformulated problem.
+static bool canApplyAntiEpigraphReformulation(const ProblemPtr& problem, const LinearObjectiveFunctionPtr& objective)
+{
+    const auto variable = objective->linearTerms.front()->variable;
+    const double objectiveCoefficient = objective->linearTerms.front()->coefficient;
+
+    if(variable->properties.type != E_VariableType::Real || !std::isfinite(objectiveCoefficient)
+        || objectiveCoefficient == 0.0)
+        return false;
+
+    for(const auto& sos : problem->specialOrderedSets)
+    {
+        if(std::find(sos->variables.begin(), sos->variables.end(), variable) != sos->variables.end())
+            return false;
+    }
+
+    for(const auto& constraint : problem->numericConstraints)
+    {
+        auto definition = std::dynamic_pointer_cast<QuadraticConstraint>(constraint);
+
+        if(!definition)
+            continue;
+
+        for(const auto& term : definition->linearTerms)
+        {
+            if(term->variable != variable)
+                continue;
+
+            const bool upperSide = definition->valueLHS == SHOT_DBL_MIN && definition->valueRHS != SHOT_DBL_MAX;
+            const bool lowerSide = definition->valueRHS == SHOT_DBL_MAX && definition->valueLHS != SHOT_DBL_MIN;
+
+            if((!upperSide && !lowerSide) || !std::isfinite(term->coefficient) || term->coefficient == 0.0
+                || definition->properties.hasNonalgebraicPart)
+                return false;
+
+            const bool improvesDownwards
+                = (objectiveCoefficient > 0.0) == (objective->direction == E_ObjectiveFunctionDirection::Minimize);
+            const bool definesLowerBound = upperSide ? term->coefficient < 0.0 : term->coefficient > 0.0;
+
+            if(improvesDownwards != definesLowerBound)
+                return false;
+
+            try
+            {
+                IntervalVector box;
+                box.reserve(problem->allVariables.size());
+
+                for(const auto& v : problem->allVariables)
+                    box.push_back(v == variable ? Interval(0.0) : v->getBound());
+
+                // An unbounded term or an interval-domain error gives the full interval, not a finite proof.
+                const Interval remainder = definition->calculateFunctionValue(box);
+
+                if(remainder.l() == SHOT_DBL_MIN || remainder.u() == SHOT_DBL_MAX)
+                    return false;
+
+                const double side = upperSide ? definition->valueRHS : definition->valueLHS;
+                const Interval values = (Interval(side) - remainder) / Interval(term->coefficient);
+
+                return std::isfinite(values.l()) && std::isfinite(values.u()) && variable->lowerBound <= values.l()
+                    && variable->upperBound >= values.u();
+            }
+
+            catch(IntervalError&)
+            {
+                // Keep the constraint if interval arithmetic cannot prove the variable bounds redundant.
+                return false;
+            }
+        }
+    }
+
+    return false;
+}
+
 void TaskReformulateProblem::reformulateObjectiveFunction()
 {
     auto epigraphStrategy = static_cast<ES_ObjectiveEpigraphStrategy>(
@@ -418,7 +494,8 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
                 && (!originalObjectiveVariable->properties.inQuadraticTerms // Not in quadratic terms
                     && !originalObjectiveVariable->properties.inNonlinearExpression // Not in nonlinear expressions
                     && !originalObjectiveVariable->properties.inMonomialTerms // Not in monomial terms
-                    && !originalObjectiveVariable->properties.inSignomialTerms)) // Not in signomial terms
+                    && !originalObjectiveVariable->properties.inSignomialTerms) // Not in signomial terms
+                && canApplyAntiEpigraphReformulation(env->problem, sourceObjective))
             {
                 // Now know the objective variable is present in a nonlinear or quadratic constraint and only in one
                 // unique linear term. Need to find the constraint
@@ -430,7 +507,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
                 {
                     for(auto const& LT : C->linearTerms)
                     {
-                        if(LT->variable->name == originalObjectiveVariable->name)
+                        if(LT->variable == reformulatedProblem->getVariable(originalObjectiveVariable->getIndex()))
                         {
                             epigraphConstraint = C;
                             epigraphConstraintTerm = LT;
@@ -448,7 +525,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
                     {
                         for(auto const& LT : C->linearTerms)
                         {
-                            if(LT->variable->name == originalObjectiveVariable->name)
+                            if(LT->variable == reformulatedProblem->getVariable(originalObjectiveVariable->getIndex()))
                             {
                                 epigraphConstraint = C;
                                 epigraphConstraintTerm = LT;
@@ -461,7 +538,11 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
                     }
                 }
 
-                if(epigraphConstraint && epigraphConstraintTerm)
+                // Reformulated one-sided rows use an upper bound. Keep any other shape unchanged.
+                auto definition = std::dynamic_pointer_cast<LinearConstraint>(epigraphConstraint);
+
+                if(definition && epigraphConstraintTerm && definition->valueLHS == SHOT_DBL_MIN
+                    && definition->valueRHS != SHOT_DBL_MAX && std::isfinite(definition->valueRHS))
                 {
                     double epigraphFactor = -originalObjectiveCoefficient / epigraphConstraintTerm->coefficient;
 

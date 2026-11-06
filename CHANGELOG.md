@@ -158,6 +158,10 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- Antiepigraph reformulation preserves the defining constraint when its direction,
+  ranged bounds or objective-variable domain make the reformulation unsafe,
+  preventing incorrect global optimality claims and lost variable restrictions
+  ([#292]).
 - A GAMS NLP solver licence failure produces one warning and switches to
   GAMS IPOPT without reusing solver-specific options. Failed solvers are
   skipped for the rest of the problem; if IPOPT also has a licence failure,
@@ -456,6 +460,7 @@ Changes since SHOT 1.1.
 [#289]: https://github.com/coin-or/SHOT/pull/289
 [#290]: https://github.com/coin-or/SHOT/pull/290
 [#291]: https://github.com/coin-or/SHOT/pull/291
+[#292]: https://github.com/coin-or/SHOT/pull/292
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
