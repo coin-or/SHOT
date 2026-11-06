@@ -43,6 +43,8 @@ Changes since SHOT 1.1.
 
 ### Added
 
+- Guides to interpreting terminal output, configuring solves, and understanding
+  modeling and reformulation, with expanded result handling and C++ examples.
 - HiGHS as MIP solver ([#182], [#191], [#194], [4f096597]).
 - Uno ([#200]) and CONOPT ([#225]) as NLP solvers for the fixed-integer
   primal heuristic.
