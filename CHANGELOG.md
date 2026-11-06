@@ -160,7 +160,7 @@ Changes since SHOT 1.1.
 
 - Gurobi accepts nonconvex quadratic objectives when recommended settings
   are disabled, including with quadratic strategies 1 and 2, instead of
-  stopping with an "Objective Q not PSD" error.
+  stopping with an "Objective Q not PSD" error ([#287]).
 - Large negative lower bounds and positive upper bounds of auxiliary
   variables are treated as infinite in MIP models (threshold 1e15), with
   fixed values preserved. Oversized square and product auxiliaries use
@@ -431,6 +431,7 @@ Changes since SHOT 1.1.
 [#284]: https://github.com/coin-or/SHOT/pull/284
 [#285]: https://github.com/coin-or/SHOT/pull/285
 [#286]: https://github.com/coin-or/SHOT/pull/286
+[#287]: https://github.com/coin-or/SHOT/pull/287
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
