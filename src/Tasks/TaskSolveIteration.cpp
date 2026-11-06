@@ -344,8 +344,7 @@ void TaskSolveIteration::run()
         if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
         {
             for(auto& SOL : sols)
-                SOL.point.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->getIndex())
-                    = currIter->objectiveValue;
+                env->reformulatedProblem->updateAntiEpigraphObjectiveVariableValue(SOL.point, SOL.objectiveValue);
         }
 
         currIter->solutionPoints = sols;
