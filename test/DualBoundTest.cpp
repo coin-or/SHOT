@@ -34,6 +34,7 @@
 #include "../src/Tasks/TaskInitializeRootsearch.h"
 #include "../src/Tasks/TaskAddPrimalReductionCut.h"
 #include "../src/Tasks/TaskPerformConvexBounding.h"
+#include "../src/Tasks/TaskCheckIterationError.h"
 #include "../src/Tasks/TaskSelectHyperplanesECP.h"
 #include "../src/Tasks/TaskSelectHyperplanesESH.h"
 #include "../src/TaskHandler.h"
@@ -1349,6 +1350,71 @@ bool testPointsAreProjectedOntoVariableBounds()
     return passed;
 }
 
+bool testInfeasibilityWithArtificialBounds(ES_MIPSolver mipSolver)
+{
+    for(bool upperBound : { false, true })
+    {
+        auto solver = std::make_shared<Solver>();
+        auto env = solver->getEnvironment();
+        solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+        solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+        solver->updateSetting("Model.BoundTightening.InitialPOA.Use", false);
+        solver->updateSetting("Termination.TimeLimit", 5.0);
+
+        // The feasible point is beyond an artificial integer bound, and no incumbent or cutoff is available.
+        auto problem = std::make_shared<Problem>(env);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Integer, -1.0, 1.0);
+        x->properties.hasArtificialLowerBound = !upperBound;
+        x->properties.hasArtificialUpperBound = upperBound;
+        problem->add(x);
+        double sign = upperBound ? 1.0 : -1.0;
+        auto constraint = std::make_shared<LinearConstraint>("outside_artificial_bound", 2.0, SHOT_DBL_MAX);
+        constraint->add(std::make_shared<LinearTerm>(sign, x));
+        problem->add(constraint);
+        auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+        objective->add(std::make_shared<LinearTerm>(sign, x));
+        problem->add(objective);
+        problem->finalize();
+
+        if(!solver->setProblem(problem) || !solver->solveProblem() || !solver->hasPrimalSolution()
+            || std::abs(solver->getPrimalBound() - 2.0) > 1e-6 || std::abs(solver->getGlobalDualBound() - 2.0) > 1e-6
+            || env->problem->hasArtificialBounds()
+            || solver->getModelReturnStatus() != E_ModelReturnStatus::OptimalGlobal)
+        {
+            std::cout << name(mipSolver) << ": an artificial bound prevented finding the optimum beyond it\n";
+            return false;
+        }
+    }
+
+    // If artificial bounds remain at termination, infeasibility of the restricted dual problem proves nothing.
+    for(bool artificialBound : { false, true })
+    {
+        auto solver = makeSolver(mipSolver, ModelKind::Infeasible, true);
+        if(!solver)
+            return false;
+        auto env = solver->getEnvironment();
+        env->problem->allVariables.at(0)->properties.hasArtificialUpperBound = artificialBound;
+        env->results->createIteration();
+        env->results->getCurrentIteration()->solutionStatus = E_ProblemSolutionStatus::Infeasible;
+        auto finalize = std::make_shared<TaskAddPrimalReductionCut>(env, "Finalize", "Finalize");
+        env->tasks->clearTasks();
+        env->tasks->addTask(finalize, "Finalize");
+        TaskCheckIterationError(env, "Finalize", "").run();
+
+        auto expected = artificialBound ? E_TerminationReason::NumericIssues : E_TerminationReason::InfeasibleProblem;
+        if(solver->getTerminationReason() != expected)
+        {
+            std::cout << name(mipSolver) << ": incorrect infeasibility conclusion with artificial bound "
+                      << artificialBound << '\n';
+            return false;
+        }
+    }
+
+    return true;
+}
+
 int DualBoundTest(int argc, char* argv[])
 {
     int choice = 1;
@@ -1485,6 +1551,12 @@ int DualBoundTest(int argc, char* argv[])
         std::cout << "Starting test that points are projected onto the variable bounds:\n";
         passed = testPointsAreProjectedOntoVariableBounds();
         std::cout << "Finished test that points are projected onto the variable bounds.\n";
+        break;
+    case 20:
+        std::cout << "Starting test for infeasibility with artificial bounds:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testInfeasibilityWithArtificialBounds(mipSolver) && passed;
+        std::cout << "Finished test for infeasibility with artificial bounds.\n";
         break;
     default:
         passed = false;

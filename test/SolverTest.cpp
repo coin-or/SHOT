@@ -4724,6 +4724,53 @@ bool TestLargeAuxiliaryBoundInstances()
     return passed;
 }
 
+bool TestScaledDualInfeasibilityRecovery()
+{
+    std::vector<ES_MIPSolver> backends;
+#ifdef HAS_GUROBI
+    backends.push_back(ES_MIPSolver::Gurobi);
+#endif
+#ifdef HAS_CBC
+    backends.push_back(ES_MIPSolver::Cbc);
+#endif
+    for(auto backend : backends)
+    {
+        auto solver = std::make_unique<Solver>();
+        solver->updateSetting("Dual.MIP.Solver", static_cast<int>(backend));
+        solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+        solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree));
+        solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Termination.TimeLimit", 15.0);
+
+        if(!solver->setProblem("data/instances/MINLP-convex/ravempb.osil") || !solver->solveProblem()
+            || !solver->hasPrimalSolution())
+            return false;
+
+        constexpr double reference = 269590.2;
+        constexpr double tolerance = 0.3;
+        if(solver->getTerminationReason() == E_TerminationReason::InfeasibleProblem
+            || solver->getTerminationReason() == E_TerminationReason::Error
+            || std::abs(solver->getPrimalBound() - reference) > tolerance
+            || !std::isfinite(solver->getGlobalDualBound()) || solver->getGlobalDualBound() > reference + tolerance)
+        {
+            std::cout << "Backend " << static_cast<int>(backend) << ": recovery returned incorrect bounds ["
+                      << solver->getGlobalDualBound() << ", " << solver->getPrimalBound() << "]\n";
+            return false;
+        }
+
+        auto problem = solver->getOriginalProblem();
+        auto point = solver->getPrimalSolution().point;
+        if(!problem->areLinearConstraintsFulfilled(point, 1e-6)
+            || !problem->areQuadraticConstraintsFulfilled(point, 1e-5)
+            || !problem->areNonlinearConstraintsFulfilled(point, 1e-5)
+            || !problem->areVariableBoundsFulfilled(point, 1e-6)
+            || !problem->areIntegralityConstraintsFulfilled(point, 1e-5))
+            return false;
+    }
+    return true;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -4986,6 +5033,11 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for wrong optima caused by large auxiliary bounds" << std::endl;
         passed = TestLargeAuxiliaryBoundInstances();
         std::cout << "Finished test for wrong optima caused by large auxiliary bounds." << std::endl;
+        break;
+    case 49:
+        std::cout << "Starting test for infeasibility recovery of badly scaled dual problems" << std::endl;
+        passed = TestScaledDualInfeasibilityRecovery();
+        std::cout << "Finished test for infeasibility recovery of badly scaled dual problems." << std::endl;
         break;
     default:
         passed = false;

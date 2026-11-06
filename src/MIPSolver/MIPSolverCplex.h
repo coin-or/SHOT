@@ -214,9 +214,9 @@ protected:
     // problem is solved again without them
     E_ProblemSolutionStatus resolveInfeasibleOrUnbounded(E_ProblemSolutionStatus status);
 
-    // After a failure of CPLEX, e.g., numerical trouble, the problem is solved again with numerical emphasis, unless
-    // it is already used
-    E_ProblemSolutionStatus resolveWithNumericalEmphasis(E_ProblemSolutionStatus status);
+    // Retry numerical trouble or apparent infeasibility with numerical emphasis and, if still infeasible, without
+    // presolve. Keep the retries within the time limit measured from solveStarted and restore user parameters.
+    E_ProblemSolutionStatus resolveWithNumericalEmphasis(E_ProblemSolutionStatus status, double solveStarted);
 
     // CPLEX's presolve can report a feasible problem as infeasible, so such a problem is solved again without it
     E_ProblemSolutionStatus resolveInfeasibleWithoutPresolve(E_ProblemSolutionStatus status);

@@ -158,6 +158,11 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- Gurobi, CPLEX and Cbc retry apparently infeasible dual problems with more
+  robust numerical settings, avoiding false infeasibility from badly scaled cuts.
+  Artificial variable bounds are removed before accepting infeasibility of
+  an unrepaired global relaxation, also without an incumbent or cutoff.
+  If such bounds remain, SHOT stops without claiming infeasibility.
 - Gurobi accepts nonconvex quadratic objectives when recommended settings
   are disabled, including with quadratic strategies 1 and 2, instead of
   stopping with an "Objective Q not PSD" error ([#287]).

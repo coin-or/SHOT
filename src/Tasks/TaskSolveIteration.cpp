@@ -294,11 +294,10 @@ void TaskSolveIteration::run()
         resolveProblem();
     }
 
-    // If the dual problem is infeasible with the cutoff, it is solved again without the artificial bounds, since they
-    // restrict the problem and the cutoff can only be used as dual bound for a relaxation
-    if(solStatus == E_ProblemSolutionStatus::Infeasible && sols.size() == 0 && usedCutOff
-        && env->results->solutionIsGlobal && !currIter->hasInfeasibilityRepairBeenPerformed
-        && env->results->hasPrimalSolution() && env->problem->hasArtificialBounds())
+    // Artificial bounds restrict the relaxation, so infeasibility does not prove infeasibility of the original
+    // problem, with or without an incumbent or cutoff. Remove them before drawing that conclusion.
+    if(solStatus == E_ProblemSolutionStatus::Infeasible && sols.size() == 0 && env->results->solutionIsGlobal
+        && !currIter->hasInfeasibilityRepairBeenPerformed && env->problem->hasArtificialBounds())
     {
         std::vector<VariablePtr> variables;
 
