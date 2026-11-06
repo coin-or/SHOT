@@ -88,6 +88,7 @@ bool ModelTestSOS2WithSolver(ES_MIPSolver mipSolver);
 bool ModelTestSOS2();
 bool ModelTestObjectiveEpigraphStrategy();
 bool ModelTestAntiEpigraphReformulation();
+bool ModelTestAntiEpigraphEligibility();
 bool ModelTestObjectivePartitioningStrategy();
 bool ModelTestSignomialElementBounds();
 bool ModelTestTermAndExpressionBounds();
@@ -547,6 +548,9 @@ int ModelTest(int argc, char* argv[])
         break;
     case 74:
         passed = ModelTestBilinearInverseReformulation();
+        break;
+    case 75:
+        passed = ModelTestAntiEpigraphEligibility();
         break;
     default:
         passed = false;
@@ -4554,7 +4558,7 @@ bool ModelTestAntiEpigraphReformulation()
                 auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 10.0);
                 auto var_w = std::make_shared<SHOT::Variable>("w", SHOT::E_VariableType::Real, 0.0, 3.0);
                 auto var_y = std::make_shared<SHOT::Variable>("y", SHOT::E_VariableType::Real, 0.0, 2.0);
-                auto var_z = std::make_shared<SHOT::Variable>("z", SHOT::E_VariableType::Real, -100.0, 100.0);
+                auto var_z = std::make_shared<SHOT::Variable>("z", SHOT::E_VariableType::Real, -100.0, 200.0);
                 problem->add(SHOT::Variables({ var_x, var_w, var_y, var_z }));
 
                 auto objective
@@ -12594,6 +12598,187 @@ bool ModelTestBilinearInverseReformulation()
             std::cout << "  FAILED: the bounds are " << solveSolver->getCurrentDualBound() << " and "
                       << solveSolver->getPrimalBound() << " instead of 4.\n";
             passed = false;
+        }
+    }
+
+    return passed;
+}
+
+bool ModelTestAntiEpigraphEligibility()
+{
+    bool passed = true;
+
+    // The quadratic terms share both variables; the nonlinear variant has three exponential terms sharing them.
+    // All minima are known: the quadratic form and the exponential sum attain their minima at x = y = 0.
+
+    for(auto& [mipSolver, solverName] : AvailableMIPSolversForEpigraphTests())
+    {
+
+        for(const std::string kind :
+            { "safe", "wrong_direction", "ranged", "ranged_nonlinear", "bounded", "integer", "binary" })
+        {
+
+            for(bool maximize : { false, true })
+            {
+                if(maximize && (kind == "integer" || kind == "binary"))
+                    continue;
+
+                for(bool lowerSide : { false, true })
+                {
+
+                    for(auto partitioning : { ES_PartitionNonlinearSums::Never, ES_PartitionNonlinearSums::Always })
+                    {
+                        const bool ranged = kind == "ranged" || kind == "ranged_nonlinear";
+                        const bool nonlinear = kind == "ranged_nonlinear";
+                        const double minimum = kind == "binary" ? 0.25 : kind == "integer" ? 1.5 : 3.0;
+                        const double sign = maximize ? -1.0 : 1.0;
+                        const std::string description = solverName + "/" + kind + (maximize ? "/max" : "/min")
+                            + (lowerSide ? "/lhs" : "/rhs")
+                            + "/partition=" + std::to_string(static_cast<int>(partitioning));
+
+                        auto buildProblem = [=](const EnvironmentPtr& env)
+                        {
+                            auto problem = std::make_shared<Problem>(env);
+                            const double bound = nonlinear ? 0.25 : 1.0;
+                            auto x = std::make_shared<Variable>("x", E_VariableType::Real, -bound, bound);
+                            auto y = std::make_shared<Variable>("y", E_VariableType::Real, -bound, bound);
+                            auto type = kind == "integer" ? E_VariableType::Integer
+                                : kind == "binary"        ? E_VariableType::Binary
+                                                          : E_VariableType::Real;
+                            double lower = kind == "binary" ? 0.0 : kind == "bounded" && !maximize ? 4.0 : -10.0;
+                            double upper = kind == "binary" ? 1.0 : kind == "bounded" && maximize ? -4.0 : 10.0;
+                            auto t = std::make_shared<Variable>("t", type, lower, upper);
+                            problem->add({ x, y, t });
+
+                            auto objective = std::make_shared<LinearObjectiveFunction>(maximize
+                                    ? E_ObjectiveFunctionDirection::Maximize
+                                    : E_ObjectiveFunctionDirection::Minimize);
+                            objective->add(std::make_shared<LinearTerm>(1.0, t));
+                            problem->add(objective);
+
+                            // Normally F - t <= 0 for minimization and F + t <= 0 for maximization. Reversing the
+                            // inequality gives a valid model whose optimum is at the opposite bound of t.
+                            double factor = kind == "wrong_direction" ? -1.0 : 1.0;
+
+                            if(lowerSide)
+                                factor = -factor;
+
+                            double lhs = ranged ? -100.0 : SHOT_DBL_MIN;
+                            double rhs = 0.0;
+
+                            if(lowerSide)
+                            {
+                                lhs = 0.0;
+                                rhs = ranged ? 100.0 : SHOT_DBL_MAX;
+                            }
+
+                            QuadraticConstraintPtr constraint;
+
+                            if(nonlinear)
+                            {
+                                auto nl = std::make_shared<NonlinearConstraint>("definition", lhs, rhs);
+                                auto exprX = std::make_shared<ExpressionVariable>(x);
+                                auto exprY = std::make_shared<ExpressionVariable>(y);
+                                auto expression = std::make_shared<ExpressionSum>(
+                                    std::make_shared<ExpressionExp>(std::make_shared<ExpressionSum>(exprX, exprY)),
+                                    std::make_shared<ExpressionExp>(std::make_shared<ExpressionSum>(
+                                        exprX, std::make_shared<ExpressionNegate>(exprY))),
+                                    std::make_shared<ExpressionExp>(std::make_shared<ExpressionProduct>(
+                                        std::make_shared<ExpressionConstant>(-2.0), exprX)));
+                                nl->add(std::make_shared<ExpressionProduct>(
+                                    std::make_shared<ExpressionConstant>(factor), expression));
+                                constraint = nl;
+                            }
+
+                            else
+                            {
+                                constraint = std::make_shared<QuadraticConstraint>("definition", lhs, rhs);
+                                constraint->add(std::make_shared<QuadraticTerm>(factor, x, x));
+                                constraint->add(std::make_shared<QuadraticTerm>(2.0 * factor, x, y));
+                                constraint->add(std::make_shared<QuadraticTerm>(2.0 * factor, y, y));
+                                constraint->constant = factor * minimum;
+                            }
+
+                            constraint->add(std::make_shared<LinearTerm>(-sign * factor, t));
+                            problem->add(std::static_pointer_cast<NumericConstraint>(constraint));
+
+                            return problem;
+                        };
+
+                        auto [solver, env] = SolveWithEpigraphStrategy(ES_ObjectiveEpigraphStrategy::ObjectiveFunction,
+                            buildProblem, false, mipSolver,
+                            [=](Solver& solver)
+                            {
+                                solver.updateSetting("Dual.MIP.NumberOfThreads", 1);
+                                solver.updateSetting("Termination.TimeLimit", 5.0);
+                                solver.updateSetting("Termination.ObjectiveGap.Absolute", 1e-5);
+                                solver.updateSetting("Termination.ObjectiveGap.Relative", 1e-5);
+                                solver.updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+                                solver.updateSetting("Model.Reformulation.Constraint.PartitionQuadraticTerms",
+                                    static_cast<int>(partitioning));
+                                solver.updateSetting("Model.Reformulation.Constraint.PartitionNonlinearTerms",
+                                    static_cast<int>(partitioning));
+                            });
+
+                        if(!env->reformulatedProblem)
+                        {
+                            passed = false;
+                            continue;
+                        }
+
+                        bool antiepigraphApplied
+                            = static_cast<bool>(env->reformulatedProblem->antiEpigraphObjectiveVariable);
+
+                        if((kind != "safe" && antiepigraphApplied)
+                            || (kind == "safe" && partitioning == ES_PartitionNonlinearSums::Never
+                                && !antiepigraphApplied))
+                        {
+                            std::cout << "  FAILED (" << description
+                                      << "): unexpected antiepigraph reformulation: " << antiepigraphApplied << ".\n";
+                            passed = false;
+                            continue;
+                        }
+
+                        double expected = sign * minimum;
+
+                        if(kind == "wrong_direction")
+                            expected = maximize ? 10.0 : -10.0;
+
+                        else if(kind == "bounded")
+                            expected = sign * 4.0;
+
+                        else if(kind == "integer")
+                            expected = 2.0;
+
+                        else if(kind == "binary")
+                            expected = 1.0;
+
+                        if(!solver->solveProblem() || !solver->hasPrimalSolution())
+                        {
+                            std::cout << "  FAILED (" << description << "): no solution.\n";
+                            passed = false;
+                            continue;
+                        }
+
+                        const double tolerance = 1e-4;
+                        const auto point = solver->getPrimalSolution().point;
+                        const double primal = solver->getPrimalBound();
+                        const double dual = solver->getGlobalDualBound();
+                        auto problem = env->problem;
+
+                        if(std::abs(primal - expected) > tolerance || sign * (dual - expected) > tolerance
+                            || !problem->areNumericConstraintsFulfilled(point, 1e-5)
+                            || !problem->areVariableBoundsFulfilled(point, 1e-5)
+                            || !problem->areIntegralityConstraintsFulfilled(point, 1e-5)
+                            || std::abs(problem->objectiveFunction->calculateValue(point) - primal) > tolerance)
+                        {
+                            std::cout << "  FAILED (" << description << "): primal " << primal << ", dual " << dual
+                                      << ", expected " << expected << ".\n";
+                            passed = false;
+                        }
+                    }
+                }
+            }
         }
     }
 

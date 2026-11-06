@@ -158,6 +158,9 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- Antiepigraph reformulation preserves the defining constraint when its direction,
+  ranged bounds or objective-variable domain make the reformulation unsafe,
+  preventing incorrect global optimality claims and lost variable restrictions.
 - A GAMS NLP solver licence failure produces one warning and switches to
   GAMS IPOPT without reusing solver-specific options. Failed solvers are
   skipped for the rest of the problem; if IPOPT also has a licence failure,
