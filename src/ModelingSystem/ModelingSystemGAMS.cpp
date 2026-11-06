@@ -60,6 +60,7 @@ ModelingSystemGAMS::ModelingSystemGAMS(EnvironmentPtr envPtr)
 
 void ModelingSystemGAMS::setModelingObject(gmoHandle_t gmo)
 {
+    nlpLicenseState.reset();
     modelingObject = gmo;
     modelingEnvironment = (gevHandle_t)gmoEnvironment(gmo);
 

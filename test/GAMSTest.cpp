@@ -20,12 +20,175 @@
 #include "../src/RootsearchMethod/RootsearchMethodBoost.h"
 
 #include "../src/ModelingSystem/ModelingSystemGAMS.h"
+#include "../src/NLPSolver/NLPSolverGAMS.h"
+
+#include "spdlog/sinks/ostream_sink.h"
+
+#include <sstream>
 
 #include "../src/Model/Problem.h"
 
 #include "../src/Tasks/TaskReformulateProblem.h"
 
 using namespace SHOT;
+
+class GAMSStatusProbe : public NLPSolverGAMS
+{
+public:
+    GAMSStatusProbe(EnvironmentPtr env, gmoHandle_t model, palHandle_t licensing, bool modelStatusLicense,
+        bool fallbackFails, int callStatus, bool ordinaryError = false)
+        : INLPSolver(env)
+        , NLPSolverGAMS(env, model, licensing)
+        , model(model)
+        , modelStatusLicense(modelStatusLicense)
+        , fallbackFails(fallbackFails)
+        , callStatus(callStatus)
+        , ordinaryError(ordinaryError)
+    {
+    }
+
+    int requestedCalls = 0;
+    int fallbackCalls = 0;
+    bool fallbackOptionsCleared = true;
+
+protected:
+    int callSolver(double, char* message) override
+    {
+        message[0] = '\0';
+        bool fallback = getSelectedSolverName() == "IPOPT";
+        if(fallback)
+        {
+            ++fallbackCalls;
+            fallbackOptionsCleared = fallbackOptionsCleared && gmoOptFile(model) == 0;
+        }
+        else
+            ++requestedCalls;
+
+        if(ordinaryError)
+        {
+            gmoModelStatSet(model, gmoModelStat_ErrorNoSolution);
+            gmoSolveStatSet(model, gmoSolveStat_Solver);
+        }
+        else if(!fallback || fallbackFails)
+        {
+            gmoModelStatSet(model, modelStatusLicense ? gmoModelStat_LicenseError : gmoModelStat_ErrorNoSolution);
+            gmoSolveStatSet(model, modelStatusLicense ? gmoSolveStat_Normal : gmoSolveStat_License);
+        }
+        else
+        {
+            gmoModelStatSet(model, gmoModelStat_OptimalLocal);
+            gmoSolveStatSet(model, gmoSolveStat_Normal);
+        }
+        return fallback ? 0 : callStatus;
+    }
+
+private:
+    gmoHandle_t model;
+    bool modelStatusLicense;
+    bool fallbackFails;
+    int callStatus;
+    bool ordinaryError;
+};
+
+bool TestGAMSNLPLicenseFailures()
+{
+    std::ostringstream warnings;
+    auto solver = std::make_unique<Solver>(std::make_shared<spdlog::sinks::ostream_sink_mt>(warnings));
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Warning));
+    solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+    solver->updateSetting("Subsolver.GAMS.NLP.Solver", std::string("conopt"));
+    solver->updateSetting("Subsolver.GAMS.NLP.OptionsFilename", std::string("unavailable.opt"));
+    auto fail = [&](int line)
+    {
+        std::cout << "GAMS licence regression failed at line " << line << ":\n" << warnings.str();
+        return false;
+    };
+    if(!solver->setProblem("data/synthes1.gms"))
+        return fail(__LINE__);
+    auto env = solver->getEnvironment();
+    auto modelingSystem = std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem);
+    auto model = modelingSystem->modelingObject;
+    // Independent failure scenarios use fresh state; NLP instances within each scenario share their model's state.
+    modelingSystem->nlpLicenseState = std::make_shared<GAMSNLPLicenseState>();
+    int altBounds = gmoAltBounds(model);
+    int forceCont = gmoForceCont(model);
+    auto warningCount = [&](const std::string& text)
+    {
+        auto log = warnings.str();
+        size_t position = 0;
+        int count = 0;
+        while((position = log.find(text, position)) != std::string::npos)
+        {
+            ++count;
+            position += text.size();
+        }
+        return count;
+    };
+
+    for(bool modelStatusLicense : { false, true })
+        for(bool fallbackFails : { false, true })
+            for(int callStatus : { 0, 1 })
+            {
+                modelingSystem->nlpLicenseState->unavailableSolvers.clear();
+                warnings.str("");
+                GAMSStatusProbe probe(
+                    env, model, modelingSystem->auditLicensing, modelStatusLicense, fallbackFails, callStatus);
+                auto expected = fallbackFails ? E_NLPSolutionStatus::Error : E_NLPSolutionStatus::Optimal;
+                if(probe.solveProblem() != expected || probe.requestedCalls != 1 || probe.fallbackCalls != 1
+                    || !probe.fallbackOptionsCleared || probe.getSelectedSolverName() != "IPOPT")
+                    return fail(__LINE__);
+                if(probe.solveProblem() != expected || probe.requestedCalls != 1
+                    || probe.fallbackCalls != (fallbackFails ? 1 : 2))
+                    return fail(__LINE__);
+
+                // A second NLP task shares the licence cache and must not invoke the failed solver or warn again.
+                GAMSStatusProbe second(
+                    env, model, modelingSystem->auditLicensing, modelStatusLicense, fallbackFails, callStatus);
+                if(second.solveProblem() != expected || second.requestedCalls != 0
+                    || second.fallbackCalls != (fallbackFails ? 0 : 1) || !second.fallbackOptionsCleared
+                    || warningCount("GAMS CONOPT licence error") != 1
+                    || warningCount("GAMS IPOPT licence error") != (fallbackFails ? 1 : 0)
+                    || gmoAltBounds(model) != altBounds || gmoForceCont(model) != forceCont
+                    || env->results->usedPrimalGAMSNLPSolver != "IPOPT")
+                    return fail(__LINE__);
+            }
+
+    // Ordinary solver errors still follow the existing retry/error policy and must not blacklist the solver.
+    modelingSystem->nlpLicenseState->unavailableSolvers.clear();
+    GAMSStatusProbe ordinary(env, model, modelingSystem->auditLicensing, false, false, 0, true);
+    if(ordinary.solveProblem() != E_NLPSolutionStatus::Error || ordinary.solveProblem() != E_NLPSolutionStatus::Error
+        || ordinary.requestedCalls != 2 || ordinary.fallbackCalls != 0
+        || !modelingSystem->nlpLicenseState->unavailableSolvers.empty())
+        return fail(__LINE__);
+
+    GAMSStatusProbe invocationError(env, model, modelingSystem->auditLicensing, false, false, 1, true);
+    try
+    {
+        invocationError.solveProblem();
+        return fail(__LINE__);
+    }
+    catch(const std::logic_error&)
+    {
+    }
+    if(gmoAltBounds(model) != altBounds || gmoForceCont(model) != forceCont
+        || !modelingSystem->nlpLicenseState->unavailableSolvers.empty())
+        return fail(__LINE__);
+
+    GAMSStatusProbe expired(env, model, modelingSystem->auditLicensing, false, false, 0);
+    expired.setTimeLimit(0.0);
+    if(expired.solveProblem() != E_NLPSolutionStatus::TimeLimit || expired.requestedCalls != 0
+        || expired.fallbackCalls != 0)
+        return fail(__LINE__);
+
+    modelingSystem->nlpLicenseState->unavailableSolvers.insert("CONOPT");
+    auto oldState = modelingSystem->nlpLicenseState;
+    if(!solver->setProblem("data/synthes1.gms"))
+        return fail(__LINE__);
+    auto nextModelingSystem = std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem);
+    return nextModelingSystem != modelingSystem
+        && (!nextModelingSystem->nlpLicenseState || nextModelingSystem->nlpLicenseState->unavailableSolvers.empty())
+        && oldState->unavailableSolvers.count("CONOPT") == 1;
+}
 
 bool TestGamsFunctions(std::string filename)
 {
@@ -677,6 +840,10 @@ int GAMSTest(int argc, char* argv[])
         std::cout << "Starting test of an infeasible dual problem after a solution limit update:" << std::endl;
         passed = SolveProblemWithInfeasibleDualProblemAfterSolutionLimitGAMS("data/rsyn0805m_sp.gms");
         std::cout << "Finished test of an infeasible dual problem after a solution limit update." << std::endl;
+        break;
+    case 17:
+        std::cout << "Testing GAMS NLP licence failures and fallback without relying on local licences.\n";
+        passed = TestGAMSNLPLicenseFailures();
         break;
     default:
         passed = false;

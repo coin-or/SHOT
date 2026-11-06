@@ -158,6 +158,10 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- A GAMS NLP solver licence failure produces one warning and switches to
+  GAMS IPOPT without reusing solver-specific options. Failed solvers are
+  skipped for the rest of the problem; if IPOPT also has a licence failure,
+  further GAMS NLP calls are skipped.
 - Single-tree integer-cut regression tests for Gurobi and CPLEX trigger
   cuts deterministically, avoiding failures caused by solver search behavior
   ([#290]).
