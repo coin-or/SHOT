@@ -413,10 +413,11 @@ void MIPSolverGurobi::initializeSolverSettings()
             env->settings->getSetting<double>("Model.Convexity.Quadratics.EigenValueTolerance"));
 
 #if GRB_VERSION_MAJOR >= 9
-        // Supports nonconvex MIQCQP
-        if(static_cast<ES_QuadraticProblemStrategy>(
-               env->settings->getSetting<int>("Model.Reformulation.Quadratics.Strategy"))
-            == ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained)
+        // A nonconvex quadratic objective can also be passed under the other quadratic strategies.
+        if(hasQuadraticObjective
+            || static_cast<ES_QuadraticProblemStrategy>(
+                   env->settings->getSetting<int>("Model.Reformulation.Quadratics.Strategy"))
+                == ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained)
         {
             gurobiModel->set(GRB_IntParam_NonConvex, 2);
         }
