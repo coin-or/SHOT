@@ -161,7 +161,7 @@ Changes since SHOT 1.1.
 - A GAMS NLP solver licence failure produces one warning and switches to
   GAMS IPOPT without reusing solver-specific options. Failed solvers are
   skipped for the rest of the problem; if IPOPT also has a licence failure,
-  further GAMS NLP calls are skipped.
+  further GAMS NLP calls are skipped ([#291]).
 - Single-tree integer-cut regression tests for Gurobi and CPLEX trigger
   cuts deterministically, avoiding failures caused by solver search behavior
   ([#290]).
@@ -455,6 +455,7 @@ Changes since SHOT 1.1.
 [#288]: https://github.com/coin-or/SHOT/pull/288
 [#289]: https://github.com/coin-or/SHOT/pull/289
 [#290]: https://github.com/coin-or/SHOT/pull/290
+[#291]: https://github.com/coin-or/SHOT/pull/291
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
