@@ -618,7 +618,7 @@ expected objectives — a fast way to check whether a change regressed
 solver behavior. For the full breakdown of test structure, how to run a
 single failing test in isolation, and how to use `InstanceTest` results to
 drive a `--debug` investigation, see
-[Automated tests as a debugging aid](DebuggingSHOT.md#automated-tests-as-a-debugging-aid).
+[Automated tests as a debugging aid](DeveloperDebugging.md#automated-tests-as-a-debugging-aid).
 
 ## CONOPT primal NLP solver
 

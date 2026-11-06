@@ -12,7 +12,8 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 GUIDES = ('CompilationInstructions.md', 'CommandLineUsage.md', 'Callbacks.md',
-          'DebuggingSHOT.md', 'SHOTpy_Tutorial.ipynb')
+          'UnderstandingOutput.md', 'Configuration.md', 'Modeling.md',
+          'DebuggingSHOT.md', 'DeveloperDebugging.md', 'SHOTpy_Tutorial.ipynb')
 
 
 def build_tutorial(notebook, source):
