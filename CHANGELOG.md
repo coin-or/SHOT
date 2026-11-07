@@ -161,6 +161,9 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- Integer bilinear discretization stores and evaluates its auxiliary binary values
+  in linear space and time instead of building a quadratic number of polynomial
+  factors. Fractional points use bounded interpolation between adjacent values.
 - Repeated Ipopt NLP solves reuse initialized solver state after completed solves,
   including iteration/time limits and infeasibility, instead of always rebuilding
   it. Errors force a fresh initialization for the next solve ([#296]).

@@ -30,6 +30,10 @@ void AuxiliaryVariable::takeOwnership(ProblemPtr owner)
 
 double AuxiliaryVariable::calculate(const VectorDouble& point) const
 {
+    // Linear interpolation gives one at the selected integer and zero at the other integers, without a polynomial.
+    if(properties.auxiliaryType == E_AuxiliaryVariableType::IntegerDiscretization && linearTerms.size() > 0)
+        return std::max(1.0 - std::abs(constant + linearTerms.calculate(point)), 0.0);
+
     // The sign binary of an absolute value is one if the argument is nonnegative and zero otherwise
     if(properties.auxiliaryType == E_AuxiliaryVariableType::AbsoluteValueSign && nonlinearExpression)
         return (nonlinearExpression->calculate(point) >= 0.0 ? 1.0 : 0.0);
@@ -49,7 +53,8 @@ double AuxiliaryVariable::calculate(const VectorDouble& point) const
 
 Interval AuxiliaryVariable::calculate(const IntervalVector& intervalVector) const
 {
-    if(properties.auxiliaryType == E_AuxiliaryVariableType::AbsoluteValueSign)
+    if(properties.auxiliaryType == E_AuxiliaryVariableType::AbsoluteValueSign
+        || properties.auxiliaryType == E_AuxiliaryVariableType::IntegerDiscretization)
         return (Interval(0.0, 1.0));
 
     Interval interval = constant;
@@ -183,6 +188,10 @@ std::ostream& operator<<(std::ostream& stream, AuxiliaryVariablePtr var)
 
     case E_AuxiliaryVariableType::IntegerBilinear:
         auxtype << "int. bilinear lin.";
+        break;
+
+    case E_AuxiliaryVariableType::IntegerDiscretization:
+        auxtype << "int. discretization";
         break;
 
     case E_AuxiliaryVariableType::BinaryMonomial:

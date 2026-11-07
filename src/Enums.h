@@ -30,7 +30,8 @@ enum class E_AuxiliaryVariableType
     AbsoluteValueSign, // The binary that tells the sign of the argument of an absolute value (one if nonnegative)
     AntiEpigraph, // For rewriting an epigraph formulation as objective
     EigenvalueDecomposition, // From performing an eigenvalue decomposition on quadratic sums
-    LDLDecomposition // From performing an LDL decomposition on quadratic sums
+    LDLDecomposition, // From performing an LDL decomposition on quadratic sums
+    IntegerDiscretization // One-hot binary for an integer value; constant + linearTerms gives the offset from it
 };
 
 enum class E_Convexity
