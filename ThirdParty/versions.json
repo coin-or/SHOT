@@ -76,9 +76,11 @@
       "kind": "vendored",
       "source_sha256": "9b5fed3d80ed8a026ae0d7680a99adacf6a80bf252a0e350e014fba43f1d2a75",
       "license": "EPL-2.0 OR GPL-2.0-or-later",
-      "patches": [],
+      "patches": [
+        "Guard cos() and tan() interval bounds above 1e8 in magnitude and use double period counts to avoid integer overflow; sin() uses cos()."
+      ],
       "notes": "Only interval.hpp, mcfunc.hpp and mcop.hpp; optional MC__USE_FADBAD is not supported. Unused bundled cpplapack/FADBAD++ removed.",
-      "tree_sha256": "98f40e23e52c10c95132ebfc94970ed1f3f0019eb2b832e4831787b8ab457522"
+      "tree_sha256": "2662fbf13b7cf66f1840510165fa4045b8c62df71c0bd2c04bc2f4fb48347309"
     },
     "nlohmann": {
       "version": "3.12.0",
