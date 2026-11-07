@@ -920,14 +920,13 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
     {
         Ipopt::ApplicationReturnStatus ipoptStatus;
 
-        if(!hasBeenSolved)
+        if(!canReoptimize)
         {
             ipoptStatus = ipoptApplication->OptimizeTNLP(ipoptProblem);
         }
         else
         {
             ipoptStatus = ipoptApplication->ReOptimizeTNLP(ipoptProblem);
-            hasBeenSolved = true;
         }
 
         switch(ipoptStatus)
@@ -990,6 +989,9 @@ E_NLPSolutionStatus NLPSolverIpoptBase::solveProblemInstance()
         env->output->outputError("        Unspecified error when solving problem with Ipopt!");
         status = E_NLPSolutionStatus::Error;
     }
+
+    // Errors can leave initialization incomplete. Rebuild for the next solve instead of reusing that state.
+    canReoptimize = status != E_NLPSolutionStatus::Error;
 
     env->output->outputDebug("        Finished solution of Ipopt problem.");
 

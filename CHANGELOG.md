@@ -161,6 +161,9 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- Repeated Ipopt NLP solves reuse initialized solver state after completed solves,
+  including iteration/time limits and infeasibility, instead of always rebuilding
+  it. Errors force a fresh initialization for the next solve.
 - The iteration table labels MIQCQP subproblems correctly instead of `MIQPCP`
   ([#295]).
 - Ipopt NLP solves stop when iteration values become NaN or infinite, avoiding
