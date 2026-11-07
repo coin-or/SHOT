@@ -87,7 +87,12 @@ detected type and settings. This matters for debugging because it
 determines which debug files you should expect to see at all:
 
 - **MIQCQP strategy** — used for convex QP/MIQP/QCQP/MIQCQP problems supported by CPLEX or Gurobi
-  (the reformulated model must still contain quadratic terms).
+  and for nonconvex QP/MIQP problems with CPLEX when quadratic objectives
+  are enabled. Nonconvex quadratic problems also use this strategy with
+  Gurobi 9 or newer when
+  `Model.Reformulation.Quadratics.Strategy=3` (recommended for nonconvex
+  problems with Gurobi). The reformulated model must still contain quadratic
+  terms and have no general nonlinear terms.
   Solves directly via the MIP solver plus primal heuristics; no
   outer-approximation cutting-plane loop, so no `dualiter{N}_mostdev.txt`-
   style constraint-deviation files (there's nothing nonlinear to cut

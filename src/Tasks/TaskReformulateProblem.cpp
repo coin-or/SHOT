@@ -159,7 +159,9 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
 
         if((useConvexQuadraticObjective || useNonconvexQuadraticObjective)
             && objective->properties.classification == E_ObjectiveFunctionClassification::Quadratic
-            && objective->properties.convexity != E_Convexity::Convex
+            && objective->properties.convexity
+                != (objective->properties.isMinimize ? E_Convexity::Convex : E_Convexity::Concave)
+            && objective->properties.convexity != E_Convexity::Linear
             && static_cast<ES_ObjectiveEpigraphStrategy>(
                    env->settings->getSetting<int>("Model.Reformulation.ObjectiveFunction.EpigraphStrategy"))
                 != ES_ObjectiveEpigraphStrategy::EpigraphConstraint)
@@ -345,7 +347,9 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     {
         if(auto objective
             = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(reformulatedProblem->objectiveFunction);
-            objective && objective->quadraticTerms.getConvexity() != E_Convexity::Convex
+            objective
+            && objective->quadraticTerms.getConvexity()
+                != (objective->properties.isMinimize ? E_Convexity::Convex : E_Convexity::Concave)
             && objective->quadraticTerms.getConvexity() != E_Convexity::Linear)
             isQuadraticObjectiveUnsupported = true;
     }

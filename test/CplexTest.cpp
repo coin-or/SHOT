@@ -620,6 +620,202 @@ bool CplexCallbackAfterSolveErrorTest(bool quadraticConstraint)
     return true;
 }
 
+// A convex quadratic objective keeps the quadratic constraints in CPLEX. An indefinite objective must stay
+// quadratic while the convex constraints are handled with cuts, since CPLEX rejects the direct combination.
+bool CplexQuadraticObjectiveAndConstraintsTest()
+{
+    for(bool discrete : { false, true })
+    {
+        for(bool nonconvexObjective : { false, true })
+        {
+            for(bool maximize : { false, true })
+            {
+                for(auto quadraticStrategy : { ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained,
+                        ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained })
+                {
+                    auto solver = std::make_unique<Solver>();
+                    auto env = solver->getEnvironment();
+                    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+                    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
+                    solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+                    solver->updateSetting(
+                        "Model.Reformulation.Quadratics.Strategy", static_cast<int>(quadraticStrategy));
+                    solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+                    solver->updateSetting("Primal.FixedInteger.Use", false);
+                    solver->updateSetting("Primal.PolishSolution.NumberOfPoints", 0);
+                    solver->updateSetting("Termination.ObjectiveGap.Absolute", 1e-8);
+                    solver->updateSetting("Termination.ObjectiveGap.Relative", 1e-8);
+                    solver->updateSetting("Termination.TimeLimit", 10.0);
+
+                    auto problem = std::make_shared<Problem>(env);
+                    problem->name = "cplexquadraticobjectiveandconstraints";
+                    auto x = std::make_shared<Variable>(
+                        "x", discrete ? E_VariableType::Integer : E_VariableType::Real, 0.0, 2.0);
+                    auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.0, 2.0);
+                    problem->add({ x, y });
+
+                    auto objective = std::make_shared<QuadraticObjectiveFunction>(
+                        maximize ? E_ObjectiveFunctionDirection::Maximize : E_ObjectiveFunctionDirection::Minimize);
+                    double objectiveSign = maximize ? -1.0 : 1.0;
+                    objective->add(
+                        std::make_shared<QuadraticTerm>(objectiveSign * (nonconvexObjective ? -1.0 : 1.0), x, x));
+                    objective->add(std::make_shared<QuadraticTerm>(objectiveSign, y, y));
+                    if(!nonconvexObjective)
+                        objective->add(std::make_shared<LinearTerm>(-4.0 * objectiveSign, x));
+                    problem->add(objective);
+
+                    for(int i : { 1, 2 })
+                    {
+                        auto constraint = std::make_shared<QuadraticConstraint>(
+                            "quadratic" + std::to_string(i), SHOT_DBL_MIN, 0.5 + 0.5 * i);
+                        constraint->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+                        constraint->add(std::make_shared<QuadraticTerm>(static_cast<double>(i), y, y));
+                        problem->add(constraint);
+                    }
+                    problem->finalize();
+                    if(!solver->setProblem(problem))
+                        return false;
+
+                    auto expectedStrategy = nonconvexObjective
+                        ? (discrete ? E_SolutionStrategy::MultiTree : E_SolutionStrategy::NLP)
+                        : E_SolutionStrategy::MIQCQP;
+                    const auto& properties = env->reformulatedProblem->properties;
+                    if(env->results->usedSolutionStrategy != expectedStrategy
+                        || !env->reformulatedProblem->objectiveFunction->properties.hasQuadraticTerms
+                        || properties.numberOfQuadraticConstraints != (nonconvexObjective ? 0 : 2)
+                        || properties.numberOfNonlinearConstraints != (nonconvexObjective ? 2 : 0))
+                    {
+                        std::cout << "Incorrect CPLEX quadratic routing: nonconvex objective " << nonconvexObjective
+                                  << ", discrete " << discrete << ", strategy " << static_cast<int>(quadraticStrategy)
+                                  << '\n';
+                        return false;
+                    }
+
+                    // Both objectives attain their optima at (1, 0); without the constraints x could reach 2.
+                    double expectedObjective = objectiveSign * (nonconvexObjective ? -1.0 : -3.0);
+                    if(!solver->solveProblem() || !solver->hasPrimalSolution()
+                        || solver->getModelReturnStatus() != E_ModelReturnStatus::OptimalGlobal
+                        || std::abs(solver->getPrimalBound() - expectedObjective) > 1e-6
+                        || std::abs(solver->getGlobalDualBound() - expectedObjective) > 1e-6)
+                    {
+                        std::cout << "CPLEX quadratic solve failed: nonconvex objective " << nonconvexObjective
+                                  << ", discrete " << discrete << ", maximize " << maximize << ", strategy "
+                                  << static_cast<int>(quadraticStrategy) << ", bounds [" << solver->getGlobalDualBound()
+                                  << ", " << solver->getPrimalBound() << "]\n";
+                        return false;
+                    }
+
+                    auto expectedClass = nonconvexObjective
+                        ? (discrete ? E_DualProblemClass::MIQP : E_DualProblemClass::QP)
+                        : (discrete ? E_DualProblemClass::MIQCQP : E_DualProblemClass::QCQP);
+                    auto deviation = problem->getMaxNumericConstraintValue(
+                        solver->getPrimalSolution().point, problem->numericConstraints);
+                    if(env->dualSolver->MIPSolver->getProblemClass() != expectedClass || !std::isfinite(deviation.error)
+                        || deviation.error > 1e-6)
+                    {
+                        std::cout << "Incorrect CPLEX problem class or infeasible quadratic solution\n";
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+    return true;
+}
+
+bool CplexDirectNonconvexQPTest()
+{
+    for(bool discrete : { false, true })
+    {
+        for(bool maximize : { false, true })
+        {
+            for(bool indefinite : { false, true })
+            {
+                for(int quadraticStrategy : { -1, 0, 1, 2, 3 }) // Default, then each explicit quadratic strategy
+                {
+                    auto solver = std::make_unique<Solver>();
+                    auto env = solver->getEnvironment();
+                    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+                    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
+                    solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+                    solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+                    solver->updateSetting("Primal.FixedInteger.Use", false);
+                    solver->updateSetting("Primal.PolishSolution.NumberOfPoints", 0);
+                    solver->updateSetting("Termination.ObjectiveGap.Absolute", 1e-8);
+                    solver->updateSetting("Termination.ObjectiveGap.Relative", 1e-8);
+                    solver->updateSetting("Termination.TimeLimit", 10.0);
+                    if(quadraticStrategy >= 0)
+                        solver->updateSetting("Model.Reformulation.Quadratics.Strategy", quadraticStrategy);
+
+                    auto problem = std::make_shared<Problem>(env);
+                    problem->name = "cplexdirectnonconvexqp";
+                    auto x = std::make_shared<Variable>(
+                        "x", discrete ? E_VariableType::Integer : E_VariableType::Real, 0.0, 2.0);
+                    auto y = std::make_shared<Variable>("y", E_VariableType::Real, -1.0, 1.0);
+                    problem->add({ x, y });
+
+                    auto objective = std::make_shared<QuadraticObjectiveFunction>(
+                        maximize ? E_ObjectiveFunctionDirection::Maximize : E_ObjectiveFunctionDirection::Minimize);
+                    double sign = maximize ? 1.0 : -1.0;
+                    objective->add(std::make_shared<QuadraticTerm>(sign, x, x));
+                    objective->add(std::make_shared<QuadraticTerm>(indefinite ? -sign : sign, y, y));
+                    problem->add(objective);
+
+                    // The two rows give x + |y| <= 1. Both objective types have an optimum at (1, 0).
+                    for(int i : { -1, 1 })
+                    {
+                        auto constraint
+                            = std::make_shared<LinearConstraint>("linear" + std::to_string(i), SHOT_DBL_MIN, 1.0);
+                        constraint->add(std::make_shared<LinearTerm>(1.0, x));
+                        constraint->add(std::make_shared<LinearTerm>(static_cast<double>(i), y));
+                        problem->add(constraint);
+                    }
+                    problem->finalize();
+                    if(!solver->setProblem(problem))
+                        return false;
+
+                    auto expectedStrategy = quadraticStrategy == 0
+                        ? (discrete ? E_SolutionStrategy::MultiTree : E_SolutionStrategy::NLP)
+                        : E_SolutionStrategy::MIQP;
+                    if(env->results->usedSolutionStrategy != expectedStrategy)
+                    {
+                        std::cout << "Incorrect CPLEX nonconvex QP strategy: discrete " << discrete << ", maximize "
+                                  << maximize << ", indefinite " << indefinite << ", quadratic strategy "
+                                  << quadraticStrategy << '\n';
+                        return false;
+                    }
+                    if(quadraticStrategy == 0)
+                        continue;
+
+                    double expectedObjective = maximize ? 1.0 : -1.0;
+                    if(!solver->solveProblem() || !solver->hasPrimalSolution()
+                        || solver->getModelReturnStatus() != E_ModelReturnStatus::OptimalGlobal
+                        || std::abs(solver->getPrimalBound() - expectedObjective) > 1e-6
+                        || std::abs(solver->getGlobalDualBound() - expectedObjective) > 1e-6)
+                    {
+                        std::cout << "Direct CPLEX nonconvex QP solve failed: discrete " << discrete << ", maximize "
+                                  << maximize << ", indefinite " << indefinite << ", quadratic strategy "
+                                  << quadraticStrategy << ", bounds [" << solver->getGlobalDualBound() << ", "
+                                  << solver->getPrimalBound() << "]\n";
+                        return false;
+                    }
+                    auto expectedClass = discrete ? E_DualProblemClass::MIQP : E_DualProblemClass::QP;
+                    auto deviation = problem->getMaxNumericConstraintValue(
+                        solver->getPrimalSolution().point, problem->numericConstraints);
+                    if(env->dualSolver->MIPSolver->getProblemClass() != expectedClass
+                        || env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable()
+                        || !std::isfinite(deviation.error) || deviation.error > 1e-6)
+                    {
+                        std::cout << "Incorrect CPLEX nonconvex QP class or infeasible solution\n";
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+    return true;
+}
+
 bool CplexRelaxationConversionTest()
 {
     auto solver = std::make_unique<Solver>();
@@ -954,6 +1150,14 @@ int CplexTest(int argc, char* argv[])
     case 29:
         std::cout << "Testing Cplex recovery settings and remaining time.\n";
         passed = CplexInfeasibilityRecoverySettingsTest();
+        break;
+    case 30:
+        std::cout << "Testing Cplex routing of quadratic objectives with quadratic constraints.\n";
+        passed = CplexQuadraticObjectiveAndConstraintsTest();
+        break;
+    case 31:
+        std::cout << "Testing direct Cplex solves of nonconvex QP and MIQP models.\n";
+        passed = CplexDirectNonconvexQPTest();
         break;
     default:
         passed = false;

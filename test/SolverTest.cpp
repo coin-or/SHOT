@@ -46,6 +46,10 @@
 #include <set>
 #include <stdexcept>
 
+#ifdef HAS_GUROBI
+#include "gurobi_c.h"
+#endif
+
 using namespace SHOT;
 
 bool ReadProblem(std::string filename)
@@ -2685,6 +2689,102 @@ bool TestStrategySelectionForLinearAndQuadraticProblems()
     return true;
 }
 
+bool TestStrategySelectionForNonconvexQuadraticProblems()
+{
+#if defined(HAS_GUROBI) && GRB_VERSION_MAJOR >= 9
+    for(bool discrete : { false, true })
+    {
+        for(int quadraticType : { 1, 2, 3 }) // Nonconvex objective, constraints, or both
+        {
+            for(int quadraticStrategy : { -1, 0, 1, 2, 3 }) // Recommended settings, then each explicit strategy
+            {
+                auto solver = std::make_unique<Solver>();
+                auto env = solver->getEnvironment();
+                solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+                solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Gurobi));
+                solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+                solver->updateSetting("Primal.FixedInteger.Use", false);
+                solver->updateSetting("Primal.PolishSolution.NumberOfPoints", 0);
+                solver->updateSetting("Termination.TimeLimit", 10.0);
+                if(quadraticStrategy >= 0)
+                    solver->updateSetting("Model.Reformulation.Quadratics.Strategy", quadraticStrategy);
+
+                auto problem = std::make_shared<Problem>(env);
+                problem->name = "nonconvexquadraticstrategy";
+                auto type = discrete ? E_VariableType::Integer : E_VariableType::Real;
+                auto x = std::make_shared<Variable>("x", type, 0.0, 2.0);
+                auto y = std::make_shared<Variable>("y", type, 0.0, 2.0);
+                problem->add(x);
+                problem->add(y);
+                if(quadraticType & 1)
+                {
+                    auto objective
+                        = std::make_shared<QuadraticObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+                    objective->add(std::make_shared<QuadraticTerm>(-1.0, x, x));
+                    objective->add(std::make_shared<QuadraticTerm>(-1.0, y, y));
+                    problem->add(objective);
+                }
+                else
+                {
+                    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+                    objective->add(std::make_shared<LinearTerm>(-1.0, x));
+                    objective->add(std::make_shared<LinearTerm>(-1.0, y));
+                    problem->add(objective);
+                }
+                if(quadraticType & 2)
+                {
+                    for(int i : { 1, 2 })
+                    {
+                        auto constraint = std::make_shared<QuadraticConstraint>(
+                            "quadratic" + std::to_string(i), SHOT_DBL_MIN, -static_cast<double>(i));
+                        constraint->add(std::make_shared<QuadraticTerm>(-1.0, x, x));
+                        constraint->add(std::make_shared<QuadraticTerm>(-static_cast<double>(i), y, y));
+                        problem->add(constraint);
+                    }
+                }
+                problem->finalize();
+                if(!solver->setProblem(problem))
+                    return false;
+
+                bool direct = quadraticStrategy == -1 || quadraticStrategy == 3;
+                auto expected = direct ? (quadraticType & 2 ? E_SolutionStrategy::MIQCQP : E_SolutionStrategy::MIQP)
+                                       : (discrete ? E_SolutionStrategy::MultiTree : E_SolutionStrategy::NLP);
+                if(env->results->usedSolutionStrategy != expected)
+                {
+                    std::cout << "Incorrect strategy for nonconvex quadratic type " << quadraticType << ", discrete "
+                              << discrete << ", quadratic strategy " << quadraticStrategy << '\n';
+                    return false;
+                }
+                if(direct)
+                {
+                    double expectedObjective = quadraticType & 1 ? -8.0 : -4.0;
+                    if(!solver->solveProblem() || solver->getPrimalSolutions().empty()
+                        || std::abs(solver->getPrimalSolution().objValue - expectedObjective) > 1e-6
+                        || std::abs(solver->getGlobalDualBound() - expectedObjective) > 1e-6
+                        || solver->getModelReturnStatus() != E_ModelReturnStatus::OptimalGlobal)
+                    {
+                        std::cout << "Direct nonconvex quadratic solve failed for type " << quadraticType
+                                  << ", discrete " << discrete << '\n';
+                        return false;
+                    }
+                    if(!env->problem->numericConstraints.empty())
+                    {
+                        auto deviation = env->problem->getMaxNumericConstraintValue(
+                            solver->getPrimalSolution().point, env->problem->numericConstraints);
+                        if(!std::isfinite(deviation.error) || deviation.error > 1e-6)
+                        {
+                            std::cout << "Direct nonconvex quadratic solve returned an infeasible point\n";
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+#endif
+    return true;
+}
+
 // Squares in the objective function and the constraints, also inside nonlinear expressions, so that the partitioning of
 // the quadratic terms in each is decided by the PartitionQuadraticTerms setting of the constraints or the objective
 // function. The objective function only has squares of u and v, and the constraints only of x, y and z.
@@ -5240,6 +5340,9 @@ int SolverTest(int argc, char* argv[])
         break;
     case 51:
         passed = TestIntegerBilinearDiscretizationValues();
+        break;
+    case 52:
+        passed = TestStrategySelectionForNonconvexQuadraticProblems();
         break;
     default:
         passed = false;
