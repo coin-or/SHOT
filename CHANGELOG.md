@@ -162,13 +162,13 @@ Changes since SHOT 1.1.
 ### Fixed
 
 - Convex maximization QCQP and MIQCQP models retain their quadratic constraints
-  with CPLEX and use the direct quadratic strategy.
+  with CPLEX and use the direct quadratic strategy ([#298]).
 - CPLEX uses the direct quadratic strategy for nonconvex QP and MIQP models
-  with only linear constraints when quadratic objectives are enabled.
+  with only linear constraints when quadratic objectives are enabled ([#298]).
 - Nonconvex QP, MIQP, QCQP and MIQCQP models use the direct quadratic strategy
   with Gurobi 9 or newer when `Model.Reformulation.Quadratics.Strategy=3`,
   including when selected by recommended settings, instead of falling back to
-  the NLP or multi-tree strategy.
+  the NLP or multi-tree strategy ([#298]).
 - Integer bilinear discretization stores and evaluates its auxiliary binary values
   in linear space and time instead of building a quadratic number of polynomial
   factors. Fractional points use bounded interpolation between adjacent values
@@ -494,6 +494,7 @@ Changes since SHOT 1.1.
 [#295]: https://github.com/coin-or/SHOT/pull/295
 [#296]: https://github.com/coin-or/SHOT/pull/296
 [#297]: https://github.com/coin-or/SHOT/pull/297
+[#298]: https://github.com/coin-or/SHOT/pull/298
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
