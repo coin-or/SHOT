@@ -21,6 +21,7 @@
 #include "../src/Model/Problem.h"
 
 #include "../src/NLPSolver/NLPSolverIpoptRelaxed.h"
+#include "IpIpoptData.hpp"
 
 #include <array>
 #include <cmath>
@@ -435,6 +436,165 @@ bool IpoptTest4()
     return passed;
 }
 
+bool IpoptTest5()
+{
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    auto problem = std::make_shared<Problem>(env);
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, -2.0, 2.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Integer, -2.0, 2.0);
+    problem->add({ x, y });
+
+    // (x - 1)^2 + (y - x)^2 has its unconstrained minimum at x = y = 1.
+    auto objective = std::make_shared<QuadraticObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<QuadraticTerm>(2.0, x, x));
+    objective->add(std::make_shared<QuadraticTerm>(-2.0, x, y));
+    objective->add(std::make_shared<QuadraticTerm>(1.0, y, y));
+    objective->add(std::make_shared<LinearTerm>(-2.0, x));
+    objective->constant = 1.0;
+    problem->add(objective);
+    auto row = std::make_shared<LinearConstraint>("sum", SHOT_DBL_MIN, 4.0);
+    row->add(std::make_shared<LinearTerm>(1.0, x));
+    row->add(std::make_shared<LinearTerm>(1.0, y));
+    problem->add(row);
+    problem->finalize();
+    env->problem = problem;
+
+    class TestSolver : public NLPSolverIpoptRelaxed
+    {
+    public:
+        using NLPSolverIpoptBase::fixVariables;
+        using NLPSolverIpoptBase::getVariableLowerBounds;
+        using NLPSolverIpoptBase::getVariableUpperBounds;
+        using NLPSolverIpoptBase::unfixVariables;
+        using NLPSolverIpoptBase::updateVariableLowerBound;
+        using NLPSolverIpoptBase::updateVariableUpperBound;
+
+        TestSolver(EnvironmentPtr envPtr, ProblemPtr source) : INLPSolver(envPtr), NLPSolverIpoptRelaxed(envPtr, source)
+        {
+        }
+
+        auto getIpoptData() { return ipoptApplication->IpoptDataObject(); }
+        auto getIpoptOptions() { return ipoptApplication->Options(); }
+    };
+
+    bool passed = true;
+    auto checkSolve = [&](TestSolver& nlp, double expected, bool reuse, const std::string& description)
+    {
+        // Retaining the old object prevents a new allocation from coincidentally having the same address.
+        auto previous = nlp.getIpoptData();
+        auto status = nlp.solveProblem();
+        auto current = nlp.getIpoptData();
+        auto point = nlp.getSolution();
+
+        if(!Ipopt::IsValid(current) || (reuse && current != previous)
+            || (!reuse && Ipopt::IsValid(previous) && current == previous))
+        {
+            std::cout << "  FAILED (" << description << "): unexpected Ipopt state reuse.\n";
+            passed = false;
+        }
+
+        if((status != E_NLPSolutionStatus::Optimal && status != E_NLPSolutionStatus::Feasible) || point.size() != 2
+            || std::abs(nlp.getObjectiveValue() - expected) > 1e-6)
+        {
+            std::cout << "  FAILED (" << description << "): wrong solve status or objective.\n";
+            passed = false;
+
+            return;
+        }
+
+        auto lower = nlp.getVariableLowerBounds();
+        auto upper = nlp.getVariableUpperBounds();
+
+        for(size_t i = 0; i < point.size(); ++i)
+        {
+            if(point[i] < lower[i] - 1e-6 || point[i] > upper[i] + 1e-6)
+            {
+                std::cout << "  FAILED (" << description << "): solution violates updated variable bounds.\n";
+                passed = false;
+            }
+        }
+
+        if(!problem->areNumericConstraintsFulfilled(point, 1e-6)
+            || std::abs(problem->objectiveFunction->calculateValue(point) - nlp.getObjectiveValue()) > 1e-6)
+        {
+            std::cout << "  FAILED (" << description << "): solution violates the current problem.\n";
+            passed = false;
+        }
+    };
+
+    TestSolver nlp(env, problem);
+    nlp.setTimeLimit(1.0);
+    nlp.getIpoptOptions()->SetIntegerValue("max_iter", 0);
+    nlp.setStartingPoint({ 0, 1 }, { -1.5, 1.5 });
+
+    if(nlp.solveProblem() != E_NLPSolutionStatus::IterationLimit)
+    {
+        std::cout << "  FAILED: initial Ipopt iteration limit was not reached.\n";
+        passed = false;
+    }
+
+    nlp.getIpoptOptions()->SetIntegerValue("max_iter", 100);
+    checkSolve(nlp, 0.0, true, "after iteration limit");
+    nlp.setStartingPoint({ 0, 1 }, { 1.8, -1.5 });
+    checkSolve(nlp, 0.0, true, "changed starting point");
+    nlp.clearStartingPoint();
+    checkSolve(nlp, 0.0, true, "cleared starting point");
+
+    nlp.updateVariableUpperBound(0, 0.25);
+    checkSolve(nlp, 0.5625, true, "changed variable bound");
+    nlp.updateVariableUpperBound(0, 2.0);
+    nlp.fixVariables({ 1 }, { 0.0 });
+    checkSolve(nlp, 0.5, true, "fixed variable");
+    nlp.unfixVariables();
+    checkSolve(nlp, 0.0, true, "unfixed variable");
+
+    row->valueLHS = 1.0;
+    row->valueRHS = 1.0;
+    checkSolve(nlp, 0.2, true, "changed constraint bounds to equality");
+    row->valueLHS = SHOT_DBL_MIN;
+    nlp.fixVariables({ 0, 1 }, { 1.0, 1.0 });
+    auto previous = nlp.getIpoptData();
+
+    if(nlp.solveProblem() != E_NLPSolutionStatus::Infeasible || nlp.getIpoptData() != previous)
+    {
+        std::cout << "  FAILED: infeasible fixed variables were not detected with reused state.\n";
+        passed = false;
+    }
+
+    nlp.unfixVariables();
+    row->valueRHS = 4.0;
+    checkSolve(nlp, 0.0, true, "after infeasible solve");
+    nlp.updateVariableLowerBound(0, 3.0);
+
+    if(nlp.solveProblem() != E_NLPSolutionStatus::Error)
+    {
+        std::cout << "  FAILED: inconsistent variable bounds did not produce an error.\n";
+        passed = false;
+    }
+
+    nlp.updateVariableLowerBound(0, -2.0);
+    checkSolve(nlp, 0.0, false, "fresh state after error");
+    checkSolve(nlp, 0.0, true, "reuse after recovery");
+
+    TestSolver failedFirst(env, problem);
+    failedFirst.setTimeLimit(1.0);
+    failedFirst.updateVariableLowerBound(0, 3.0);
+
+    if(failedFirst.solveProblem() != E_NLPSolutionStatus::Error)
+    {
+        std::cout << "  FAILED: the first solve with invalid bounds did not fail.\n";
+        passed = false;
+    }
+
+    failedFirst.updateVariableLowerBound(0, -2.0);
+    checkSolve(failedFirst, 0.0, false, "first valid solve after initialization error");
+    checkSolve(failedFirst, 0.0, true, "reuse after initial error recovery");
+
+    return passed;
+}
+
 int IpoptTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -469,6 +629,9 @@ int IpoptTest(int argc, char* argv[])
         break;
     case 4:
         passed = IpoptTest4();
+        break;
+    case 5:
+        passed = IpoptTest5();
         break;
     default:
         passed = false;

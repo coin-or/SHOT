@@ -168,7 +168,7 @@ class NLPSolverIpoptBase : virtual public INLPSolver
 {
 
 private:
-    bool hasBeenSolved = false;
+    bool canReoptimize = false;
     bool maxWallTimeWarningShown = false;
 
 protected:
