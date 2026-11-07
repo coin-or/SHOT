@@ -978,6 +978,46 @@ E_ProblemSolutionStatus MIPSolverHighs::resolveInfeasibleOrUnbounded(E_ProblemSo
     if(highsInstance.getModelStatus() != HighsModelStatus::kUnboundedOrInfeasible)
         return (status);
 
+    // An unbounded root LP does not establish integer feasibility. Check that separately before disabling
+    // presolve, which can be unsafe for unbounded integer domains in HiGHS's reduced-cost probing.
+    if(highsInstance.getLp().isMip())
+    {
+        auto model = highsInstance.getModel();
+        std::fill(model.lp_.col_cost_.begin(), model.lp_.col_cost_.end(), 0.0);
+        model.lp_.offset_ = 0.0;
+        model.lp_.sense_ = ObjSense::kMinimize;
+
+        Highs feasibilityModel;
+        feasibilityModel.passModel(model);
+        feasibilityModel.passOptions(highsInstance.getOptions());
+        feasibilityModel.setOptionValue("output_flag", false);
+        feasibilityModel.setOptionValue("presolve", "on");
+        feasibilityModel.setOptionValue("objective_bound", kHighsInf);
+        feasibilityModel.setOptionValue("objective_target", -kHighsInf);
+        feasibilityModel.setOptionValue("time_limit",
+            std::max(0.0,
+                highsCallbackData.timeLimit
+                    - std::chrono::duration<double>(std::chrono::steady_clock::now() - highsCallbackData.solveStarted)
+                        .count()));
+        feasibilityModel.setCallback(highsCallback, reinterpret_cast<void*>(&highsCallbackData));
+        feasibilityModel.startCallback(kCallbackMipInterrupt);
+        feasibilityModel.startCallback(kCallbackSimplexInterrupt);
+        feasibilityModel.startCallback(kCallbackIpmInterrupt);
+        feasibilityModel.run();
+
+        if(feasibilityModel.getModelStatus() == HighsModelStatus::kOptimal)
+            return E_ProblemSolutionStatus::Unbounded;
+
+        if(feasibilityModel.getModelStatus() == HighsModelStatus::kInfeasible)
+            return E_ProblemSolutionStatus::Infeasible;
+
+        if(interruptedByTermination)
+            return E_ProblemSolutionStatus::Abort;
+
+        if(interruptedByTimeLimit || feasibilityModel.getModelStatus() == HighsModelStatus::kTimeLimit)
+            return E_ProblemSolutionStatus::TimeLimit;
+    }
+
     std::string presolve;
     highsInstance.getOptionValue("presolve", presolve);
 
