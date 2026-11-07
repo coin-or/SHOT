@@ -11,6 +11,7 @@
 #include "Solver.h"
 
 #include "DualSolver.h"
+#include "MIPSolver/MIPSolverCapabilities.h"
 #include "PrimalSolver.h"
 #include "Report.h"
 #include "Results.h"
@@ -47,12 +48,41 @@ namespace fs = std;
 namespace fs = std::experimental;
 #endif
 
-#ifdef HAS_GUROBI
-#include "gurobi_c++.h"
-#endif
-
 namespace SHOT
 {
+namespace
+{
+    bool supportsQuadraticModel(const MIPSolverCapabilities& capabilities, const Problem& problem)
+    {
+        const auto& objective = problem.objectiveFunction->properties;
+
+        if(objective.classification > E_ObjectiveFunctionClassification::Quadratic)
+            return false;
+
+        bool nonconvexObjective = objective.classification == E_ObjectiveFunctionClassification::Quadratic
+            && objective.convexity != E_Convexity::Linear
+            && objective.convexity != (objective.isMinimize ? E_Convexity::Convex : E_Convexity::Concave);
+
+        if(objective.classification == E_ObjectiveFunctionClassification::Quadratic
+            && !(nonconvexObjective ? capabilities.nonconvexQuadraticObjective : capabilities.convexQuadraticObjective))
+            return false;
+
+        if(nonconvexObjective && capabilities.nonconvexObjectiveExcludesQuadraticConstraints
+            && !problem.quadraticConstraints.empty())
+            return false;
+
+        for(const auto& constraint : problem.quadraticConstraints)
+        {
+            bool convex = constraint->properties.convexity == E_Convexity::Convex
+                || constraint->properties.convexity == E_Convexity::Linear;
+
+            if(!(convex ? capabilities.convexQuadraticConstraints : capabilities.nonconvexQuadraticConstraints))
+                return false;
+        }
+
+        return problem.nonlinearConstraints.empty();
+    }
+} // namespace
 
 void Solver::createTimers()
 {
@@ -350,6 +380,9 @@ bool Solver::setProblem(std::string fileName)
         }
 #endif
 
+        if(!validateMIPFeatures(env->problem))
+            return false;
+
         if(env->problem->name == "")
             env->problem->name = problemName.string();
 
@@ -480,6 +513,9 @@ bool Solver::setProblem(
 
     setReformulationSettings();
 
+    if(!validateMIPFeatures(env->problem))
+        return false;
+
     // The cutoff the dual solver starts from, as in the overload reading the problem from a file. Without this
     // Dual.MIP.CutOff.InitialValue would silently have no effect on this path.
     if(env->settings->getSetting<bool>("Dual.MIP.CutOff.UseInitialValue")
@@ -573,6 +609,10 @@ bool Solver::setProblem(
 // Called before the problem is read and bound tightening is performed, since these use the reformulation settings
 void Solver::setReformulationSettings()
 {
+    // Resolve an unavailable backend before reading the model, without changing the numerical bound defaults
+    // used by the reader and bound tightening. Full settings verification still runs after reading the model.
+    setMIPSolverCompatibilitySettings();
+
     // Do not do convexifying reformulations if the problem is assumed to be convex
     if(env->settings->getSetting<bool>("Model.Convexity.AssumeConvex"))
     {
@@ -582,23 +622,6 @@ void Solver::setReformulationSettings()
         env->settings->updateSetting("Model.Reformulation.Monomials.Formulation",
             (int)ES_ReformulationBinaryMonomials::None, E_SettingPriority::RecommendedInternal);
     }
-
-    // Cbc and HiGHS are not given quadratic terms
-#ifdef HAS_CBC
-    if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Cbc)
-    {
-        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy",
-            (int)ES_QuadraticProblemStrategy::Nonlinear, E_SettingPriority::SolverCompatibility);
-    }
-#endif
-
-#ifdef HAS_HIGHS
-    if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Highs)
-    {
-        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy",
-            (int)ES_QuadraticProblemStrategy::Nonlinear, E_SettingPriority::SolverCompatibility);
-    }
-#endif
 }
 
 bool Solver::setStartingPoint(const VectorDouble& point)
@@ -630,33 +653,73 @@ bool Solver::setStartingPoint(const VectorDouble& point)
     return (true);
 }
 
+void Solver::setMIPSolverCompatibilitySettings()
+{
+    auto solver = static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver"));
+    auto capabilities = getMIPSolverCapabilities(solver);
+
+    if(!capabilities)
+    {
+        env->output->outputWarning(" SHOT has not been compiled with support for selected MIP solver.");
+#ifdef HAS_GUROBI
+        solver = ES_MIPSolver::Gurobi;
+#elif defined(HAS_CPLEX)
+        solver = ES_MIPSolver::Cplex;
+#elif defined(HAS_HIGHS)
+        solver = ES_MIPSolver::Highs;
+#elif defined(HAS_CBC)
+        solver = ES_MIPSolver::Cbc;
+#else
+        throw Exception(" SHOT has not been compiled with support for any MIP solver.");
+#endif
+        // Availability must override an explicit user selection too.
+        env->settings->updateSetting(
+            "Dual.MIP.Solver", static_cast<int>(solver), E_SettingPriority::SolverCompatibility);
+        capabilities = getMIPSolverCapabilities(solver);
+    }
+
+    if(!capabilities->singleTree)
+        env->settings->updateSetting(
+            "Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree), E_SettingPriority::SolverCompatibility);
+
+    if(!capabilities->convexQuadraticObjective && !capabilities->nonconvexQuadraticObjective
+        && !capabilities->convexQuadraticConstraints && !capabilities->nonconvexQuadraticConstraints)
+        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy",
+            static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear), E_SettingPriority::SolverCompatibility);
+    else if(!capabilities->convexQuadraticConstraints && !capabilities->nonconvexQuadraticConstraints
+        && env->settings->getSetting<int>("Model.Reformulation.Quadratics.Strategy")
+            > static_cast<int>(ES_QuadraticProblemStrategy::QuadraticObjective))
+        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy",
+            static_cast<int>(ES_QuadraticProblemStrategy::QuadraticObjective), E_SettingPriority::SolverCompatibility);
+}
+
+bool Solver::validateMIPFeatures(ProblemPtr problem)
+{
+    auto solver = static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver"));
+    auto capabilities = getMIPSolverCapabilities(solver);
+
+    if(!capabilities)
+        return false;
+
+    if(auto feature = getUnsupportedMIPFeature(*capabilities, *problem))
+    {
+        env->output->outputError(fmt::format(" The selected MIP solver ({}) does not support {}.",
+            env->settings->getEnumDescription("MIP.Solver", "Dual").at(static_cast<int>(solver)).second, *feature));
+        return false;
+    }
+
+    return true;
+}
+
 bool Solver::selectStrategy()
 {
     try
     {
-        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Cbc
-            || static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Highs)
-        {
-            // The reformulated problem can have discrete variables also when the original problem has none, e.g., the
-            // binary variables that bound absolute values from above
-            auto problem = (env->reformulatedProblem) ? env->reformulatedProblem : env->problem;
+        auto solver = static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver"));
+        auto capabilities = getMIPSolverCapabilities(solver);
 
-            if(problem->properties.numberOfDiscreteVariables == 0
-                && problem->properties.numberOfSemicontinuousVariables == 0)
-            {
-                env->output->outputDebug(" Using continuous problem solution strategy.");
-                solutionStrategy = std::make_unique<SolutionStrategyNLP>(env);
-                env->results->usedSolutionStrategy = E_SolutionStrategy::NLP;
-            }
-            else
-            {
-                solutionStrategy = std::make_unique<SolutionStrategyMultiTree>(env);
-                isProblemInitialized = true;
-                env->results->usedSolutionStrategy = E_SolutionStrategy::MultiTree;
-            }
-
-            return (true);
-        }
+        if(!capabilities || !validateMIPFeatures(env->reformulatedProblem))
+            return false;
 
         auto quadraticStrategy = static_cast<ES_QuadraticProblemStrategy>(
             env->settings->getSetting<int>("Model.Reformulation.Quadratics.Strategy"));
@@ -668,18 +731,9 @@ bool Solver::selectStrategy()
         // Select from the model we actually solve: quadratic terms can disappear during linearization.
         const auto& properties = env->reformulatedProblem->properties;
         bool isConvex = properties.convexity == E_ProblemConvexity::Convex;
-        bool canSolveQuadraticDirectly = isConvex;
-#if defined(HAS_GUROBI) && GRB_VERSION_MAJOR >= 9
-        // Gurobi can solve the whole nonconvex quadratic model when its quadratic terms are retained.
-        canSolveQuadraticDirectly = canSolveQuadraticDirectly
-            || (static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Gurobi
-                && quadraticStrategy == ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained);
-#endif
-        // CPLEX also solves nonconvex quadratic objectives directly when all constraints are linear.
-        bool canSolveQPDirectly = canSolveQuadraticDirectly
-            || static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Cplex;
+        bool canSolveQuadraticDirectly = supportsQuadraticModel(*capabilities, *env->reformulatedProblem);
 
-        if(canSolveQPDirectly && (useQuadraticObjective || useQuadraticConstraints) && properties.isMIQPProblem)
+        if(canSolveQuadraticDirectly && (useQuadraticObjective || useQuadraticConstraints) && properties.isMIQPProblem)
         // MIQP problem
         {
             env->settings->updateSetting(
@@ -688,7 +742,8 @@ bool Solver::selectStrategy()
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
         }
-        else if(canSolveQPDirectly && (useQuadraticObjective || useQuadraticConstraints) && properties.isQPProblem)
+        else if(canSolveQuadraticDirectly && (useQuadraticObjective || useQuadraticConstraints)
+            && properties.isQPProblem)
         // QP problem
         {
             env->output->outputDebug(" Using QP solution strategy.");
@@ -752,15 +807,6 @@ bool Solver::selectStrategy()
             }
         }
 
-        // Want to show the output from Gurobi if Gurobi handles the whole problem
-        if(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Gurobi
-            && ((useQuadraticObjective || useQuadraticConstraints)
-                && (properties.isMIQPProblem || properties.isMIQCQPProblem || properties.isQCQPProblem
-                    || properties.isQPProblem)))
-        {
-            env->settings->updateSetting(
-                "Output.Console.DualSolver.Show", true, E_SettingPriority::RecommendedInternal);
-        }
         isProblemInitialized = true;
     }
     catch(Exception& e)
@@ -1118,78 +1164,10 @@ void Solver::verifySettings()
 
     // Checking for errors in MIP solver selection
 
+    setMIPSolverCompatibilitySettings();
     auto solver = static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver"));
-    bool MIPSolverDefined = false;
-    double unboundedVariableBound = 1e50;
 
-#ifdef HAS_CPLEX
-    if(solver == ES_MIPSolver::Cplex)
-    {
-        MIPSolverDefined = true;
-        unboundedVariableBound = 1e20;
-    }
-#endif
-
-#ifdef HAS_GUROBI
-    if(solver == ES_MIPSolver::Gurobi)
-    {
-        MIPSolverDefined = true;
-        unboundedVariableBound = 1e20;
-    }
-#endif
-
-#ifdef HAS_CBC
-    if(solver == ES_MIPSolver::Cbc)
-    {
-        MIPSolverDefined = true;
-        unboundedVariableBound = 1e50;
-
-        // Some features are not available in Cbc
-        env->settings->updateSetting(
-            "Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree), E_SettingPriority::SolverCompatibility);
-        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy",
-            static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear), E_SettingPriority::SolverCompatibility);
-    }
-#endif
-
-#ifdef HAS_HIGHS
-    if(solver == ES_MIPSolver::Highs)
-    {
-        MIPSolverDefined = true;
-        unboundedVariableBound = 1e20;
-
-        // Some features are not available in Highs
-        env->settings->updateSetting(
-            "Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree), E_SettingPriority::SolverCompatibility);
-        env->settings->updateSetting("Model.Reformulation.Quadratics.Strategy",
-            static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear), E_SettingPriority::SolverCompatibility);
-    }
-#endif
-
-    if(!MIPSolverDefined)
-    {
-        env->output->outputWarning(" SHOT has not been compiled with support for selected MIP solver.");
-
-#ifdef HAS_GUROBI
-        env->settings->updateSetting(
-            "Dual.MIP.Solver", (int)ES_MIPSolver::Gurobi, E_SettingPriority::RecommendedInternal);
-        unboundedVariableBound = 1e20;
-#elif HAS_CPLEX
-        env->settings->updateSetting(
-            "Dual.MIP.Solver", (int)ES_MIPSolver::Cplex, E_SettingPriority::RecommendedInternal);
-        unboundedVariableBound = 1e20;
-#elif HAS_HIGHS
-        env->settings->updateSetting(
-            "Dual.MIP.Solver", (int)ES_MIPSolver::Highs, E_SettingPriority::RecommendedInternal);
-        unboundedVariableBound = 1e20;
-#elif HAS_CBC
-        env->settings->updateSetting("Dual.MIP.Solver", (int)ES_MIPSolver::Cbc, E_SettingPriority::RecommendedInternal);
-        unboundedVariableBound = 1e50;
-
-#else
-        env->output->outputCritical(" SHOT has not been compiled with support for any MIP solver.");
-#endif
-    }
+    double unboundedVariableBound = getMIPSolverCapabilities(solver)->unboundedVariableBound;
 
     // Updating max bound setting for unbounded variables
     double minLB = env->settings->getSetting<double>("Model.Variables.Continuous.MinimumLowerBound");
@@ -1231,10 +1209,7 @@ std::set<E_SettingCondition> Solver::getSettingConditions(ProblemPtr problem)
         conditions.insert(E_SettingCondition::MIPSolverCplex);
         break;
     case ES_MIPSolver::Gurobi:
-#if defined(HAS_GUROBI) && GRB_VERSION_MAJOR >= 9
-        // The recommended values for Gurobi assume version 9 or newer, which supports nonconvex quadratic terms
         conditions.insert(E_SettingCondition::MIPSolverGurobi);
-#endif
         break;
     case ES_MIPSolver::Cbc:
         conditions.insert(E_SettingCondition::MIPSolverCbc);
@@ -1409,32 +1384,7 @@ bool Solver::hasModelingSystem(ES_ModelingSystem format)
     }
 }
 
-bool Solver::hasMIPSolver(ES_MIPSolver solver)
-{
-    switch(solver)
-    {
-    case ES_MIPSolver::Cplex:
-#ifdef HAS_CPLEX
-        return true;
-#else
-        return false;
-#endif
-    case ES_MIPSolver::Gurobi:
-#ifdef HAS_GUROBI
-        return true;
-#else
-        return false;
-#endif
-    case ES_MIPSolver::Cbc:
-#ifdef HAS_CBC
-        return true;
-#else
-        return false;
-#endif
-    default:
-        return false;
-    }
-}
+bool Solver::hasMIPSolver(ES_MIPSolver solver) { return getMIPSolverCapabilities(solver).has_value(); }
 
 bool Solver::hasNLPSolver(ES_PrimalNLPSolver solver)
 {

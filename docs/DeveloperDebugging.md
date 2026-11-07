@@ -5,6 +5,8 @@ Start with [Debugging SHOT](DebuggingSHOT.md) to enable diagnostics and locate
 [intermediate models and points](DebuggingSHOT.md#debug-file-reference).
 For normal progress rows and status interpretation, see
 [Understanding SHOT output](UnderstandingOutput.md).
+For backend feature discovery and strategy compatibility checks, see
+[MIP solver capabilities](MIPSolverCapabilities.md).
 
 ## Why the output looks the way it does
 

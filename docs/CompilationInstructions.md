@@ -388,7 +388,7 @@ but SHOT only needs their SDK/headers+libraries at compile time:
   `$HOME/Applications` (this is how a Mac install under
   `~/Applications/CPLEX_Studio<version>` gets found); override with
   `-DCPLEX_DIR=<path>/cplex` if installed elsewhere.
-- **Gurobi**: auto-detected (`cmake/FindGUROBI.cmake`) under
+- **Gurobi 10.0 or newer**: auto-detected (`cmake/FindGUROBI.cmake`) under
   `/opt/gurobi*/linux64` (Linux) or `/Library/gurobi*/mac64`,
   `/Library/gurobi*/macos_universal2`, `/Library/gurobi*/macos_arm64`
   (macOS) — these are Gurobi's own standard installer locations; override

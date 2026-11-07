@@ -23,7 +23,7 @@ The build fails on Sphinx warnings and missing module/Doxygen dependencies.
 Notebook execution is disabled: run changed examples separately before publishing.
 
 Run the complete Python examples in the first-model, results, configuration,
-and modeling guides with the matching module:
+modeling, and MIP-capabilities guides with the matching module:
 
 ```bash
 PYTHONPATH="$PWD/build" .venv-docs/bin/python docs/check_examples.py

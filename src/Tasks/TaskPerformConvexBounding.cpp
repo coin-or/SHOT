@@ -126,7 +126,8 @@ void TaskPerformConvexBounding::run()
 
     env->output->outputDebug("  Creating convex bounding problem");
 
-    taskCreateMIPProblem = std::make_shared<TaskCreateMIPProblem>(env, MIPSolver, env->reformulatedProblem);
+    taskCreateMIPProblem = std::make_shared<TaskCreateMIPProblem>(
+        env, MIPSolver, env->reformulatedProblem, getMIPSolverCapabilities(env->results->usedMIPSolver).value());
     taskCreateMIPProblem->run();
 
     int numberHyperplanesAdded = 0;

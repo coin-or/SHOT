@@ -39,6 +39,27 @@ message(STATUS "Found Gurobi folder: ${GUROBI_INSTALL_DIR}")
 if(GUROBI_INSTALL_DIR)
   set(GUROBI_INCLUDE_DIR "${GUROBI_INSTALL_DIR}/include")
   set(GUROBI_LIB_DIR "${GUROBI_INSTALL_DIR}/lib")
+
+  # Read the SDK version before accepting its libraries, including when no compiler or license is available.
+  unset(GUROBI_VERSION)
+
+  if(EXISTS "${GUROBI_INCLUDE_DIR}/gurobi_c.h")
+    file(STRINGS "${GUROBI_INCLUDE_DIR}/gurobi_c.h" GUROBI_VERSION_DEFINES
+         REGEX "^#[ \t]*define[ \t]+GRB_VERSION_(MAJOR|MINOR|TECHNICAL)[ \t]+[0-9]+")
+    foreach(component MAJOR MINOR TECHNICAL)
+      unset(GUROBI_VERSION_${component})
+      foreach(line IN LISTS GUROBI_VERSION_DEFINES)
+        if(line MATCHES "GRB_VERSION_${component}[ \t]+([0-9]+)")
+          set(GUROBI_VERSION_${component} "${CMAKE_MATCH_1}")
+        endif()
+      endforeach()
+    endforeach()
+
+    if(DEFINED GUROBI_VERSION_MAJOR AND DEFINED GUROBI_VERSION_MINOR AND DEFINED GUROBI_VERSION_TECHNICAL)
+      set(GUROBI_VERSION "${GUROBI_VERSION_MAJOR}.${GUROBI_VERSION_MINOR}.${GUROBI_VERSION_TECHNICAL}")
+    endif()
+  endif()
+
   message(STATUS "Using Gurobi include folder: ${GUROBI_INCLUDE_DIR}")
   message(STATUS "Using Gurobi library folder: ${GUROBI_LIB_DIR}")
 
@@ -151,12 +172,27 @@ if(GUROBI_INSTALL_DIR)
   message(STATUS "Found Gurobi C++ library: ${GUROBI_CPP_LIBRARY}")
 endif()
 
-# Handle the QUIETLY and REQUIRED arguments and set GUROBI_FOUND to TRUE if all
-# listed variables are TRUE.
+# Match the core library to the header version; a stale library from another SDK is not compatible.
+set(GUROBI_VERSION_LIBRARY_MATCH FALSE)
+
+if(GUROBI_VERSION)
+  foreach(library_list GUROBI_LIBRARY GUROBI_LIBRARY_DEBUG GUROBI_CPP_LIBRARY)
+    foreach(library IN LISTS ${library_list})
+      get_filename_component(library_name "${library}" NAME)
+
+      if(library_name MATCHES "^(lib)?gurobi[0-9]+\\.(dylib|so|lib)$")
+        if(library_name MATCHES "^(lib)?gurobi${GUROBI_VERSION_MAJOR}${GUROBI_VERSION_MINOR}\\.(dylib|so|lib)$")
+          set(GUROBI_VERSION_LIBRARY_MATCH TRUE)
+        else()
+          list(REMOVE_ITEM ${library_list} "${library}")
+        endif()
+      endif()
+    endforeach()
+  endforeach()
+endif()
 find_package_handle_standard_args(GUROBI
-                                  DEFAULT_MSG
-                                  GUROBI_LIBRARY
-                                  GUROBI_CPP_LIBRARY)
+    REQUIRED_VARS GUROBI_INCLUDE_DIR GUROBI_LIBRARY GUROBI_CPP_LIBRARY GUROBI_VERSION GUROBI_VERSION_LIBRARY_MATCH
+    VERSION_VAR GUROBI_VERSION)
 mark_as_advanced(GUROBI_LIBRARY
                  GUROBI_CPP_LIBRARY
                  GUROBI_INCLUDE_DIR

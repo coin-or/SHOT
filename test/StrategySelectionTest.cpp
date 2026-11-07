@@ -18,12 +18,9 @@
 #include "../src/Model/Terms.h"
 #include "../src/Model/Variables.h"
 
-#ifdef HAS_GUROBI
-#include "gurobi_c.h"
-#endif
-
 #include <array>
 #include <cstdio>
+#include <cstdlib>
 #include <iostream>
 #include <string>
 
@@ -51,7 +48,7 @@ struct ProblemCase
     const char* name;
     FunctionType objective;
     FunctionType constraints;
-    std::array<Strategies, 4> expected; // Cbc, HiGHS, CPLEX, Gurobi 9+
+    std::array<Strategies, 4> expected; // Cbc, HiGHS, CPLEX, Gurobi 10+
 };
 
 bool isNonconvex(FunctionType type)
@@ -227,13 +224,10 @@ bool testDefaultStrategies(ES_MIPSolver backend, size_t column)
                     std::cout << "Cannot initialize " << names[column] << " default strategy for " << test.name << '\n';
                     return false;
                 }
+
                 auto expected = test.expected[column];
-#if defined(HAS_GUROBI) && GRB_VERSION_MAJOR < 9
-                // Older Gurobi versions do not get the recommended nonconvex quadratic strategy.
-                if(backend == ES_MIPSolver::Gurobi && nonconvex)
-                    expected = nlpMulti;
-#endif
                 auto strategy = discrete ? expected.discrete : expected.continuous;
+
                 if(env->results->usedSolutionStrategy != strategy)
                 {
                     std::cout << names[column] << " default strategy changed for " << test.name << ", discrete "
@@ -241,11 +235,36 @@ bool testDefaultStrategies(ES_MIPSolver backend, size_t column)
                               << ", got " << static_cast<int>(env->results->usedSolutionStrategy) << '\n';
                     return false;
                 }
+
+                if(std::getenv("SHOT_STRATEGY_SNAPSHOT"))
+                {
+                    const auto& reformulated = env->reformulatedProblem;
+                    const auto& p = reformulated->properties;
+                    size_t quadraticTerms = 0;
+
+                    for(const auto& constraint : reformulated->quadraticConstraints)
+                        quadraticTerms += constraint->quadraticTerms.size();
+
+                    if(reformulated->objectiveFunction->properties.hasQuadraticTerms)
+                        quadraticTerms
+                            += std::dynamic_pointer_cast<QuadraticObjectiveFunction>(reformulated->objectiveFunction)
+                                   ->quadraticTerms.size();
+
+                    std::cout << "Strategy snapshot " << column << ' ' << test.name << ' ' << discrete << ' '
+                              << maximize << ' ' << static_cast<int>(env->results->usedSolutionStrategy) << ' '
+                              << p.numberOfVariables << ' ' << p.numberOfBinaryVariables << ' '
+                              << p.numberOfIntegerVariables << ' ' << p.numberOfLinearConstraints << ' '
+                              << p.numberOfQuadraticConstraints << ' ' << p.numberOfNonlinearConstraints << ' '
+                              << static_cast<int>(reformulated->objectiveFunction->properties.classification) << ' '
+                              << quadraticTerms << '\n';
+                }
+
                 checked++;
             }
         }
     }
     std::cout << "Checked " << checked << " default strategy combinations for " << names[column] << '\n';
+
     return true;
 }
 } // namespace

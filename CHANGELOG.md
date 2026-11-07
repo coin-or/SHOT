@@ -10,6 +10,7 @@ Changes since SHOT 1.1.
 
 ### Breaking changes
 
+- Gurobi builds require version 10.0 or newer ([#299]).
 - Settings are updated with `updateSetting("Category.Name", value)` instead
   of `updateSetting(name, category, value)`, and a priority decides which
   source wins when a setting is given more than once ([#187]).
@@ -43,6 +44,11 @@ Changes since SHOT 1.1.
 
 ### Added
 
+- MIP backend capability queries for convex/nonconvex quadratic objectives and
+  constraints, SOS1/SOS2, semicontinuous and semi-integer variables, SHOT's
+  single-tree integration, and finite variable-bound defaults, available
+  without constructing a solver. SHOTpy exposes the records through
+  `getMIPSolverCapabilities()` with read-only properties ([#299]).
 - Guides to interpreting terminal output, configuring solves, and understanding
   modeling and reformulation, with expanded result handling and C++ examples
   ([#295]).
@@ -161,12 +167,24 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- SOS-only models with continuous columns use the discrete strategy with Cbc;
+  HiGHS rejects unsupported SOS sets instead of omitting them. Unsupported
+  negative semicontinuous and semi-integer branches are rejected by the CPLEX
+  and HiGHS adapters before model construction ([#299]).
+- Retained nonconvex quadratic objectives with linear constraints can use
+  Gurobi's direct strategy under the objective-enabled reformulation modes too
+  ([#299]).
+- `hasMIPSolver()` reports HiGHS availability consistently with the supported
+  solver list ([#299]).
+- Compatibility settings for an unavailable MIP solver's fallback are applied
+  before reformulation, including when the unavailable solver was explicitly
+  selected. A failed MIP model construction stops initialization ([#299]).
 - Convex maximization QCQP and MIQCQP models retain their quadratic constraints
   with CPLEX and use the direct quadratic strategy ([#298]).
 - CPLEX uses the direct quadratic strategy for nonconvex QP and MIQP models
   with only linear constraints when quadratic objectives are enabled ([#298]).
 - Nonconvex QP, MIQP, QCQP and MIQCQP models use the direct quadratic strategy
-  with Gurobi 9 or newer when `Model.Reformulation.Quadratics.Strategy=3`,
+  with Gurobi when `Model.Reformulation.Quadratics.Strategy=3`,
   including when selected by recommended settings, instead of falling back to
   the NLP or multi-tree strategy ([#298]).
 - Integer bilinear discretization stores and evaluates its auxiliary binary values
@@ -383,6 +401,9 @@ Changes since SHOT 1.1.
 
 ### Removed
 
+- The unused C++ `IMIPSolver::supportsQuadraticObjective()` and
+  `supportsQuadraticConstraints()` methods. Use the backend capability records
+  or `getMIPSolverCapabilities()` instead ([#299]).
 - The legacy Cplex single-tree callback, deprecated by Cplex, and the setting
   `Subsolver.Cplex.UseGenericCallback`; the generic Cplex callback is always
   used ([#233]).
@@ -495,6 +516,7 @@ Changes since SHOT 1.1.
 [#296]: https://github.com/coin-or/SHOT/pull/296
 [#297]: https://github.com/coin-or/SHOT/pull/297
 [#298]: https://github.com/coin-or/SHOT/pull/298
+[#299]: https://github.com/coin-or/SHOT/pull/299
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e

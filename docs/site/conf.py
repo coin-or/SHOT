@@ -30,6 +30,8 @@ def format_binding_docstrings(app, what, name, obj, options, lines):
     # Binding prose uses a bare bitwise-OR symbol, which reST reads as substitution markup.
     for index, line in enumerate(lines):
         lines[index] = line.replace("combined with |,", "combined with ``|``,").replace("|x|", "``|x|``").replace("|a - b|", "``|a - b|``")
+        # The Python-safe enum member None_ would otherwise be parsed as a reST link.
+        lines[index] = lines[index].replace("None_ :", "``None_`` :")
 
 
 def setup(app):

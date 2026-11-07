@@ -1877,11 +1877,7 @@ PairDouble MIPSolverCbc::getCurrentVariableBounds(int varIndex)
     return (tmpBounds);
 }
 
-bool MIPSolverCbc::supportsQuadraticObjective() { return (false); }
-
-bool MIPSolverCbc::supportsQuadraticConstraints() { return (false); }
-
-double MIPSolverCbc::getUnboundedVariableBoundValue() { return (1e+50); }
+double MIPSolverCbc::getUnboundedVariableBoundValue() { return capabilities.unboundedVariableBound; }
 
 double MIPSolverCbc::getDualObjectiveValue()
 {

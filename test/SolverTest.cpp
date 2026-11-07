@@ -46,10 +46,6 @@
 #include <set>
 #include <stdexcept>
 
-#ifdef HAS_GUROBI
-#include "gurobi_c.h"
-#endif
-
 using namespace SHOT;
 
 bool ReadProblem(std::string filename)
@@ -2691,7 +2687,7 @@ bool TestStrategySelectionForLinearAndQuadraticProblems()
 
 bool TestStrategySelectionForNonconvexQuadraticProblems()
 {
-#if defined(HAS_GUROBI) && GRB_VERSION_MAJOR >= 9
+#ifdef HAS_GUROBI
     for(bool discrete : { false, true })
     {
         for(int quadraticType : { 1, 2, 3 }) // Nonconvex objective, constraints, or both
@@ -2746,9 +2742,11 @@ bool TestStrategySelectionForNonconvexQuadraticProblems()
                 if(!solver->setProblem(problem))
                     return false;
 
-                bool direct = quadraticStrategy == -1 || quadraticStrategy == 3;
+                bool direct = quadraticStrategy == -1 || quadraticStrategy == 3
+                    || (quadraticType == 1 && quadraticStrategy >= 1);
                 auto expected = direct ? (quadraticType & 2 ? E_SolutionStrategy::MIQCQP : E_SolutionStrategy::MIQP)
                                        : (discrete ? E_SolutionStrategy::MultiTree : E_SolutionStrategy::NLP);
+
                 if(env->results->usedSolutionStrategy != expected)
                 {
                     std::cout << "Incorrect strategy for nonconvex quadratic type " << quadraticType << ", discrete "

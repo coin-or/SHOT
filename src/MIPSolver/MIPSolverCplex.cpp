@@ -145,11 +145,15 @@ bool MIPSolverCplex::addVariable(
         case E_VariableType::Semicontinuous:
         case E_VariableType::Semiinteger:
         {
-            isProblemDiscrete = true;
             if(semiBound < 0.0)
-                upperBound = semiBound;
-            else
-                lowerBound = semiBound;
+            {
+                env->output->outputError(
+                    " Negative semi-variable branches are not supported by SHOT's CPLEX interface.");
+                return false;
+            }
+
+            isProblemDiscrete = true;
+            lowerBound = semiBound;
             auto cplexVar = IloSemiContVar(cplexEnv, lowerBound, upperBound,
                 (type == E_VariableType::Semicontinuous) ? ILOFLOAT : ILOINT, name.c_str());
             cplexVars.add(cplexVar);
@@ -347,8 +351,8 @@ bool MIPSolverCplex::finalizeProblem()
 {
     try
     {
-        // TaskCreateMIPProblem may finalize the same model more than once. End the previous extractor before
-        // replacing its handle, so the environment does not retain an active CPLEX instance for the old model.
+        // A model can be rebuilt between iterations. End the previous extractor before replacing its handle,
+        // so the environment does not retain an active CPLEX instance for the old model.
         if(cplexInstance.getImpl())
             cplexInstance.end();
 
@@ -1695,10 +1699,7 @@ PairDouble MIPSolverCplex::getCurrentVariableBounds(int varIndex)
     return (tmpBounds);
 }
 
-bool MIPSolverCplex::supportsQuadraticObjective() { return (true); }
-bool MIPSolverCplex::supportsQuadraticConstraints() { return (true); }
-
-double MIPSolverCplex::getUnboundedVariableBoundValue() { return (1e+20); }
+double MIPSolverCplex::getUnboundedVariableBoundValue() { return capabilities.unboundedVariableBound; }
 
 double MIPSolverCplex::getDualObjectiveValue()
 {

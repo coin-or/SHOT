@@ -597,7 +597,7 @@ bool CplexCallbackAfterSolveErrorTest(bool quadraticConstraint)
         return false;
 
     // Give the original quadratic model to CPLEX so SHOT's reformulation does not remove the error trigger.
-    TaskCreateMIPProblem(env, backend, problem).run();
+    TaskCreateMIPProblem(env, backend, problem, MIPSolverCplex::capabilities).run();
     backend->setTimeLimit(10.0);
     backend->setSolutionLimit(2100000000);
 
@@ -850,7 +850,7 @@ bool CplexRelaxationConversionTest()
     if(!backend->initializeProblem())
         return false;
 
-    TaskCreateMIPProblem(env, backend, problem).run();
+    TaskCreateMIPProblem(env, backend, problem, MIPSolverCplex::capabilities).run();
     backend->setTimeLimit(10.0);
     backend->setSolutionLimit(2100000000);
 
@@ -950,7 +950,8 @@ bool CplexInfeasibilityRecoverySettingsTest()
         auto backend = std::make_shared<CplexRecoveryProbe>(env);
         if(!backend->initializeProblem())
             return false;
-        TaskCreateMIPProblem(env, backend, problem).run();
+
+        TaskCreateMIPProblem(env, backend, problem, MIPSolverCplex::capabilities).run();
         backend->setTimeLimit(10.0);
         backend->cplexInstance.setParam(IloCplex::Param::Emphasis::Numerical, emphasis);
         backend->cplexInstance.setParam(IloCplex::Param::Advance, 2);

@@ -412,7 +412,6 @@ void MIPSolverGurobi::initializeSolverSettings()
         gurobiModel->set(GRB_DoubleParam_PSDTol,
             env->settings->getSetting<double>("Model.Convexity.Quadratics.EigenValueTolerance"));
 
-#if GRB_VERSION_MAJOR >= 9
         // A nonconvex quadratic objective can also be passed under the other quadratic strategies.
         if(hasQuadraticObjective
             || static_cast<ES_QuadraticProblemStrategy>(
@@ -421,7 +420,6 @@ void MIPSolverGurobi::initializeSolverSettings()
         {
             gurobiModel->set(GRB_IntParam_NonConvex, 2);
         }
-#endif
 
         // Set various solver specific MIP settings
         gurobiModel->set(GRB_IntParam_ScaleFlag, env->settings->getSetting<int>("Subsolver.Gurobi.ScaleFlag"));
@@ -1593,10 +1591,7 @@ PairDouble MIPSolverGurobi::getCurrentVariableBounds(int varIndex)
     return (tmpBounds);
 }
 
-bool MIPSolverGurobi::supportsQuadraticObjective() { return (true); }
-bool MIPSolverGurobi::supportsQuadraticConstraints() { return (true); }
-
-double MIPSolverGurobi::getUnboundedVariableBoundValue() { return (1e+20); }
+double MIPSolverGurobi::getUnboundedVariableBoundValue() { return capabilities.unboundedVariableBound; }
 
 double MIPSolverGurobi::getDualObjectiveValue()
 {

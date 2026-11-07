@@ -13,6 +13,7 @@
 #include "../DualSolver.h"
 #include "../MIPSolver/IMIPSolver.h"
 #include "../MIPSolver/MIPSolverBase.h"
+#include "../MIPSolver/MIPSolverCapabilities.h"
 #include "../Output.h"
 #include "../Results.h"
 #include "../Settings.h"
@@ -21,10 +22,6 @@
 
 #include "../Model/Simplifications.h"
 #include "TaskPerformBoundTightening.h"
-
-#ifdef HAS_GUROBI
-#include "gurobi_c.h"
-#endif
 
 #include <algorithm>
 #include <cstdio>
@@ -99,163 +96,43 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     auto integerBilinearStrategy = static_cast<ES_ReformulateBilinearInteger>(
         env->settings->getSetting<int>("Model.Reformulation.Bilinear.IntegerFormulation"));
 
-    if(env->settings->getSetting<int>("Dual.MIP.Solver") == (int)ES_MIPSolver::Cplex)
+    auto solver = static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver"));
+    auto capabilities = getMIPSolverCapabilities(solver);
+
+    if(!capabilities)
+        throw Exception(" Cannot reformulate a problem for an unavailable MIP solver.");
+
+    bool retainObjective = quadraticStrategy != ES_QuadraticProblemStrategy::Nonlinear;
+    bool retainConstraints = quadraticStrategy >= ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained;
+    bool retainNonconvex = quadraticStrategy == ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained;
+    useConvexQuadraticObjective = retainObjective && capabilities->convexQuadraticObjective;
+    useNonconvexQuadraticObjective = retainNonconvex && capabilities->nonconvexQuadraticObjective;
+    useConvexQuadraticConstraints = retainConstraints && capabilities->convexQuadraticConstraints;
+    useNonconvexQuadraticConstraints = retainNonconvex && capabilities->nonconvexQuadraticConstraints;
+
+    // Gurobi's PSDTol is configured from SHOT's eigenvalue tolerance. This numerical acceptance rule is separate
+    // from support for genuinely nonconvex quadratic constraints.
+    useConvexQuadraticConstraintsWithinTolerance = useConvexQuadraticConstraints && solver == ES_MIPSolver::Gurobi;
+
+    useIntegerBilinearTermReformulation = integerBilinearStrategy == ES_ReformulateBilinearInteger::Yes
+        || (integerBilinearStrategy == ES_ReformulateBilinearInteger::NoIfQuadraticSupport
+            && !useNonconvexQuadraticConstraints);
+
+    // Some backends solve nonconvex quadratic objectives globally only with linear constraints. Keep the exact
+    // objective and handle the convex constraints with cuts instead, unless the objective is made an epigraph.
+    const auto& objective = env->problem->objectiveFunction->properties;
+
+    if(capabilities->nonconvexObjectiveExcludesQuadraticConstraints
+        && (useConvexQuadraticObjective || useNonconvexQuadraticObjective)
+        && objective.classification == E_ObjectiveFunctionClassification::Quadratic
+        && objective.convexity != (objective.isMinimize ? E_Convexity::Convex : E_Convexity::Concave)
+        && objective.convexity != E_Convexity::Linear
+        && static_cast<ES_ObjectiveEpigraphStrategy>(
+               env->settings->getSetting<int>("Model.Reformulation.ObjectiveFunction.EpigraphStrategy"))
+            != ES_ObjectiveEpigraphStrategy::EpigraphConstraint)
     {
-        switch(quadraticStrategy)
-        {
-        case(ES_QuadraticProblemStrategy::Nonlinear):
-            useConvexQuadraticConstraints = false;
-            useConvexQuadraticConstraintsWithinTolerance = false;
-            useNonconvexQuadraticConstraints = false;
-            useConvexQuadraticObjective = false;
-            useNonconvexQuadraticObjective = false;
-            break;
-        case(ES_QuadraticProblemStrategy::QuadraticObjective):
-            useConvexQuadraticConstraints = false;
-            useConvexQuadraticConstraintsWithinTolerance = false;
-            useNonconvexQuadraticConstraints = false;
-            useConvexQuadraticObjective = true;
-            useNonconvexQuadraticObjective = false;
-            break;
-        case(ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained):
-            useConvexQuadraticConstraints = true;
-            useConvexQuadraticConstraintsWithinTolerance = false;
-            useNonconvexQuadraticConstraints = false;
-            useConvexQuadraticObjective = true;
-            useNonconvexQuadraticObjective = false;
-            break;
-        case(ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained):
-            useConvexQuadraticConstraints = true;
-            useConvexQuadraticConstraintsWithinTolerance = false; // No support in Cplex
-            useNonconvexQuadraticConstraints = false; // No support in Cplex
-            useConvexQuadraticObjective = true;
-            useNonconvexQuadraticObjective = true;
-            break;
-        default:
-            break;
-        }
-
-        switch(integerBilinearStrategy)
-        {
-        case(ES_ReformulateBilinearInteger::No):
-            useIntegerBilinearTermReformulation = false;
-            break;
-        case(ES_ReformulateBilinearInteger::NoIfQuadraticSupport):
-            useIntegerBilinearTermReformulation = true;
-            break;
-        case(ES_ReformulateBilinearInteger::Yes):
-            useIntegerBilinearTermReformulation = true;
-            break;
-        default:
-            break;
-        }
-
-        // CPLEX solves a dual problem with a nonconvex quadratic objective function to global optimality
-        // (OptimalityTarget = 3), but not one that also has quadratic constraints, which it rejects with "objective is
-        // not convex". The quadratic objective function of a nonconvex problem keeps its nonconvex terms when it is
-        // regarded as nonlinear, so the convex quadratic constraints are considered as nonlinear instead, which keeps
-        // the objective function exact and the cuts of the constraints valid.
-        auto& objective = env->problem->objectiveFunction;
-
-        if((useConvexQuadraticObjective || useNonconvexQuadraticObjective)
-            && objective->properties.classification == E_ObjectiveFunctionClassification::Quadratic
-            && objective->properties.convexity
-                != (objective->properties.isMinimize ? E_Convexity::Convex : E_Convexity::Concave)
-            && objective->properties.convexity != E_Convexity::Linear
-            && static_cast<ES_ObjectiveEpigraphStrategy>(
-                   env->settings->getSetting<int>("Model.Reformulation.ObjectiveFunction.EpigraphStrategy"))
-                != ES_ObjectiveEpigraphStrategy::EpigraphConstraint)
-        {
-            useConvexQuadraticConstraints = false;
-            useConvexQuadraticConstraintsWithinTolerance = false;
-        }
-    }
-    else if(env->settings->getSetting<int>("Dual.MIP.Solver") == (int)ES_MIPSolver::Gurobi)
-    {
-        switch(quadraticStrategy)
-        {
-        case(ES_QuadraticProblemStrategy::Nonlinear):
-            useConvexQuadraticConstraints = false;
-            useConvexQuadraticConstraintsWithinTolerance = false;
-            useNonconvexQuadraticConstraints = false;
-            useConvexQuadraticObjective = false;
-            useNonconvexQuadraticObjective = false;
-            break;
-        case(ES_QuadraticProblemStrategy::QuadraticObjective):
-            useConvexQuadraticConstraints = false;
-            useConvexQuadraticConstraintsWithinTolerance = false;
-            useNonconvexQuadraticConstraints = false;
-            useConvexQuadraticObjective = true;
-            useNonconvexQuadraticObjective = false;
-            break;
-        case(ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained):
-            useConvexQuadraticConstraints = true;
-            useConvexQuadraticConstraintsWithinTolerance = true;
-            useNonconvexQuadraticConstraints = false;
-            useConvexQuadraticObjective = true;
-            useNonconvexQuadraticObjective = false;
-            break;
-        case(ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained):
-            useConvexQuadraticConstraints = true;
-            useConvexQuadraticConstraintsWithinTolerance = true;
-            useNonconvexQuadraticConstraints = true;
-            useConvexQuadraticObjective = true;
-            useNonconvexQuadraticObjective = true;
-            break;
-        default:
-            break;
-        }
-
-        switch(integerBilinearStrategy)
-        {
-        case(ES_ReformulateBilinearInteger::No):
-            useIntegerBilinearTermReformulation = false;
-            break;
-
-        case(ES_ReformulateBilinearInteger::NoIfQuadraticSupport):
-            // Gurobi from version 9 supports nonconvex quadratic terms, but they are only passed to it with
-            // Model.Reformulation.Quadratics.Strategy = NonconvexQuadraticallyConstrained
-#if defined(HAS_GUROBI) && GRB_VERSION_MAJOR >= 9
-            useIntegerBilinearTermReformulation = !useNonconvexQuadraticConstraints;
-#else
-            useIntegerBilinearTermReformulation = true;
-#endif
-            break;
-        case(ES_ReformulateBilinearInteger::Yes):
-            useIntegerBilinearTermReformulation = true;
-            break;
-        default:
-            break;
-        }
-    }
-    else if(env->settings->getSetting<int>("Dual.MIP.Solver") == (int)ES_MIPSolver::Cbc
-        || env->settings->getSetting<int>("Dual.MIP.Solver") == (int)ES_MIPSolver::Highs)
-    {
-        // Cbc and HiGHS are not given quadratic terms
         useConvexQuadraticConstraints = false;
         useConvexQuadraticConstraintsWithinTolerance = false;
-        useNonconvexQuadraticConstraints = false;
-        useConvexQuadraticObjective = false;
-        useNonconvexQuadraticObjective = false;
-
-        switch(integerBilinearStrategy)
-        {
-        case(ES_ReformulateBilinearInteger::No):
-            useIntegerBilinearTermReformulation = false;
-            break;
-        case(ES_ReformulateBilinearInteger::NoIfQuadraticSupport):
-            useIntegerBilinearTermReformulation = true;
-            break;
-        case(ES_ReformulateBilinearInteger::Yes):
-            useIntegerBilinearTermReformulation = true;
-            break;
-        default:
-            break;
-        }
-    }
-    else
-    {
-        // Will not happen
     }
 
     extractQuadraticTermsFromNonconvexExpressions
