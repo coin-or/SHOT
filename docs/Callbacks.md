@@ -60,8 +60,8 @@ callback receives the context class of the location, and its return value is ign
 | Location | Context class | Where it is called | Strategies | Points | Actions |
 |---|---|---|---|---|---|
 | `InteriorPointSearch` | `InteriorPointSearchContext` | `TaskFindInteriorPoint`, after checking existing points or completing the internal search (including failure to find a point), or instead of it with `Dual.ESH.InteriorPoint.Strategy` = OnlyExternal | Multi-tree, single-tree, NLP; ESH cut strategy and nonlinear constraints only | `getInteriorPoints()`: reformulated | `setInteriorPoints(points)` |
-| `DualBoundUpdate` | `DualBoundUpdateContext` | `TaskUpdateExternalDualBound`, before the first dual problem and once per iteration; before and after the direct MIQCQP solve; the CPLEX and Gurobi single-tree callbacks | Multi-tree, single-tree, NLP, direct MIQCQP | – | `setDualBound(value)` |
-| `PrimalCandidateSearch` | `PrimalCandidateSearchContext` | `TaskSelectPrimalCandidatesFromExternalSource`, before the first dual solve, once per iteration and when the solution is finalized; before and after the direct MIQCQP solve; the CPLEX and Gurobi single-tree callbacks | Multi-tree, single-tree, NLP, direct MIQCQP | – | `addPrimalSolution(point)` |
+| `DualBoundUpdate` | `DualBoundUpdateContext` | `TaskUpdateExternalDualBound`, before the first dual problem and once per iteration; before and after the direct MILP/MIQCQP solve; the CPLEX and Gurobi single-tree callbacks | Multi-tree, single-tree, NLP, direct MILP/MIQCQP | – | `setDualBound(value)` |
+| `PrimalCandidateSearch` | `PrimalCandidateSearchContext` | `TaskSelectPrimalCandidatesFromExternalSource`, before the first dual solve, once per iteration and when the solution is finalized; before and after the direct MILP/MIQCQP solve; the CPLEX and Gurobi single-tree callbacks | Multi-tree, single-tree, NLP, direct MILP/MIQCQP | – | `addPrimalSolution(point)` |
 | `PrimalCandidateCheck` | `PrimalCandidateCheckContext` | `PrimalSolver::checkPrimalSolutionCandidates`, for each candidate before it is checked | All | `getPoint()`: original | `rejectCandidate()` |
 | `NewPrimalSolution` | `NewPrimalSolutionContext` | `Results::addPrimalSolution`, after a solution has been stored | All | `getPoint()`: original | – |
 | `BoundsUpdated` | `BoundsUpdatedContext` | After a primal, current dual, or global dual bound changes during the solve | All | – | – |
@@ -91,11 +91,13 @@ solution give a wrong solution and wrong dual bounds. A failing callback makes `
 produced a usable point. A callback can supply replacement points at that stage; SHOT validates them before deciding
 whether the interior-point search failed.
 
-Linear mixed-integer problems use `Dual.TreeStrategy`: multi-tree for Cbc and HiGHS, and the requested
-multi-tree or single-tree strategy for CPLEX and Gurobi. This also applies to linear reformulations of nonlinear
-models. Continuous linear problems use the continuous (NLP) strategy. The direct MIQCQP strategy is reserved for
-quadratic problems supported by CPLEX or Gurobi and enabled by `Model.Reformulation.Quadratics.Strategy`;
-`HyperplaneSelection` is unavailable in that direct strategy.
+Linear mixed-integer problems, including linear reformulations of nonlinear models, are solved directly by the
+MIP backend. Registering a `HyperplaneSelection` callback, even after `setProblem()`, instead selects
+`Dual.TreeStrategy`: multi-tree for Cbc and HiGHS, and the requested multi-tree or single-tree strategy for
+CPLEX and Gurobi. Continuous linear problems use the continuous (NLP) strategy. The direct MIQCQP strategy is
+reserved for quadratic problems supported by CPLEX or Gurobi and enabled by
+`Model.Reformulation.Quadratics.Strategy`; `HyperplaneSelection` is unavailable in that direct strategy.
+Removing the last `HyperplaneSelection` callback before `solveProblem()` restores direct MILP solving.
 
 For reformulated MILPs, multi-tree invokes `HyperplaneSelection` after the initial `PrimalCandidateSearch`, with
 an empty solution-point list, and after each iteration's primal reviews, using that iteration's solution points.
@@ -103,8 +105,8 @@ SHOT adds the returned cuts before checking the objective gap, so a rejected see
 solve and a closed gap does not skip the callback. Nonlinear multi-tree models retain cut selection after SHOT's
 own hyperplane generation. The initial call is specific to multi-tree MILPs.
 
-For direct MIQCQP, `DualBoundUpdate` changes SHOT's bound and gap calculations. It does not pass the bound to
-CPLEX or Gurobi as a bound for their internal search.
+For direct MILP/MIQCQP, `DualBoundUpdate` changes SHOT's bound and gap calculations. It does not pass the bound
+to the MIP backend as a bound for its internal search.
 
 `DualBoundUpdate` always uses the **original problem's objective direction and objective values**, even when SHOT
 reformulates a maximization objective as a minimization problem internally. For minimization, supply a valid lower

@@ -733,7 +733,16 @@ bool Solver::selectStrategy()
         bool isConvex = properties.convexity == E_ProblemConvexity::Convex;
         bool canSolveQuadraticDirectly = supportsQuadraticModel(*capabilities, *env->reformulatedProblem);
 
-        if(canSolveQuadraticDirectly && (useQuadraticObjective || useQuadraticConstraints) && properties.isMIQPProblem)
+        if(properties.isMILPProblem && !env->callbacks->isActive(E_CallbackLocation::HyperplaneSelection))
+        {
+            env->settings->updateSetting(
+                "Output.Console.DualSolver.Show", true, E_SettingPriority::RecommendedInternal);
+            env->output->outputDebug(" Using direct MILP solution strategy.");
+            solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
+            env->results->usedSolutionStrategy = E_SolutionStrategy::MILP;
+        }
+        else if(canSolveQuadraticDirectly && (useQuadraticObjective || useQuadraticConstraints)
+            && properties.isMIQPProblem)
         // MIQP problem
         {
             env->settings->updateSetting(
@@ -770,8 +779,7 @@ bool Solver::selectStrategy()
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
         }
-        // Continuous linear and convex nonlinear problems use the continuous strategy. Linear mixed-integer
-        // problems follow Dual.TreeStrategy below; the direct MIQCQP strategy is reserved for quadratic problems.
+        // Continuous linear and convex nonlinear problems use the continuous strategy.
         else if(isConvex && (properties.isLPProblem || properties.isNLPProblem))
         {
             env->output->outputDebug(" Using continuous solution strategy.");
@@ -833,6 +841,20 @@ bool Solver::solveProblem()
 
     // Verify settings in case they were changed after setProblem() was called
     verifySettings();
+
+    // Cut callbacks can be registered or removed after setProblem(). They need a tree strategy to add their
+    // restrictions during the search, whereas a complete MILP can be solved directly without them.
+    bool useDirectMILP = !env->callbacks->isActive(E_CallbackLocation::HyperplaneSelection);
+
+    if(env->reformulatedProblem->properties.isMILPProblem
+        && (env->results->usedSolutionStrategy == E_SolutionStrategy::MILP) != useDirectMILP)
+    {
+        env->tasks->clearTasks();
+        env->dualSolver->isSingleTree = false;
+
+        if(!selectStrategy())
+            return false;
+    }
 
     // The debug mode can also be enabled, or its directory changed, after setProblem() was called
     if(env->settings->getSetting<bool>("Output.Debug.Enable")

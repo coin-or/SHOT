@@ -631,8 +631,12 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
             == (env->problem->objectiveFunction->properties.isMinimize ? E_Convexity::Convex : E_Convexity::Concave);
     }
 
-    if(((env->problem->properties.convexity == E_ProblemConvexity::Convex && useConvexQuadraticObjective)
-           || useNonconvexQuadraticObjective)
+    const auto& objectiveProperties = env->problem->objectiveFunction->properties;
+    bool isObjectiveConvex = objectiveProperties.convexity == E_Convexity::Linear
+        || objectiveProperties.convexity
+            == (objectiveProperties.isMinimize ? E_Convexity::Convex : E_Convexity::Concave);
+
+    if(((isObjectiveConvex && useConvexQuadraticObjective) || useNonconvexQuadraticObjective)
         && env->problem->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic
         && isQuadraticObjectiveSupported)
     {
@@ -1199,12 +1203,13 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms.getConvexity();
 
     if(isQuadraticConstraint
-        && (C->properties.convexity == E_Convexity::Convex
-            && ((useConvexQuadraticConstraints
-                    && std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms.minEigenValue >= 0.0)
-                || (useConvexQuadraticConstraintsWithinTolerance
-                    && std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms.minEigenValueWithinTolerance)
-                || useNonconvexQuadraticConstraints)))
+        && (useNonconvexQuadraticConstraints
+            || (C->properties.convexity == E_Convexity::Convex
+                && ((useConvexQuadraticConstraints
+                        && std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms.minEigenValue >= 0.0)
+                    || (useConvexQuadraticConstraintsWithinTolerance
+                        && std::dynamic_pointer_cast<QuadraticConstraint>(C)
+                            ->quadraticTerms.minEigenValueWithinTolerance)))))
     {
         // Quadratic constraint (not considered as nonlinear)
         QuadraticConstraintPtr constraint = std::make_shared<QuadraticConstraint>(C->name, valueLHS, valueRHS);

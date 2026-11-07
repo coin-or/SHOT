@@ -234,6 +234,7 @@ enum class E_SolutionStrategy
     NLP,
     MIQP,
     MIQCQP,
+    MILP,
     None
 };
 

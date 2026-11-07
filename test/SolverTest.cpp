@@ -2584,7 +2584,7 @@ bool TestPrimalSolutionSlightlyOutsideBounds()
     return (passed);
 }
 
-// Linear problems must honor the tree setting, while genuine convex quadratic problems retain direct solves.
+// Complete MILPs and supported convex quadratic problems use direct solves regardless of the tree setting.
 bool TestStrategySelectionForLinearAndQuadraticProblems()
 {
     std::vector<ES_MIPSolver> backends;
@@ -2666,10 +2666,8 @@ bool TestStrategySelectionForLinearAndQuadraticProblems()
                     {
                         if(!discrete)
                             expected = E_SolutionStrategy::NLP;
-                        else if(supportsQuadratics && tree == ES_TreeStrategy::SingleTree)
-                            expected = E_SolutionStrategy::SingleTree;
                         else
-                            expected = E_SolutionStrategy::MultiTree;
+                            expected = E_SolutionStrategy::MILP;
                     }
                     if(env->results->usedSolutionStrategy != expected)
                     {

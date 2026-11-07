@@ -167,6 +167,20 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- HiGHS distinguishes unbounded from infeasible MILPs by checking integer
+  feasibility with presolve enabled, avoiding a numerical status for unbounded
+  integer domains ([#301]).
+- Convex quadratic objectives are retained when supported by the MIP backend
+  even when other constraints make the problem nonconvex ([#301]).
+- Removing a `HyperplaneSelection` callback after `setProblem()` restores
+  direct MILP solving when no cut callback remains ([#301]).
+- Nonconvex quadratic constraints retain their quadratic terms when the MIP
+  backend and quadratic strategy support them, including Gurobi's recommended
+  strategy for binary quadratic models ([#301]).
+- Complete MILP reformulations are solved directly by the MIP backend to its
+  optimality tolerances, without SHOT's single-tree callbacks or initial LP
+  relaxation. Models with a `HyperplaneSelection` callback retain the tree
+  strategy so that user cuts are applied ([#301]).
 - SOS-only models with continuous columns use the discrete strategy with Cbc;
   HiGHS rejects unsupported SOS sets instead of omitting them. Unsupported
   negative semicontinuous and semi-integer branches are rejected by the CPLEX
@@ -517,6 +531,7 @@ Changes since SHOT 1.1.
 [#297]: https://github.com/coin-or/SHOT/pull/297
 [#298]: https://github.com/coin-or/SHOT/pull/298
 [#299]: https://github.com/coin-or/SHOT/pull/299
+[#301]: https://github.com/coin-or/SHOT/pull/301
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e

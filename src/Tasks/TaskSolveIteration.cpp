@@ -237,7 +237,7 @@ void TaskSolveIteration::run()
 
     // Must update the pointer to the current iteration if we use the lazy
     // strategy since new iterations have been created when solving
-    if(static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("Dual.TreeStrategy")) == ES_TreeStrategy::SingleTree)
+    if(env->dualSolver->isSingleTree)
     {
         currIter = env->results->getCurrentIteration();
     }
@@ -263,8 +263,7 @@ void TaskSolveIteration::run()
     {
         solStatus = solveDualProblem();
 
-        if(static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("Dual.TreeStrategy"))
-            == ES_TreeStrategy::SingleTree)
+        if(env->dualSolver->isSingleTree)
             currIter = env->results->getCurrentIteration();
 
         currIter->solutionStatus = solStatus;
