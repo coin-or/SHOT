@@ -45,6 +45,9 @@ inline bool integerCutsBetweenSingleTreeSolves(SHOT::ES_MIPSolver mipSolver)
     solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
 
+    // An external-cut callback selects the single-tree integration for this otherwise complete MILP.
+    solver->registerCallback<HyperplaneSelectionContext>([](HyperplaneSelectionContext&) { });
+
     // min x - z, x >= z/2, x in [0,3], integer z in [0,4]: optimum -2 at (2,4).
     auto problem = std::make_shared<Problem>(env);
     auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.0, 3.0);

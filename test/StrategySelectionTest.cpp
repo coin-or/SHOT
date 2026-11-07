@@ -8,6 +8,7 @@
    Please see the README and LICENSE files for more information.
 */
 
+#include "../src/DualSolver.h"
 #include "../src/Environment.h"
 #include "../src/Results.h"
 #include "../src/Solver.h"
@@ -19,6 +20,7 @@
 #include "../src/Model/Variables.h"
 
 #include <array>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
@@ -138,10 +140,11 @@ bool testDefaultStrategies(ES_MIPSolver backend, size_t column)
     constexpr Strategies nlpSingle { S::NLP, S::SingleTree };
     constexpr Strategies directQP { S::MIQP, S::MIQP };
     constexpr Strategies directQCQP { S::MIQCQP, S::MIQCQP };
+    constexpr Strategies directLinear { S::NLP, S::MILP };
 
     // Freeze the expected routing independently of the settings and selector implementation.
     const ProblemCase cases[] = {
-        { "linear", F::Linear, F::Linear, { nlpMulti, nlpMulti, nlpSingle, nlpSingle } },
+        { "linear", F::Linear, F::Linear, { directLinear, directLinear, directLinear, directLinear } },
         { "convex_qp", F::ConvexQuadratic, F::Linear, { nlpMulti, nlpMulti, directQP, directQP } },
         { "nonconvex_qp", F::NonconvexQuadratic, F::Linear, { nlpMulti, nlpMulti, directQP, directQP } },
         { "convex_qcqp_linear_objective", F::Linear, F::ConvexQuadratic,
@@ -267,6 +270,262 @@ bool testDefaultStrategies(ES_MIPSolver backend, size_t column)
 
     return true;
 }
+
+bool testDirectReformulatedMILP(ES_MIPSolver backend)
+{
+    for(bool maximize : { false, true })
+    {
+        for(auto tree : { ES_TreeStrategy::SingleTree, ES_TreeStrategy::MultiTree })
+        {
+            auto solver = std::make_unique<Solver>();
+            auto env = solver->getEnvironment();
+            solver->updateSetting("Dual.MIP.Solver", static_cast<int>(backend));
+            solver->updateSetting("Dual.TreeStrategy", static_cast<int>(tree));
+            solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+            solver->updateSetting("Dual.MIP.SolutionLimit.Initial", 1);
+            solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+            solver->updateSetting("Output.File.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+            auto problem = std::make_shared<Problem>(env);
+            problem->name = "shared_binary_products";
+            auto x = std::make_shared<Variable>("x", E_VariableType::Binary, 0.0, 1.0);
+            auto y = std::make_shared<Variable>("y", E_VariableType::Binary, 0.0, 1.0);
+            auto z = std::make_shared<Variable>("z", E_VariableType::Binary, 0.0, 1.0);
+            auto w = std::make_shared<Variable>("w", E_VariableType::Binary, 0.0, 1.0);
+            problem->add({ x, y, z, w });
+
+            auto objective = std::make_shared<NonlinearObjectiveFunction>(
+                maximize ? E_ObjectiveFunctionDirection::Maximize : E_ObjectiveFunctionDirection::Minimize);
+            objective->add(std::make_shared<LinearTerm>(-3.0, x));
+            objective->add(std::make_shared<LinearTerm>(-2.0, y));
+            objective->add(std::make_shared<LinearTerm>(-1.0, z));
+            objective->add(std::make_shared<LinearTerm>(-1.0, w));
+            objective->add(std::make_shared<MonomialTerm>(8.0, Variables { x, y, z }));
+            objective->add(std::make_shared<MonomialTerm>(7.0, Variables { y, z, w }));
+            problem->add(objective);
+
+            for(int i : { 1, 2 })
+            {
+                auto constraint = std::make_shared<NonlinearConstraint>(
+                    "products" + std::to_string(i), SHOT_DBL_MIN, static_cast<double>(i));
+                constraint->add(std::make_shared<MonomialTerm>(static_cast<double>(i), Variables { x, y, z }));
+                constraint->add(std::make_shared<MonomialTerm>(1.0, Variables { y, z, w }));
+                problem->add(constraint);
+            }
+
+            problem->finalize();
+
+            if(!solver->setProblem(problem) || !env->reformulatedProblem->properties.isMILPProblem
+                || env->results->usedSolutionStrategy != E_SolutionStrategy::MILP || env->dualSolver->isSingleTree)
+            {
+                std::cout << "Binary products did not select a direct MILP solve\n";
+                return false;
+            }
+
+            if(!solver->solveProblem() || !solver->hasPrimalSolution())
+            {
+                std::cout << "Direct reformulated MILP solve failed\n";
+                return false;
+            }
+
+            double optimum = maximize ? 3.0 : -6.0;
+            const auto& point = solver->getPrimalSolution().point;
+
+            if(std::abs(solver->getPrimalBound() - optimum) > 1e-6
+                || std::abs(solver->getGlobalDualBound() - optimum) > 1e-6 || env->results->getNumberOfIterations() != 1
+                || !problem->areNonlinearConstraintsFulfilled(point, 1e-6)
+                || (solver->getTerminationReason() != E_TerminationReason::AbsoluteGap
+                    && solver->getTerminationReason() != E_TerminationReason::RelativeGap))
+            {
+                std::cout << "Direct reformulated MILP did not prove optimum " << optimum << " in one solve: primal "
+                          << solver->getPrimalBound() << ", dual " << solver->getGlobalDualBound() << ", iterations "
+                          << env->results->getNumberOfIterations() << ", termination "
+                          << static_cast<int>(solver->getTerminationReason()) << '\n';
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+bool testBinaryQuadraticConstraints(ES_MIPSolver backend)
+{
+    for(bool linearize : { false, true })
+    {
+        for(bool maximize : { false, true })
+        {
+            Solver solver;
+            auto env = solver.getEnvironment();
+            solver.updateSetting("Dual.MIP.Solver", static_cast<int>(backend));
+            solver.updateSetting("Dual.MIP.NumberOfThreads", 1);
+            solver.updateSetting("Primal.FixedInteger.Use", false);
+            solver.updateSetting("Primal.PolishSolution.NumberOfPoints", 0);
+            solver.updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+            solver.updateSetting("Output.File.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+            if(linearize)
+                solver.updateSetting("Model.Reformulation.Quadratics.Strategy",
+                    static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
+
+            auto problem = std::make_shared<Problem>(env);
+            problem->name = "binary_quadratic_constraints";
+            auto x = std::make_shared<Variable>("x", E_VariableType::Binary, 0.0, 1.0);
+            auto y = std::make_shared<Variable>("y", E_VariableType::Binary, 0.0, 1.0);
+            auto z = std::make_shared<Variable>("z", E_VariableType::Binary, 0.0, 1.0);
+            problem->add({ x, y, z });
+            auto objective = std::make_shared<LinearObjectiveFunction>(
+                maximize ? E_ObjectiveFunctionDirection::Maximize : E_ObjectiveFunctionDirection::Minimize);
+            objective->add(std::make_shared<LinearTerm>(1.0, x));
+            objective->add(std::make_shared<LinearTerm>(2.0, y));
+            objective->add(std::make_shared<LinearTerm>(3.0, z));
+            problem->add(objective);
+
+            for(int i : { 1, 2 })
+            {
+                auto constraint = std::make_shared<QuadraticConstraint>(
+                    "products" + std::to_string(i), SHOT_DBL_MIN, static_cast<double>(i));
+                constraint->add(std::make_shared<QuadraticTerm>(static_cast<double>(i), x, y));
+                constraint->add(std::make_shared<QuadraticTerm>(1.0, y, z));
+                problem->add(constraint);
+            }
+
+            problem->finalize();
+            bool retainQuadratics = backend == ES_MIPSolver::Gurobi && !linearize;
+            auto expected = retainQuadratics ? E_SolutionStrategy::MIQCQP : E_SolutionStrategy::MILP;
+
+            if(!solver.setProblem(problem) || env->results->usedSolutionStrategy != expected
+                || (retainQuadratics
+                    && (env->reformulatedProblem->properties.numberOfAuxiliaryVariables != 0
+                        || env->reformulatedProblem->quadraticConstraints.size() != 2
+                        || env->reformulatedProblem->quadraticConstraints[0]->quadraticTerms.size() != 2
+                        || env->reformulatedProblem->quadraticConstraints[1]->quadraticTerms.size() != 2)))
+            {
+                std::cout << "Binary quadratic constraints did not follow the backend's quadratic strategy\n";
+                return false;
+            }
+
+            double optimum = maximize ? 5.0 : 0.0;
+
+            if(!solver.solveProblem() || !solver.hasPrimalSolution()
+                || std::abs(solver.getPrimalBound() - optimum) > 1e-6
+                || std::abs(solver.getGlobalDualBound() - optimum) > 1e-6
+                || solver.getModelReturnStatus() != E_ModelReturnStatus::OptimalGlobal
+                || !problem->areQuadraticConstraintsFulfilled(solver.getPrimalSolution().point, 1e-6))
+            {
+                std::cout << "Binary quadratic constraints did not produce the expected global optimum\n";
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+bool testConvexObjectiveWithNonconvexConstraints(ES_MIPSolver backend)
+{
+    if(backend != ES_MIPSolver::Cplex && backend != ES_MIPSolver::Gurobi)
+        return true;
+
+    const ProblemCase test { "convex_objective_nonconvex_constraints", FunctionType::ConvexQuadratic,
+        FunctionType::NonconvexQuadratic, { } };
+
+    for(bool discrete : { false, true })
+    {
+        for(bool maximize : { false, true })
+        {
+            for(int strategy : { -1, 2 })
+            {
+                Solver solver;
+                auto env = solver.getEnvironment();
+                solver.updateSetting("Dual.MIP.Solver", static_cast<int>(backend));
+                solver.updateSetting("Dual.MIP.NumberOfThreads", 1);
+                solver.updateSetting("Primal.FixedInteger.Use", false);
+                solver.updateSetting("Primal.PolishSolution.NumberOfPoints", 0);
+                solver.updateSetting("Termination.TimeLimit", 10.0);
+                solver.updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+                solver.updateSetting("Output.File.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+                if(strategy >= 0)
+                    solver.updateSetting("Model.Reformulation.Quadratics.Strategy", strategy);
+
+                auto problem = makeProblem(env, test, discrete, maximize);
+                auto x = problem->getVariable(0);
+                auto y = problem->getVariable(1);
+                auto objective = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(problem->objectiveFunction);
+                objective->add(std::make_shared<QuadraticTerm>(maximize ? -2.0 : 2.0, x, y));
+                auto constraint = std::make_shared<LinearConstraint>("objective_lower_bound", 2.0, SHOT_DBL_MAX);
+                constraint->add(std::make_shared<LinearTerm>(1.0, x));
+                constraint->add(std::make_shared<LinearTerm>(1.0, y));
+                problem->add(constraint);
+                problem->finalize();
+
+                if(!solver.setProblem(problem)
+                    || env->reformulatedProblem->objectiveFunction->properties.classification
+                        != E_ObjectiveFunctionClassification::Quadratic
+                    || env->reformulatedProblem->properties.numberOfAuxiliaryVariables != 0
+                    || std::dynamic_pointer_cast<QuadraticObjectiveFunction>(
+                           env->reformulatedProblem->objectiveFunction)
+                            ->quadraticTerms.size()
+                        != 3)
+                {
+                    std::cout << "Nonconvex constraints caused a supported quadratic objective to be partitioned\n";
+                    return false;
+                }
+
+                double optimum = maximize ? -4.0 : 4.0;
+
+                if(!solver.solveProblem() || !solver.hasPrimalSolution()
+                    || std::abs(solver.getPrimalBound() - optimum) > 1e-5
+                    || std::abs(solver.getGlobalDualBound() - optimum) > 1e-5
+                    || !problem->areNumericConstraintsFulfilled(solver.getPrimalSolution().point, 1e-5))
+                {
+                    std::cout << "Retained quadratic objective did not produce the expected optimum\n";
+                    return false;
+                }
+            }
+        }
+    }
+
+    return true;
+}
+
+bool testRemovedCutCallback(ES_MIPSolver backend)
+{
+    const ProblemCase test { "removed_cut_callback", FunctionType::Linear, FunctionType::Linear, { } };
+
+    for(auto tree : { ES_TreeStrategy::MultiTree, ES_TreeStrategy::SingleTree })
+    {
+        Solver solver;
+        auto env = solver.getEnvironment();
+        solver.updateSetting("Dual.MIP.Solver", static_cast<int>(backend));
+        solver.updateSetting("Dual.TreeStrategy", static_cast<int>(tree));
+        solver.updateSetting("Dual.MIP.NumberOfThreads", 1);
+        solver.updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver.updateSetting("Output.File.LogLevel", static_cast<int>(E_LogLevel::Off));
+        auto handle = solver.registerCallback<HyperplaneSelectionContext>([](HyperplaneSelectionContext&) { });
+        auto problem = makeProblem(env, test, true, false);
+
+        if(!solver.setProblem(problem) || env->results->usedSolutionStrategy == E_SolutionStrategy::MILP
+            || !solver.removeCallback(handle) || !solver.solveProblem()
+            || env->results->usedSolutionStrategy != E_SolutionStrategy::MILP || env->dualSolver->isSingleTree
+            || !solver.hasPrimalSolution() || std::abs(solver.getPrimalBound()) > 1e-6
+            || std::abs(solver.getGlobalDualBound()) > 1e-6 || env->results->getNumberOfIterations() != 1)
+        {
+            std::cout << "Removing a cut callback did not restore a direct MILP solve\n";
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool testStrategies(ES_MIPSolver backend, size_t column)
+{
+    return testDefaultStrategies(backend, column) && testDirectReformulatedMILP(backend)
+        && testBinaryQuadraticConstraints(backend) && testConvexObjectiveWithNonconvexConstraints(backend)
+        && testRemovedCutCallback(backend);
+}
 } // namespace
 
 int StrategySelectionTest(int argc, char* argv[])
@@ -278,19 +537,19 @@ int StrategySelectionTest(int argc, char* argv[])
     {
 #ifdef HAS_CBC
     case 1:
-        return testDefaultStrategies(ES_MIPSolver::Cbc, 0) ? 0 : -1;
+        return testStrategies(ES_MIPSolver::Cbc, 0) ? 0 : -1;
 #endif
 #ifdef HAS_HIGHS
     case 2:
-        return testDefaultStrategies(ES_MIPSolver::Highs, 1) ? 0 : -1;
+        return testStrategies(ES_MIPSolver::Highs, 1) ? 0 : -1;
 #endif
 #ifdef HAS_CPLEX
     case 3:
-        return testDefaultStrategies(ES_MIPSolver::Cplex, 2) ? 0 : -1;
+        return testStrategies(ES_MIPSolver::Cplex, 2) ? 0 : -1;
 #endif
 #ifdef HAS_GUROBI
     case 4:
-        return testDefaultStrategies(ES_MIPSolver::Gurobi, 3) ? 0 : -1;
+        return testStrategies(ES_MIPSolver::Gurobi, 3) ? 0 : -1;
 #endif
     default:
         std::cout << "Strategy selection test " << choice << " does not exist\n";

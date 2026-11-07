@@ -86,6 +86,11 @@ different sequence of tasks — based on the (reformulated) problem's
 detected type and settings. This matters for debugging because it
 determines which debug files you should expect to see at all:
 
+- **Direct MILP strategy** — used for complete MILP models, including linear
+  reformulations of nonlinear models. Solves the model directly with the
+  selected MIP backend, without an initial LP relaxation or SHOT's single-tree
+  callbacks. A registered `HyperplaneSelection` callback instead selects the
+  tree strategy so that user cuts can be added.
 - **MIQCQP strategy** — used for convex QP/MIQP/QCQP/MIQCQP problems supported by CPLEX or Gurobi
   and for nonconvex QP/MIQP problems with CPLEX when quadratic objectives
   are enabled. Nonconvex quadratic problems also use this strategy with
@@ -101,9 +106,10 @@ determines which debug files you should expect to see at all:
   problems. Solves continuous dual problems and can use NLP primal heuristics;
   inspect the dual problem files and any NLP solve output/log.
 - **Multi-tree strategy** — the classical SHOT algorithm for general convex
-  MINLP and MILP models: repeatedly solves a MIP relaxation, potentially stopping
-  at a solution limit, adds supporting-hyperplane/ECP cuts, and resolves. This
-  generates the full `dualiter{N}_*` sequence described below.
+  MINLP models and MILPs with user cut callbacks: repeatedly solves a MIP
+  relaxation, potentially stopping at a solution limit, adds
+  supporting-hyperplane/ECP cuts, and resolves. This generates the full
+  `dualiter{N}_*` sequence described below.
 - **Single-tree strategy** — solves one branch-and-cut MIP tree, adding
   cuts via callbacks during the search rather than resolving from scratch
   each iteration (requires solver callback support — currently only CPLEX

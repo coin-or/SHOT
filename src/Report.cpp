@@ -428,7 +428,10 @@ void Report::outputOptionsReport()
         env->output->outputInfo(" Dual strategy:              MIQP version");
         break;
     case(E_SolutionStrategy::MIQCQP):
-        env->output->outputInfo(" Dual strategy:              MIQCQP version");
+        env->output->outputInfo(" Dual strategy:              Direct MIQCQP");
+        break;
+    case(E_SolutionStrategy::MILP):
+        env->output->outputInfo(" Dual strategy:              Direct MILP");
         break;
     default:
         break;

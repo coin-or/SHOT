@@ -170,6 +170,17 @@ Changes since SHOT 1.1.
 - HiGHS distinguishes unbounded from infeasible MILPs by checking integer
   feasibility with presolve enabled, avoiding a numerical status for unbounded
   integer domains.
+- Convex quadratic objectives are retained when supported by the MIP backend
+  even when other constraints make the problem nonconvex.
+- Removing a `HyperplaneSelection` callback after `setProblem()` restores
+  direct MILP solving when no cut callback remains.
+- Nonconvex quadratic constraints retain their quadratic terms when the MIP
+  backend and quadratic strategy support them, including Gurobi's recommended
+  strategy for binary quadratic models.
+- Complete MILP reformulations are solved directly by the MIP backend to its
+  optimality tolerances, without SHOT's single-tree callbacks or initial LP
+  relaxation. Models with a `HyperplaneSelection` callback retain the tree
+  strategy so that user cuts are applied.
 - SOS-only models with continuous columns use the discrete strategy with Cbc;
   HiGHS rejects unsupported SOS sets instead of omitting them. Unsupported
   negative semicontinuous and semi-integer branches are rejected by the CPLEX
