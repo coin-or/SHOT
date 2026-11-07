@@ -47,7 +47,8 @@ Changes since SHOT 1.1.
 - MIP backend capability queries for convex/nonconvex quadratic objectives and
   constraints, SOS1/SOS2, semicontinuous and semi-integer variables, SHOT's
   single-tree integration, and finite variable-bound defaults, available
-  without constructing a solver ([#299]).
+  without constructing a solver. SHOTpy exposes the records through
+  `getMIPSolverCapabilities()` with read-only properties ([#299]).
 - Guides to interpreting terminal output, configuring solves, and understanding
   modeling and reformulation, with expanded result handling and C++ examples
   ([#295]).

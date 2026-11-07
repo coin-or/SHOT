@@ -13,6 +13,7 @@ Code that selects a backend by enum can include
 
 ```cpp
 auto capabilities = SHOT::getMIPSolverCapabilities(SHOT::ES_MIPSolver::Gurobi);
+
 if(capabilities && capabilities->convexQuadraticConstraints)
 {
     // The compiled SHOT adapter can retain convex quadratic constraints.
@@ -31,6 +32,29 @@ and HiGHS use `1e20`. The existing instance getter
 `getUnboundedVariableBoundValue()` reuses this field for Cbc, CPLEX, and Gurobi.
 HiGHS continues to return its native infinity value from the instance getter,
 which is separate from SHOT's finite default.
+
+## Python API
+
+SHOTpy exposes the same fields as read-only properties of
+`MIPSolverCapabilities`:
+
+```python
+import SHOTpy
+
+capabilities = SHOTpy.getMIPSolverCapabilities(SHOTpy.MIPSolver.Gurobi)
+
+if capabilities is not None:
+    print(capabilities.SOS1)
+    print(capabilities.nonconvexQuadraticConstraints)
+    print(capabilities.semicontinuous == SHOTpy.SemiVariableSupport.SignedInterval)
+```
+
+The function returns `None` for an unavailable backend or `MIPSolver.NotUsed`.
+It constructs no solver and needs no solver license. Assigning or deleting a
+property raises `AttributeError`; the records are obtained from the lookup and
+cannot be constructed directly in Python. Semi-variable support is exposed as
+`SemiVariableSupport.None_`, `NonnegativeInterval`, or `SignedInterval`;
+`None_` corresponds to C++'s `E_SemiVariableSupport::None`.
 
 ## Quadratic objectives and constraints
 
