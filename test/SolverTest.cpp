@@ -4199,6 +4199,117 @@ bool TestIntegerBilinearTermArtificialBounds()
     return passed;
 }
 
+bool TestIntegerBilinearDiscretizationValues()
+{
+    bool passed = true;
+    auto expect = [&](bool condition, const std::string& message)
+    {
+        if(!condition)
+        {
+            std::cout << "  " << message << '\n';
+            passed = false;
+        }
+    };
+
+    for(auto bounds : { std::pair(-2.0, 2.0), std::pair(3.0, 7.0), std::pair(-7.0, -3.0), std::pair(-125.0, 124.0) })
+    {
+        auto solver = std::make_unique<Solver>();
+        auto env = solver->getEnvironment();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Termination.TimeLimit", 10.0);
+        solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+        solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+        solver->updateSetting("Model.Reformulation.Quadratics.ExtractStrategy",
+            static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractToEqualityConstraintIfNonconvex));
+        solver->updateSetting(
+            "Model.Reformulation.Bilinear.IntegerFormulation", static_cast<int>(ES_ReformulateBilinearInteger::Yes));
+        auto problem = std::make_shared<Problem>(env);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.0, 1.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.0, 1.0);
+        auto i = std::make_shared<Variable>("i", E_VariableType::Integer, bounds.first, bounds.second);
+        problem->add({ x, y, i });
+        auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+        objective->add(std::make_shared<QuadraticTerm>(1.0, x, i));
+        objective->add(std::make_shared<QuadraticTerm>(1.0, y, i));
+        objective->add(std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(0.1),
+            std::make_shared<ExpressionExp>(std::make_shared<ExpressionVariable>(x))));
+        problem->add(objective);
+        problem->finalize();
+        expect(solver->setProblem(problem), "Could not reformulate the integer bilinear problem.");
+        auto reformulated = env->reformulatedProblem;
+        const auto count = static_cast<size_t>(bounds.second - bounds.first + 1.0);
+        expect(static_cast<size_t>(reformulated->properties.numberOfBinaryVariables) == count,
+            "Products sharing an integer variable did not share one set of binaries.");
+        expect(reformulated->getAuxiliaryVariablesOfType(E_AuxiliaryVariableType::IntegerBilinear).size() == 2,
+            "The two bilinear products were not both discretized.");
+
+        // Check integer values and interpolation throughout the domain, including both ends.
+        for(double value = bounds.first; value <= bounds.second; value += 0.25)
+        {
+            VectorDouble point = { 0.3, 0.8, value };
+            reformulated->augmentAuxiliaryVariableValues(point);
+            double sum = 0.0;
+            size_t nonzero = 0;
+
+            for(auto& binary : reformulated->auxiliaryVariables)
+            {
+                if(binary->properties.type != E_VariableType::Binary)
+                    continue;
+
+                double weight = point.at(binary->getIndex());
+                expect(std::isfinite(weight) && weight >= 0.0 && weight <= 1.0,
+                    "A discretization weight was not finite or outside [0, 1].");
+                sum += weight;
+                nonzero += weight != 0.0;
+            }
+
+            expect(sum == 1.0 && nonzero == (value == std::floor(value) ? 1 : 2),
+                "Discretization weights did not interpolate between adjacent integers.");
+            expect(reformulated->areNumericConstraintsFulfilled(point, 1e-6),
+                "Augmented point violates the reformulation constraints.");
+            expect(std::abs(reformulated->objectiveFunction->calculateValue(point)
+                       - problem->objectiveFunction->calculateValue(point))
+                    < 1e-8,
+                "The reformulation changed the objective value.");
+        }
+
+        if(count <= 5)
+        {
+            expect(solver->solveProblem(), "Could not solve the discretized problem.");
+            double optimum = bounds.first < 0.0 ? 2.0 * bounds.first + 0.1 * std::exp(1.0) : 0.1;
+            expect(solver->hasPrimalSolution() && std::abs(solver->getPrimalBound() - optimum) < 1e-5
+                    && std::abs(solver->getGlobalDualBound() - optimum) < 1e-5
+                    && solver->getModelReturnStatus() == E_ModelReturnStatus::OptimalGlobal,
+                "Discretization changed the optimum or termination status.");
+        }
+
+        auto copy = reformulated->createCopy(env, false, false, true);
+        VectorDouble point = { 0.3, 0.8, bounds.first + 0.25 };
+        reformulated->augmentAuxiliaryVariableValues(point);
+        expect(copy->areNumericConstraintsFulfilled(point, 1e-6)
+                && std::abs(copy->objectiveFunction->calculateValue(point)
+                       - reformulated->objectiveFunction->calculateValue(point))
+                    < 1e-8,
+            "Copying a reformulated problem changed its constraints or objective.");
+
+        for(auto& auxiliary : reformulated->auxiliaryVariables)
+        {
+            if(auxiliary->properties.type == E_VariableType::Binary)
+            {
+                auto interval = auxiliary->calculate(
+                    IntervalVector { Interval(0.0, 1.0), Interval(0.0, 1.0), Interval(bounds.first, bounds.second) });
+                expect(isValidInterval(interval) && interval.l() >= 0.0 && interval.u() <= 1.0,
+                    "Discretization interval bounds were outside [0, 1].");
+                expect(std::isnan(
+                           auxiliary->calculate(VectorDouble { 0.3, 0.8, std::numeric_limits<double>::quiet_NaN() })),
+                    "A non-finite source value was hidden by the discretization.");
+            }
+        }
+    }
+
+    return passed;
+}
+
 // MC++ converted the number of periods in the interval cosine and tangent to an int, which overflowed for bounds larger
 // than about 6.7e9 and gave wrong intervals: on arm64, e.g., cos([-1e12, -1e11]) in [0.37, 0.88], and on x86-64 also
 // cos([-1e20, 1]) in [-0.99, 0.54]. Bound tightening then used them, and SHOT reported a wrong optimum.
@@ -5126,6 +5237,9 @@ int SolverTest(int argc, char* argv[])
     case 50:
         std::cout << "Testing bilinear products with unsafe big-M bounds" << std::endl;
         passed = TestBilinearLinearizationWithHugeBounds();
+        break;
+    case 51:
+        passed = TestIntegerBilinearDiscretizationValues();
         break;
     default:
         passed = false;

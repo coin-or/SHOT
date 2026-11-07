@@ -4449,25 +4449,10 @@ void TaskReformulateProblem::reformulateIntegerBilinearTerm(
             auto auxBinary = std::make_shared<AuxiliaryVariable>(
                 "s_bli" + std::to_string(auxVariableCounter + 1), E_VariableType::Binary, 0.0, 1.0);
 
-            // The binary is one if the variable has the value i, which at integer values is given by the product of
-            // (x - j) / (i - j) over the other values j; every factor is exact, so it is exactly one or zero
-            auto indicator = std::make_shared<ExpressionProduct>();
-
-            for(auto j = discretizationVariable->lowerBound; j <= discretizationVariable->upperBound; j++)
-            {
-                if(j == i)
-                    continue;
-
-                indicator->children.push_back(std::make_shared<ExpressionDivide>(
-                    std::make_shared<ExpressionSum>(std::make_shared<ExpressionVariable>(discretizationVariable),
-                        std::make_shared<ExpressionConstant>(-j)),
-                    std::make_shared<ExpressionConstant>(i - j)));
-            }
-
-            if(indicator->children.size() > 0)
-                auxBinary->nonlinearExpression = indicator;
-            else
-                auxBinary->constant = 1.0;
+            // Store only x - i. AuxiliaryVariable::calculate evaluates the corresponding one-hot weight.
+            auxBinary->properties.auxiliaryType = E_AuxiliaryVariableType::IntegerDiscretization;
+            auxBinary->constant = -i;
+            auxBinary->linearTerms.add(std::make_shared<LinearTerm>(1.0, discretizationVariable));
 
             auxFirstSum->add(std::make_shared<LinearTerm>(1.0, auxBinary));
             auxFirstSumVarDef->add(std::make_shared<LinearTerm>(i, auxBinary));

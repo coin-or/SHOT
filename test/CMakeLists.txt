@@ -188,7 +188,8 @@ set(Solver_parts
     47
     48
     49
-    50)
+    50
+    51)
 if(HAS_IPOPT)
   list(APPEND Solver_parts 46)
 endif()

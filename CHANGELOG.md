@@ -161,6 +161,10 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- Integer bilinear discretization stores and evaluates its auxiliary binary values
+  in linear space and time instead of building a quadratic number of polynomial
+  factors. Fractional points use bounded interpolation between adjacent values
+  ([#297]).
 - Repeated Ipopt NLP solves reuse initialized solver state after completed solves,
   including iteration/time limits and infeasibility, instead of always rebuilding
   it. Errors force a fresh initialization for the next solve ([#296]).
@@ -481,6 +485,7 @@ Changes since SHOT 1.1.
 [#294]: https://github.com/coin-or/SHOT/pull/294
 [#295]: https://github.com/coin-or/SHOT/pull/295
 [#296]: https://github.com/coin-or/SHOT/pull/296
+[#297]: https://github.com/coin-or/SHOT/pull/297
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
