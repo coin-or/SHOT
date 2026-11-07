@@ -161,6 +161,14 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- Convex maximization QCQP and MIQCQP models retain their quadratic constraints
+  with CPLEX and use the direct quadratic strategy.
+- CPLEX uses the direct quadratic strategy for nonconvex QP and MIQP models
+  with only linear constraints when quadratic objectives are enabled.
+- Nonconvex QP, MIQP, QCQP and MIQCQP models use the direct quadratic strategy
+  with Gurobi 9 or newer when `Model.Reformulation.Quadratics.Strategy=3`,
+  including when selected by recommended settings, instead of falling back to
+  the NLP or multi-tree strategy.
 - Integer bilinear discretization stores and evaluates its auxiliary binary values
   in linear space and time instead of building a quadratic number of polynomial
   factors. Fractional points use bounded interpolation between adjacent values

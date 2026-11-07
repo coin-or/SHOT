@@ -668,38 +668,48 @@ bool Solver::selectStrategy()
         // Select from the model we actually solve: quadratic terms can disappear during linearization.
         const auto& properties = env->reformulatedProblem->properties;
         bool isConvex = properties.convexity == E_ProblemConvexity::Convex;
+        bool canSolveQuadraticDirectly = isConvex;
+#if defined(HAS_GUROBI) && GRB_VERSION_MAJOR >= 9
+        // Gurobi can solve the whole nonconvex quadratic model when its quadratic terms are retained.
+        canSolveQuadraticDirectly = canSolveQuadraticDirectly
+            || (static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Gurobi
+                && quadraticStrategy == ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained);
+#endif
+        // CPLEX also solves nonconvex quadratic objectives directly when all constraints are linear.
+        bool canSolveQPDirectly = canSolveQuadraticDirectly
+            || static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")) == ES_MIPSolver::Cplex;
 
-        if(isConvex && (useQuadraticObjective || useQuadraticConstraints) && properties.isMIQPProblem)
-        // Convex MIQP problem
+        if(canSolveQPDirectly && (useQuadraticObjective || useQuadraticConstraints) && properties.isMIQPProblem)
+        // MIQP problem
         {
             env->settings->updateSetting(
                 "Output.Console.DualSolver.Show", true, E_SettingPriority::RecommendedInternal);
-            env->output->outputDebug(" Using convex MIQP solution strategy.");
+            env->output->outputDebug(" Using MIQP solution strategy.");
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
         }
-        else if(isConvex && (useQuadraticObjective || useQuadraticConstraints) && properties.isQPProblem)
-        // Convex QP problem
+        else if(canSolveQPDirectly && (useQuadraticObjective || useQuadraticConstraints) && properties.isQPProblem)
+        // QP problem
         {
-            env->output->outputDebug(" Using convex QP solution strategy.");
+            env->output->outputDebug(" Using QP solution strategy.");
             env->settings->updateSetting(
                 "Output.Console.DualSolver.Show", true, E_SettingPriority::RecommendedInternal);
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQP;
         }
-        // Convex MIQCQP problem
-        else if(isConvex && useQuadraticConstraints && properties.isMIQCQPProblem)
+        // MIQCQP problem
+        else if(canSolveQuadraticDirectly && useQuadraticConstraints && properties.isMIQCQPProblem)
         {
-            env->output->outputDebug(" Using convex MIQCQP solution strategy.");
+            env->output->outputDebug(" Using MIQCQP solution strategy.");
             env->settings->updateSetting(
                 "Output.Console.DualSolver.Show", true, E_SettingPriority::RecommendedInternal);
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
             env->results->usedSolutionStrategy = E_SolutionStrategy::MIQCQP;
         }
-        // Convex QCQP problem
-        else if(isConvex && useQuadraticConstraints && properties.isQCQPProblem)
+        // QCQP problem
+        else if(canSolveQuadraticDirectly && useQuadraticConstraints && properties.isQCQPProblem)
         {
-            env->output->outputDebug(" Using convex QCQP solution strategy.");
+            env->output->outputDebug(" Using QCQP solution strategy.");
             env->settings->updateSetting(
                 "Output.Console.DualSolver.Show", true, E_SettingPriority::RecommendedInternal);
             solutionStrategy = std::make_unique<SolutionStrategyMIQCQP>(env);
