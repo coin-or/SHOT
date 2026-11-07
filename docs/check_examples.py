@@ -15,7 +15,8 @@ import SHOTpy
 from build import GUIDES, ROOT
 
 
-PYTHON_GUIDES = ('site/getting-started.md', 'site/concepts.md', 'Configuration.md', 'Modeling.md')
+PYTHON_GUIDES = ('site/getting-started.md', 'site/concepts.md', 'Configuration.md', 'Modeling.md',
+                 'MIPSolverCapabilities.md')
 SETTING_NAME = re.compile(
     r'(?<![\w.])(?:Dual|Primal|Termination|Output|Strategy|Model|Subsolver)'
     r'(?:\.[A-Za-z][A-Za-z0-9]*)+'

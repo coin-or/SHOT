@@ -69,6 +69,7 @@ SHOTpy tutorial <SHOTpy_Tutorial>
 C++ integration <cpp>
 Callbacks
 Solver concepts <concepts>
+MIP solver capabilities <MIPSolverCapabilities>
 Configuration
 Modeling and reformulation <Modeling>
 Debugging <DebuggingSHOT>

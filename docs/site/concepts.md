@@ -87,4 +87,63 @@ SHOT detects the convexity of the objective function and of each constraint func
 
 ## Solver backends
 
-The available MIP/NLP backends depend on compilation options and installed licenses. Select a backend available in your build and consult the [settings reference](reference/settings.md). See the [compilation guide](CompilationInstructions.md) for dependencies and the [debugging guide](DebuggingSHOT.md) for intermediate problems and diagnostic logs.
+The MIP/NLP backends compiled into SHOT depend on the build configuration. Solving
+with a proprietary backend also requires a suitable license. Select a backend
+available in your build and consult the [settings reference](reference/settings.md).
+See the [compilation guide](CompilationInstructions.md) for dependencies and the
+[debugging guide](DebuggingSHOT.md) for intermediate problems and diagnostic logs.
+
+### Reading MIP solver capabilities
+
+`SHOTpy.getSupportedMIPSolvers()` lists the MIP backends compiled into your build.
+Use `SHOTpy.getMIPSolverCapabilities()` to inspect what SHOT's adapter supports
+before choosing one. The lookup constructs no solver and needs no solver license.
+It returns `None` for a backend that was not compiled in, or for `MIPSolver.NotUsed`.
+
+```python
+import SHOTpy
+
+capabilities = SHOTpy.getMIPSolverCapabilities(SHOTpy.MIPSolver.Gurobi)
+
+if capabilities is None:
+    print("Gurobi is not compiled into this build")
+else:
+    print("SOS1:", capabilities.SOS1)
+    print("Nonconvex quadratic constraints:", capabilities.nonconvexQuadraticConstraints)
+    print("Semicontinuous domains:", capabilities.semicontinuous)
+```
+
+The returned `MIPSolverCapabilities` object has read-only properties for convex
+and nonconvex quadratic objectives and constraints, SOS1/SOS2, semicontinuous and
+semi-integer variable domains, SHOT's single-tree integration, and finite
+variable-bound defaults. Assigning or deleting a property raises `AttributeError`.
+Semi-variable support is `SemiVariableSupport.None_`, `NonnegativeInterval`, or
+`SignedInterval`; the last also permits a negative nonzero branch.
+
+C++ provides the same query through `getMIPSolverCapabilities()`, returning a
+`std::optional<MIPSolverCapabilities>`. The header does not require a vendor SDK:
+
+```cpp
+#include "MIPSolver/MIPSolverCapabilities.h"
+#include <iostream>
+
+int main()
+{
+    const auto capabilities = SHOT::getMIPSolverCapabilities(SHOT::ES_MIPSolver::Gurobi);
+
+    if(capabilities)
+        std::cout << "SOS1: " << std::boolalpha << capabilities->SOS1 << '\n';
+}
+```
+
+Capabilities describe support through SHOT's adapter; they do not enable a
+reformulation or establish that a license is available. Support for an objective
+and for constraints separately does not guarantee support for their combination.
+For example, CPLEX supports a nonconvex quadratic objective with linear
+constraints, but cannot generally combine that objective with quadratic
+constraints. Its `nonconvexObjectiveExcludesQuadraticConstraints` flag records
+this restriction.
+
+See [MIP solver capabilities](MIPSolverCapabilities.md) for the complete field
+definitions and semi-variable domains, or the [SHOTpy](reference/python.rst) and
+{ref}`C++ <cpp-mip-solver-capabilities>` API references.
