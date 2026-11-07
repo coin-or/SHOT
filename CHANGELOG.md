@@ -163,7 +163,7 @@ Changes since SHOT 1.1.
 
 - Repeated Ipopt NLP solves reuse initialized solver state after completed solves,
   including iteration/time limits and infeasibility, instead of always rebuilding
-  it. Errors force a fresh initialization for the next solve.
+  it. Errors force a fresh initialization for the next solve ([#296]).
 - The iteration table labels MIQCQP subproblems correctly instead of `MIQPCP`
   ([#295]).
 - Ipopt NLP solves stop when iteration values become NaN or infinite, avoiding
@@ -480,6 +480,7 @@ Changes since SHOT 1.1.
 [#293]: https://github.com/coin-or/SHOT/pull/293
 [#294]: https://github.com/coin-or/SHOT/pull/294
 [#295]: https://github.com/coin-or/SHOT/pull/295
+[#296]: https://github.com/coin-or/SHOT/pull/296
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
