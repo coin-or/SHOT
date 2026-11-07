@@ -22,8 +22,9 @@
 namespace SHOT
 {
 
-TaskCreateMIPProblem::TaskCreateMIPProblem(EnvironmentPtr envPtr, MIPSolverPtr MIPSolver, ProblemPtr sourceProblem)
-    : TaskBase(envPtr)
+TaskCreateMIPProblem::TaskCreateMIPProblem(
+    EnvironmentPtr envPtr, MIPSolverPtr MIPSolver, ProblemPtr sourceProblem, MIPSolverCapabilities capabilities)
+    : TaskBase(envPtr), capabilities(capabilities)
 {
     this->MIPSolver = MIPSolver;
     this->sourceProblem = sourceProblem;
@@ -35,9 +36,9 @@ void TaskCreateMIPProblem::run()
 {
     env->output->outputDebug(" Creating MIP problem");
 
-    createProblem(this->MIPSolver, this->sourceProblem);
+    if(!createProblem(this->MIPSolver, this->sourceProblem))
+        throw Exception(" Could not create MIP problem.");
 
-    this->MIPSolver->finalizeProblem();
     this->MIPSolver->initializeSolverSettings();
 
     env->output->outputDebug(" MIP problem created");
@@ -45,6 +46,12 @@ void TaskCreateMIPProblem::run()
 
 bool TaskCreateMIPProblem::createProblem(MIPSolverPtr destination, ProblemPtr sourceProblem)
 {
+    if(auto feature = getUnsupportedMIPFeature(capabilities, *sourceProblem))
+    {
+        env->output->outputError(" MIP backend does not support " + *feature + ".");
+        return false;
+    }
+
     // Now creating the variables
 
     bool variablesInitialized = true;
@@ -86,7 +93,9 @@ bool TaskCreateMIPProblem::createProblem(MIPSolverPtr destination, ProblemPtr so
 
         auto bounds = MIPSolverBase::getAuxiliaryVariableBoundsForSolver(
             objectiveBound.l(), objectiveBound.u(), destination->getUnboundedVariableBoundValue());
-        destination->addVariable("shot_dual_objvar", E_VariableType::Real, bounds.first, bounds.second, 0.0);
+
+        if(!destination->addVariable("shot_dual_objvar", E_VariableType::Real, bounds.first, bounds.second, 0.0))
+            return false;
 
         env->output->outputDebug(fmt::format(
             "         SHOT internal dual objective variable created with index {} and bounds [{},{}] created.",

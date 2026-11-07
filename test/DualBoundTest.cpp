@@ -187,7 +187,7 @@ bool testUnsuccessfulSolveGivesNoBound(ES_MIPSolver mipSolver, ModelKind kind)
             return false;
         }
 
-        TaskCreateMIPProblem(env, backend, env->reformulatedProblem).run();
+        TaskCreateMIPProblem(env, backend, env->reformulatedProblem, getMIPSolverCapabilities(mipSolver).value()).run();
 
         auto status = backend->solveProblem();
         double bound = backend->getDualObjectiveValue();
@@ -1049,7 +1049,7 @@ bool testIntegerCutVariablesSurviveRelaxation(ES_MIPSolver mipSolver)
         return false;
     }
 
-    TaskCreateMIPProblem(env, backend, env->reformulatedProblem).run();
+    TaskCreateMIPProblem(env, backend, env->reformulatedProblem, getMIPSolverCapabilities(mipSolver).value()).run();
 
     int zIndex = -1;
 

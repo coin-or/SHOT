@@ -94,7 +94,8 @@ bool HighsLargeIntegerDomainWithoutPresolveTest()
         env->dualSolver->MIPSolver = backend;
         if(!backend->initializeProblem())
             return false;
-        TaskCreateMIPProblem(env, backend, problem).run();
+
+        TaskCreateMIPProblem(env, backend, problem, MIPSolverHighs::capabilities).run();
         backend->setTimeLimit(1.0);
         backend->setSolutionLimit(2100000000);
         auto status = backend->solveProblem();

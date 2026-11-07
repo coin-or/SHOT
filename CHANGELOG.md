@@ -10,6 +10,7 @@ Changes since SHOT 1.1.
 
 ### Breaking changes
 
+- Gurobi builds require version 10.0 or newer.
 - Settings are updated with `updateSetting("Category.Name", value)` instead
   of `updateSetting(name, category, value)`, and a priority decides which
   source wins when a setting is given more than once ([#187]).
@@ -43,6 +44,9 @@ Changes since SHOT 1.1.
 
 ### Added
 
+- MIP backend capability queries for convex/nonconvex quadratic objectives and
+  constraints, SOS1/SOS2, semicontinuous and semi-integer variables, and SHOT's
+  single-tree integration, available without constructing a solver.
 - Guides to interpreting terminal output, configuring solves, and understanding
   modeling and reformulation, with expanded result handling and C++ examples
   ([#295]).
@@ -161,6 +165,17 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- SOS-only models with continuous columns use the discrete strategy with Cbc;
+  HiGHS rejects unsupported SOS sets instead of omitting them. Unsupported
+  negative semicontinuous and semi-integer branches are rejected by the CPLEX
+  and HiGHS adapters before model construction.
+- Retained nonconvex quadratic objectives with linear constraints can use
+  Gurobi's direct strategy under the objective-enabled reformulation modes too.
+- `hasMIPSolver()` reports HiGHS availability consistently with the supported
+  solver list.
+- Compatibility settings for an unavailable MIP solver's fallback are applied
+  before reformulation, including when the unavailable solver was explicitly
+  selected. A failed MIP model construction stops initialization.
 - Convex maximization QCQP and MIQCQP models retain their quadratic constraints
   with CPLEX and use the direct quadratic strategy ([#298]).
 - CPLEX uses the direct quadratic strategy for nonconvex QP and MIQP models
@@ -383,6 +398,9 @@ Changes since SHOT 1.1.
 
 ### Removed
 
+- The unused C++ `IMIPSolver::supportsQuadraticObjective()` and
+  `supportsQuadraticConstraints()` methods. Use the backend capability records
+  or `getMIPSolverCapabilities()` instead.
 - The legacy Cplex single-tree callback, deprecated by Cplex, and the setting
   `Subsolver.Cplex.UseGenericCallback`; the generic Cplex callback is always
   used ([#233]).

@@ -10,6 +10,7 @@
 
 #pragma once
 #include "MIPSolverBase.h"
+#include "MIPSolverCapabilities.h"
 #include "MIPSolverCallbackBase.h"
 
 #ifdef __GNUC__
@@ -39,6 +40,24 @@ public:
 class MIPSolverCplex : public IMIPSolver, public MIPSolverBase
 {
 public:
+    inline static constexpr MIPSolverCapabilities capabilities = []
+    {
+        MIPSolverCapabilities result;
+        result.convexQuadraticObjective = true;
+        result.nonconvexQuadraticObjective = true;
+        result.convexQuadraticConstraints = true;
+        result.nonconvexQuadraticConstraints = false;
+        result.nonconvexObjectiveExcludesQuadraticConstraints = true;
+        result.SOS1 = true;
+        result.SOS2 = true;
+        result.singleTree = true;
+        result.semicontinuous = E_SemiVariableSupport::NonnegativeInterval;
+        result.semiinteger = E_SemiVariableSupport::NonnegativeInterval;
+        result.unboundedVariableBound = 1e20;
+
+        return result;
+    }();
+
     MIPSolverCplex();
     MIPSolverCplex(EnvironmentPtr envPtr);
     ~MIPSolverCplex() override;
@@ -155,9 +174,6 @@ public:
     void addMIPStart(VectorDouble point) override;
     void addPartialMIPStart(VectorInteger variableIndexes, VectorDouble variableValues) override;
     void deleteMIPStarts() override;
-
-    bool supportsQuadraticObjective() override;
-    bool supportsQuadraticConstraints() override;
 
     double getUnboundedVariableBoundValue() override;
 

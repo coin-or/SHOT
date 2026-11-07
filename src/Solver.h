@@ -40,6 +40,7 @@ private:
 
     void initializeSettings();
     void verifySettings();
+    void setMIPSolverCompatibilitySettings();
 
     // The conditions of the conditional setting values that hold for the problem and the selected MIP solver
     std::set<E_SettingCondition> getSettingConditions(ProblemPtr problem);
@@ -53,6 +54,7 @@ private:
     bool setDebugPath();
     void initializeDebugMode();
 
+    bool validateMIPFeatures(ProblemPtr problem);
     bool selectStrategy();
 
     void finalizeSolution();

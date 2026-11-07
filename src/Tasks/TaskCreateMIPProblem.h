@@ -10,6 +10,7 @@
 
 #pragma once
 #include "TaskBase.h"
+#include "../MIPSolver/MIPSolverCapabilities.h"
 
 namespace SHOT
 {
@@ -17,7 +18,8 @@ namespace SHOT
 class TaskCreateMIPProblem : public TaskBase
 {
 public:
-    TaskCreateMIPProblem(EnvironmentPtr envPtr, MIPSolverPtr MIPSolver, ProblemPtr sourceProblem);
+    TaskCreateMIPProblem(
+        EnvironmentPtr envPtr, MIPSolverPtr MIPSolver, ProblemPtr sourceProblem, MIPSolverCapabilities capabilities);
     ~TaskCreateMIPProblem() override;
 
     void run() override;
@@ -26,6 +28,7 @@ public:
 private:
     bool createProblem(MIPSolverPtr destinationProblem, ProblemPtr sourceProblem);
 
+    MIPSolverCapabilities capabilities;
     MIPSolverPtr MIPSolver;
     ProblemPtr sourceProblem;
 };

@@ -10,6 +10,7 @@
 
 #pragma once
 #include "MIPSolverBase.h"
+#include "MIPSolverCapabilities.h"
 #include "MIPSolverCallbackBase.h"
 
 #include "gurobi_c++.h"
@@ -32,6 +33,24 @@ private:
 class MIPSolverGurobi : public IMIPSolver, public MIPSolverBase
 {
 public:
+    inline static constexpr MIPSolverCapabilities capabilities = []
+    {
+        MIPSolverCapabilities result;
+        result.convexQuadraticObjective = true;
+        result.nonconvexQuadraticObjective = true;
+        result.convexQuadraticConstraints = true;
+        result.nonconvexQuadraticConstraints = true;
+        result.nonconvexObjectiveExcludesQuadraticConstraints = false;
+        result.SOS1 = true;
+        result.SOS2 = true;
+        result.singleTree = true;
+        result.semicontinuous = E_SemiVariableSupport::SignedInterval;
+        result.semiinteger = E_SemiVariableSupport::SignedInterval;
+        result.unboundedVariableBound = 1e20;
+
+        return result;
+    }();
+
     MIPSolverGurobi();
     MIPSolverGurobi(EnvironmentPtr envPtr);
     ~MIPSolverGurobi() override;
@@ -147,9 +166,6 @@ public:
     void addMIPStart(VectorDouble point) override;
     void addPartialMIPStart(VectorInteger variableIndexes, VectorDouble variableValues) override;
     void deleteMIPStarts() override;
-
-    bool supportsQuadraticObjective() override;
-    bool supportsQuadraticConstraints() override;
 
     double getUnboundedVariableBoundValue() override;
 

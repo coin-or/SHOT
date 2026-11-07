@@ -200,6 +200,12 @@ bool MIPSolverHighs::initializeProblem()
 bool MIPSolverHighs::addVariable(
     std::string name, E_VariableType type, double lowerBound, double upperBound, double semiBound)
 {
+    if((type == E_VariableType::Semicontinuous || type == E_VariableType::Semiinteger) && semiBound < 0.0)
+    {
+        env->output->outputError(" Negative semi-variable branches are not supported by SHOT's HiGHS interface.");
+        return false;
+    }
+
     if(lowerBound < -getUnboundedVariableBoundValue())
         lowerBound = -getUnboundedVariableBoundValue();
 
@@ -613,9 +619,7 @@ int MIPSolverHighs::addLinearConstraint(
 bool MIPSolverHighs::addSpecialOrderedSet(
     E_SOSType /*type*/, VectorInteger /*variableIndexes*/, VectorDouble /*variableWeights*/)
 {
-    // TODO: Not implemented
-    throw OperationNotImplementedException(
-        "Special ordered set functionality not yet implemented in HiGHS interface.");
+    env->output->outputError(" Special ordered sets are not supported by SHOT's HiGHS interface.");
     return (false);
 }
 
@@ -1736,10 +1740,6 @@ PairDouble MIPSolverHighs::getCurrentVariableBounds(int varIndex)
 
     return (tmpBounds);
 }
-
-bool MIPSolverHighs::supportsQuadraticObjective() { return (false); }
-
-bool MIPSolverHighs::supportsQuadraticConstraints() { return (false); }
 
 double MIPSolverHighs::getUnboundedVariableBoundValue() { return (highsInstance.getInfinity()); }
 

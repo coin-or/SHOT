@@ -89,7 +89,7 @@ determines which debug files you should expect to see at all:
 - **MIQCQP strategy** — used for convex QP/MIQP/QCQP/MIQCQP problems supported by CPLEX or Gurobi
   and for nonconvex QP/MIQP problems with CPLEX when quadratic objectives
   are enabled. Nonconvex quadratic problems also use this strategy with
-  Gurobi 9 or newer when
+  Gurobi when
   `Model.Reformulation.Quadratics.Strategy=3` (recommended for nonconvex
   problems with Gurobi). The reformulated model must still contain quadratic
   terms and have no general nonlinear terms.

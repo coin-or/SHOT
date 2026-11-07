@@ -4,7 +4,13 @@ set(CMAKE_CXX_STANDARD 17)
 
 # The main groups of tests, there should be a file matching the name +"test".cpp
 # in the test directory
-set(cpptests Model Settings)
+set(cpptests Model Settings MIPCapabilities)
+set(MIPCapabilities_parts 1 2 3 4 5 6)
+
+add_test(NAME GurobiVersion COMMAND ${CMAKE_COMMAND}
+    -DSHOT_SOURCE_DIR=${PROJECT_SOURCE_DIR}
+    -DSHOT_TEST_DIR=${PROJECT_BINARY_DIR}/test/gurobi-version
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/GurobiVersionTest.cmake)
 
 set(Model_parts
     1
