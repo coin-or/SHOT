@@ -30,7 +30,7 @@ jobs:
             cc: clang
             type: Debug
             cmake: '4.1.2'
-          - os: macos-14
+          - os: macos-15
             cxx: clang++
             cc: clang
             type: Release
