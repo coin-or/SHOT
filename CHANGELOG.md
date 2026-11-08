@@ -167,6 +167,8 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- HiGHS model-loading messages no longer bypass SHOT's console output settings,
+  including when creating internal feasibility and repair models ([#303]).
 - HiGHS distinguishes unbounded from infeasible MILPs by checking integer
   feasibility with presolve enabled, avoiding a numerical status for unbounded
   integer domains ([#301]).
@@ -537,6 +539,7 @@ Changes since SHOT 1.1.
 [#299]: https://github.com/coin-or/SHOT/pull/299
 [#301]: https://github.com/coin-or/SHOT/pull/301
 [#302]: https://github.com/coin-or/SHOT/pull/302
+[#303]: https://github.com/coin-or/SHOT/pull/303
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e

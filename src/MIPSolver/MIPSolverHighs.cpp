@@ -178,7 +178,12 @@ HighsCallbackFunctionType highsCallback
     }
 };
 
-MIPSolverHighs::MIPSolverHighs(EnvironmentPtr envPtr) { env = envPtr; }
+MIPSolverHighs::MIPSolverHighs(EnvironmentPtr envPtr)
+{
+    env = envPtr;
+    // Model loading can log before initializeSolverSettings() installs the logging callback.
+    highsInstance.setOptionValue("log_to_console", false);
+}
 
 MIPSolverHighs::~MIPSolverHighs() = default;
 
@@ -498,8 +503,6 @@ void MIPSolverHighs::initializeSolverSettings()
     }
 
     highsInstance.setOptionValue("highs_debug_level", env->settings->getSetting<int>("Subsolver.Highs.DebugLevel"));
-    highsInstance.setOptionValue("log_to_console",
-        false); // Prevent HiGHS from writing directly to stdout; logging is handled through the callback instead
 
     // highsInstance.setOptionValue("simplex_strategy", 0);
     // highsInstance.setOptionValue("solver", "choose");
@@ -988,9 +991,9 @@ E_ProblemSolutionStatus MIPSolverHighs::resolveInfeasibleOrUnbounded(E_ProblemSo
         model.lp_.sense_ = ObjSense::kMinimize;
 
         Highs feasibilityModel;
-        feasibilityModel.passModel(model);
         feasibilityModel.passOptions(highsInstance.getOptions());
         feasibilityModel.setOptionValue("output_flag", false);
+        feasibilityModel.passModel(model);
         feasibilityModel.setOptionValue("presolve", "on");
         feasibilityModel.setOptionValue("objective_bound", kHighsInf);
         feasibilityModel.setOptionValue("objective_target", -kHighsInf);
@@ -1042,9 +1045,9 @@ bool MIPSolverHighs::repairInfeasibility()
         // (Dual.MIP.InfeasibilityRepair.TimeLimit), the number of threads and the tolerances, are copied as well, since
         // the relaxation is a MIP problem that can otherwise take any time
         Highs feasModel;
-        feasModel.passModel(highsInstance.getModel());
         feasModel.passOptions(highsInstance.getOptions());
         feasModel.setOptionValue("output_flag", false);
+        feasModel.passModel(highsInstance.getModel());
 
         // Remove cutoff constraint if present (similar to Gurobi's cutoff removal)
         if(isMinimizationProblem)
@@ -1089,9 +1092,9 @@ bool MIPSolverHighs::repairInfeasibility()
         // nothing the repair can fix.
         {
             Highs feasibilityCheckModel;
-            feasibilityCheckModel.passModel(feasModel.getModel());
             feasibilityCheckModel.passOptions(feasModel.getOptions());
             feasibilityCheckModel.setOptionValue("output_flag", false);
+            feasibilityCheckModel.passModel(feasModel.getModel());
 
             double checkInfinity = feasibilityCheckModel.getInfinity();
 
