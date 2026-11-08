@@ -31,7 +31,7 @@ Download the respective pinned archives from `versions.json`, then run:
 
 ```sh
 python3 scripts/vendor-reader-dependencies.py ampl /path/to/mp-4.1.0.tar.gz
-python3 scripts/vendor-reader-dependencies.py mc++ /path/to/mcpp-5.0.4.tar.gz
+python3 scripts/vendor-reader-dependencies.py mc++ /path/to/mcpp-5.1.0.tar.gz
 ```
 
 The importer verifies the checksum before replacing either directory. MP
@@ -48,6 +48,7 @@ MC++'s relaxation, polynomial, linear algebra, or automatic differentiation
 facilities. The old unused cpplapack/FADBAD++ trees were removed. Optional
 `MC__USE_FADBAD` is not supported by this subset. MC++ interval arithmetic
 remains non-verified (it does not account for rounding error).
+The selected headers are unchanged between MC++ 5.0.4 and 5.1.0.
 
 The importer patches `interval.hpp` (`MCPP_PATCHES` in the script): `cos()`
 and `tan()` convert the number of periods to an `int`, which overflows for

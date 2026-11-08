@@ -49,6 +49,9 @@ Changes since SHOT 1.1.
   single-tree integration, and finite variable-bound defaults, available
   without constructing a solver. SHOTpy exposes the records through
   `getMIPSolverCapabilities()` with read-only properties ([#299]).
+- A [MIP solver capabilities guide](docs/MIPSolverCapabilities.md) and
+  [C++ and SHOTpy query examples](docs/site/concepts.md#solver-backends) in the
+  public documentation, with generated API references ([#299]).
 - Guides to interpreting terminal output, configuring solves, and understanding
   modeling and reformulation, with expanded result handling and C++ examples
   ([#295]).
@@ -140,6 +143,8 @@ Changes since SHOT 1.1.
   ([8c4a2bb8]).
 - Improved primal reduction cut heuristic ([#178]).
 - Updated bundled third-party libraries ([#213]).
+- MC++ is pinned to 5.1.0 and the optional Uno compatibility target is
+  2.9.3 ([#304]).
 - New repository layout, and the documentation is on the website ([#220],
   [#240]).
 - Settings of a MIP or NLP solver or of GAMS that SHOT is not compiled with
@@ -539,6 +544,7 @@ Changes since SHOT 1.1.
 [#299]: https://github.com/coin-or/SHOT/pull/299
 [#301]: https://github.com/coin-or/SHOT/pull/301
 [#302]: https://github.com/coin-or/SHOT/pull/302
+[#304]: https://github.com/coin-or/SHOT/pull/304
 [#303]: https://github.com/coin-or/SHOT/pull/303
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16

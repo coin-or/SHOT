@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "verified_on": "2026-10-10",
+  "verified_on": "2026-11-08",
   "dependencies": {
     "CppAD": {
       "version": "20260000.0",
@@ -71,10 +71,10 @@
       "tree_sha256": "99d0c9e2c19468bbbfc51ad4fe89309239b8a1699f57bb5da02348b5db8ac176"
     },
     "mc++": {
-      "version": "5.0.4",
-      "source": "https://codeload.github.com/omega-icl/mcpp/tar.gz/refs/tags/v5.0.4",
+      "version": "5.1.0",
+      "source": "https://codeload.github.com/omega-icl/mcpp/tar.gz/refs/tags/v5.1.0",
       "kind": "vendored",
-      "source_sha256": "9b5fed3d80ed8a026ae0d7680a99adacf6a80bf252a0e350e014fba43f1d2a75",
+      "source_sha256": "93d4b156837de6467572a227949561020214db186392793c3be4fe28ca3ebf44",
       "license": "EPL-2.0 OR GPL-2.0-or-later",
       "patches": [
         "Guard cos() and tan() interval bounds above 1e8 in magnitude and use double period counts to avoid integer overflow; sin() uses cos()."
@@ -131,7 +131,7 @@
       }
     },
     "Uno": {
-      "release": "v2.8.0",
+      "release": "v2.9.3",
       "optional": true
     }
   },
