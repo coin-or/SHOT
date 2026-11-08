@@ -4,8 +4,13 @@ set(CMAKE_CXX_STANDARD 17)
 
 # The main groups of tests, there should be a file matching the name +"test".cpp
 # in the test directory
-set(cpptests Model Settings MIPCapabilities)
+set(cpptests Model Settings MIPCapabilities PrimalNLP)
 set(MIPCapabilities_parts 1 2 3 4 5 6)
+set(PrimalNLP_parts 1 2)
+
+if(HAS_IPOPT)
+  list(APPEND PrimalNLP_parts 3)
+endif()
 
 add_test(NAME GurobiVersion COMMAND ${CMAKE_COMMAND}
     -DSHOT_SOURCE_DIR=${PROJECT_SOURCE_DIR}

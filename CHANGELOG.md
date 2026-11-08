@@ -44,6 +44,8 @@ Changes since SHOT 1.1.
 
 ### Added
 
+- `Primal.FixedInteger.MaxStartsPerCall` limits the number of dual-pool
+  starting points used per NLP call to five by default; zero allows all starts.
 - MIP backend capability queries for convex/nonconvex quadratic objectives and
   constraints, SOS1/SOS2, semicontinuous and semi-integer variables, SHOT's
   single-tree integration, and finite variable-bound defaults, available
@@ -129,6 +131,12 @@ Changes since SHOT 1.1.
 
 ### Changed
 
+- Nonconvex continuous problems use the best dual solution as the default NLP
+  starting point, rather than every point in the solution pool. Explicit
+  `Primal.FixedInteger.Source` selections still take precedence.
+- NLP progress rows show the outer SHOT iteration, with separate NLP solve
+  and batch-start counters. `NLPPOOL` replaces `NLPUNFEA` to distinguish a
+  starting point that violates nonlinear constraints from an infeasible NLP.
 - Equality constraints and ranges are kept as they are in the original
   problem ([#210]).
 - Much faster reading, reformulating and solving of large problems, and

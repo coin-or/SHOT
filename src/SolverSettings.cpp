@@ -790,6 +790,14 @@ void Solver::initializeSettings()
     enumPrimalBoundNLPStartingPoint.clear();
     env->settings->addConditionalValue(
         "Primal.FixedInteger.Source", nonconvex, static_cast<int>(ES_PrimalNLPFixedPoint::AllSolutions));
+    env->settings->addConditionalValue("Primal.FixedInteger.Source",
+        { E_SettingCondition::Nonconvex, E_SettingCondition::Continuous },
+        static_cast<int>(ES_PrimalNLPFixedPoint::FirstSolution));
+
+    env->settings->createSetting("Primal.FixedInteger.MaxStartsPerCall", 5,
+        "Maximum number of starting points selected from the dual solution pool per call, for each selected NLP "
+        "formulation: 0: Unlimited. Does not limit model starting points, final polishing or exhaustive integer search",
+        0, SHOT_INT_MAX);
 
     VectorString enumPrimalBoundNLPProblemSource;
     enumPrimalBoundNLPProblemSource.push_back("Original problem");

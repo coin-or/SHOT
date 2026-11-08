@@ -82,7 +82,7 @@ For minimization, the main header is:
 
 | Column | Interpretation |
 | --- | --- |
-| `#: type` | Counter for this operation and its row label. Dual solves, NLP calls, repairs, and reduction-cut updates have separate counters. |
+| `#: type` | Outer SHOT iteration for dual solves and NLP searches, followed by the row label. NLP solve and batch-start counters are shown separately. Repairs, reduction-cut updates and callbacks use their operation-specific counters. |
 | `Time: tot.` | Cumulative elapsed seconds, including preparation, rather than the duration of this row. |
 | `Dual cuts: + / tot.` | Number of hyperplanes added and accumulated total for the associated dual iteration. Blank when the added count is zero. NLP rows can repeat the dual iteration's counts; do not add the counts across printed rows. |
 | `Objective value: dual` | Bound from the current dual problem. It is distinct from the objective of that problem's returned solution. See the global-bound caveat below. |
@@ -122,8 +122,8 @@ Times, iteration paths, and last digits can change with the build and subsolvers
 ```text
      1: LP-O         0.05                    -37.8684 | inf.            inf. | inf.        -37.8684 | 11: 2.11e+01
      6: MILP-SL1     0.17      2 | 12        0.716245 | 14.9066      1.4e+01 | 9.5e-01      7.92975 | 10: 5.92e-01
-     1: NLPSOLPT-R   0.19      2 | 12        0.716245 | 10           9.3e+00 | 9.3e-01           10 | 1: 9.61e-09
-     2: NLPFEASP-R   0.19      2 | 12        0.716245 | 6.00976      5.3e+00 | 8.8e-01      6.00976 | 1: 9.94e-09
+     6: NLPSOLPT-R   0.19      2 | 12        0.716245 | 10           9.3e+00 | 9.3e-01           10 | 1: 9.61e-09
+     6: NLPFEASP-R   0.19      2 | 12        0.716245 | 6.00976      5.3e+00 | 8.8e-01      6.00976 | 1: 9.94e-09
     10: MILP-O       0.47                     6.00976 | 6.00976      0.0e+00 | 0.0e+00      6.00976 | 3: 9.87e-11
 ```
 
@@ -134,8 +134,8 @@ Times, iteration paths, and last digits can change with the build and subsolvers
    nonlinear constraint. A different, accepted point supplies the incumbent
    `14.9066`. A solution limit is an intentional way of limiting early MIP work.
 3. `NLPSOLPT-R` fixes integers from the first MIP solution and solves an NLP on
-   the reformulated model. It improves the incumbent to `10`. The row number
-   restarts at one because it counts NLP solves.
+   the reformulated model. It improves the incumbent to `10`. Its row retains
+   the outer iteration number `6`; the separate NLP message counts NLP solves.
 4. `NLPFEASP-R` uses another solution-pool candidate and improves the incumbent
    again, to about `6.00976`.
 5. `MILP-O` closes the gap. The final solution report confirms global optimality
@@ -173,12 +173,32 @@ problem**; the `O` here has a different meaning from a dual row's optimal suffix
 | Label before `-O` or `-R` | Candidate source |
 | --- | --- |
 | `NLPSOLPT` | First MIP solution point. |
-| `NLPFEASP` | Another MIP solution-pool point. |
-| `NLPUNFEA` | An infeasible MIP solution candidate. |
+| `NLPFEASP` | A feasible candidate from the dual solution pool, or the incumbent during final polishing. |
+| `NLPPOOL` | Another dual solution-pool point that violates the nonlinear constraints. |
 | `NLPSMDEV` | MIP candidate with the smallest nonlinear constraint deviation. |
-| `NLPNEWDB` | First MIP solution associated with a dual-bound update. |
+| `NLPNEWDB` | First dual solution associated with a dual-bound update, or a dual solution selected for final polishing. |
 | `NLPENUM` | Enumeration of discrete variable assignments. |
 | `NLPSTART` | Given starting point. |
+
+The number at the start of an NLP row is the outer SHOT iteration. A separate
+message identifies the cumulative NLP solve number and the starting point's
+position in the current batch, for example:
+
+```text
+ NLP solve #3 (SHOT iteration 2), start 2/5: dual pool point violating the nonlinear constraints (original problem).
+```
+
+The candidate-source label describes the point before the NLP solve. An
+`NLPPOOL` solve can therefore return a feasible, locally optimal solution.
+
+For nonconvex continuous problems, the recommended `Primal.FixedInteger.Source=1`
+selects only the best dual solution as a starting point. `Source=0` selects all
+pool points, subject to `Primal.FixedInteger.MaxStartsPerCall` (default five;
+zero means unlimited). The iteration/time frequencies control when a batch
+starts; the start limit controls its size. Both selected NLP formulations use
+the same starts, so selecting both can solve twice as many NLPs. Model starting
+points, final polishing and exhaustive integer enumeration have their own
+controls and are not limited by this setting.
 
 An NLP call need not find or improve a primal solution. Check whether the primal
 bound changes, and enable `Output.Console.PrimalSolver.Show=true` or debug logging
