@@ -514,6 +514,38 @@ class TestDualBounds:
         assert abs(solver.getGlobalDualBound() - solver.getPrimalBound()) < 1e-3
 
 
+class TestESHBoundaryCuts:
+    @pytest.mark.parametrize("use_max_function", [False, True], ids=["individual", "maximum"])
+    def test_rounded_boundary_point_does_not_stop_cut_generation(self, use_max_function):
+        """On ARM64, the circle root search rounded its external point inside
+        and dropped the cut, leaving a feasible point without closing the gap."""
+        import SHOTpy
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        solver.updateSetting("Dual.MIP.NumberOfThreads", 1)
+        solver.updateSetting("Dual.ESH.Rootsearch.UseMaxFunction", use_max_function)
+        solver.updateSetting("Primal.Tolerance.NonlinearConstraint", 1e-8)
+        solver.updateSetting("Termination.ObjectiveGap.Absolute", 1e-6)
+        solver.updateSetting("Termination.ObjectiveGap.Relative", 0.0)
+        solver.updateSetting("Termination.IterationLimit", 100)
+        solver.updateSetting("Termination.TimeLimit", 10.0)
+
+        problem = SHOTpy.Problem(solver)
+        x = problem.addVariable("x", lowerBound=-10.0, upperBound=10.0)
+        y = problem.addVariable("y", lowerBound=-10.0, upperBound=10.0)
+        problem.setObjective(x + y)
+        problem.addConstraint(x**2 + y**2 <= 4, "circle")
+        problem.finalize()
+        assert solver.setProblem(problem)
+        assert solver.solveProblem()
+        assert solver.getModelReturnStatus() == SHOTpy.ModelReturnStatus.OptimalGlobal, (
+            f"{solver.getTerminationReason()}: gap={solver.getAbsoluteObjectiveGap()}"
+        )
+        assert solver.getPrimalBound() == pytest.approx(-2 * math.sqrt(2), abs=1e-6)
+        assert solver.getAbsoluteObjectiveGap() <= 1e-6
+
+
 class TestOpenSourceMIPSolvers:
     @pytest.mark.parametrize("mipSolver", ["Cbc", "Highs"])
     @pytest.mark.parametrize("direction", ["Minimize", "Maximize"])
@@ -531,6 +563,11 @@ class TestOpenSourceMIPSolvers:
         solver.updateSetting("Output.Console.LogLevel", 6)
         solver.updateSetting("Dual.MIP.Solver", int(getattr(SHOTpy.MIPSolver, mipSolver)))
 
+        # An objective offset of +/-50 permits a relative gap of about 0.05
+        # with the defaults. Request an absolute certificate for this regression.
+        solver.updateSetting("Termination.ObjectiveGap.Absolute", 1e-6)
+        solver.updateSetting("Termination.ObjectiveGap.Relative", 0.0)
+
         problem = SHOTpy.Problem(solver)
         x = problem.addVariable("x", SHOTpy.VariableType.Real, 0.0, 10.0)
         y = problem.addVariable("y", SHOTpy.VariableType.Integer, 0.0, 10.0)
@@ -543,9 +580,12 @@ class TestOpenSourceMIPSolvers:
         assert solver.setProblem(problem)
         assert solver.solveProblem()
 
-        # The optimum is x = 0, y = 3, i.e., 1.36 before the sign and the constant
+        # The optimum is x = 1, y = 2, i.e., 1.36 before the sign and the constant
         optimum = sign * 1.36 + constant
-        assert solver.getModelReturnStatus() == SHOTpy.ModelReturnStatus.OptimalGlobal
+        assert solver.getModelReturnStatus() == SHOTpy.ModelReturnStatus.OptimalGlobal, (
+            f"{solver.getTerminationReason()}: primal={solver.getPrimalBound()}, "
+            f"dual={solver.getGlobalDualBound()}, gap={solver.getAbsoluteObjectiveGap()}"
+        )
         assert solver.getPrimalBound() == pytest.approx(optimum, abs=1e-3)
         assert solver.getSolutionStatistics().numberOfIterations < 100
 

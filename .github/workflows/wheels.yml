@@ -1,9 +1,11 @@
-name: Build and publish Python distributions
+name: Build and publish distributions
 
 # A tag v<version>[-<a|b|rc><n>] publishes that release; it must match the
 # version and SHOT_VERSION_SUFFIX in CMakeLists.txt. A manual run builds a
 # development version <version>.dev<run number> and publishes it from master
 # when 'publish' is checked. See scripts/set-python-version.py.
+# Native archives reuse repaired wheels and are attached to the tagged GitHub
+# release (created as a draft if it does not exist yet).
 on:
   workflow_dispatch:
     inputs:
@@ -24,18 +26,26 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm, macos-15, windows-2022]
+        include:
+          - os: ubuntu-24.04
+            platform: linux-x86_64
+          - os: ubuntu-24.04-arm
+            platform: linux-aarch64
+          - os: macos-15
+            platform: macos-arm64
+          - os: windows-2022
+            platform: windows-x86_64
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
 
-      - uses: actions/cache@v4
+      - uses: actions/cache@v5
         with:
           path: build
           key: shotpy-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('CMakeLists.txt', 'pyproject.toml', 'ThirdParty/versions.json', '.github/workflows/wheels.yml') }}
@@ -48,26 +58,120 @@ jobs:
 
       - name: Set up MSVC
         if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
+        shell: pwsh
+        run: |
+          $before = [Environment]::GetEnvironmentVariables('Process')
+          $vswhere = "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe"
+          $installation = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if ($LASTEXITCODE -ne 0 -or !$installation) {
+            throw 'No Visual Studio installation with the x64 C++ tools was found.'
+          }
+          Import-Module "$installation/Common7/Tools/Microsoft.VisualStudio.DevShell.dll"
+          Enter-VsDevShell -VsInstallPath $installation -SkipAutomaticLocation -DevCmdArguments '-arch=x64 -host_arch=x64'
+          Get-Command cl.exe -ErrorAction Stop
+          if (!$env:VCToolsRedistDir -or !(Test-Path $env:VCToolsRedistDir)) {
+            throw 'The MSVC runtime redistributable directory was not configured.'
+          }
+          # Preserve the developer environment for both cibuildwheel and packaging.
+          Get-ChildItem Env: | Where-Object {
+            $_.Name -ne 'PATH' -and $before[$_.Name] -cne $_.Value
+          } | ForEach-Object {
+            "$($_.Name)=$($_.Value)" | Add-Content -LiteralPath $env:GITHUB_ENV -Encoding utf8
+          }
+          $originalPath = $before['PATH'] -split ';'
+          $env:PATH -split ';' | Where-Object {
+            $_ -and $_ -notin $originalPath
+          } | Add-Content -LiteralPath $env:GITHUB_PATH -Encoding utf8
 
       - uses: pypa/cibuildwheel@v4.3.1
 
-      - uses: actions/upload-artifact@v4
+      - name: Package standalone executable
+        run: |
+          python -m unittest discover -s test -p test_executable_packaging.py -v
+          python scripts/package-executable.py --platform ${{ matrix.platform }}
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: executable-${{ matrix.platform }}
+          path: executables/*
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v6
         with:
           name: wheels-${{ matrix.os }}
           path: wheelhouse/*.whl
 
+  test-executables:
+    name: Test standalone executable (${{ matrix.os }})
+    needs: wheels
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            platform: linux-x86_64
+          - os: ubuntu-24.04-arm
+            platform: linux-aarch64
+          - os: macos-15
+            platform: macos-arm64
+          - os: windows-2022
+            platform: windows-x86_64
+    # Fresh runners have none of the dependencies installed by the wheel build.
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.13'
+      - uses: actions/download-artifact@v7
+        with:
+          name: executable-${{ matrix.platform }}
+          path: executables
+      - name: Test extracted archive
+        shell: bash
+        run: |
+          shopt -s nullglob
+          archives=(executables/*.tar.gz executables/*.zip)
+          test "${#archives[@]}" -eq 1
+          python scripts/test-executable-archive.py "${archives[0]}"
+
+  release-executables:
+    name: Upload executables to GitHub release
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: test-executables
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: executable-*
+          path: executables
+          merge-multiple: true
+      - name: Attach archives and checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          if ! gh release view "$RELEASE_TAG" > /dev/null 2>&1; then
+            prerelease=()
+            if [[ "$RELEASE_TAG" =~ (a|b|rc)[0-9]+$ ]]; then
+              prerelease=(--prerelease)
+            fi
+            gh release create "$RELEASE_TAG" --verify-tag --draft --generate-notes "${prerelease[@]}"
+          fi
+          gh release upload "$RELEASE_TAG" executables/* --clobber
+
   sdist:
     name: Source distribution
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.13"
 
@@ -77,7 +181,7 @@ jobs:
       - run: python -m pip install build
       - run: python -m build --sdist
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v6
         with:
           name: sdist
           path: dist/*.tar.gz
@@ -88,20 +192,20 @@ jobs:
       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
       (github.event_name == 'workflow_dispatch' && inputs.publish && github.ref == 'refs/heads/master')
     needs: [wheels, sdist]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: pypi
       url: https://pypi.org/project/SHOTpy/
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           pattern: wheels-*
           path: dist
           merge-multiple: true
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v7
         with:
           name: sdist
           path: dist

@@ -466,6 +466,11 @@ class TestSharedAuxiliaryVariables:
         results = []
         for settings in (self.ALWAYS, self.NEVER):
             solver = make_solver(settings)
+            # Compare formulations at a common accuracy, tighter than the
+            # default relative gap and the 1e-3 comparison below.
+            solver.updateSetting("Termination.ObjectiveGap.Absolute", 1e-6)
+            solver.updateSetting("Termination.ObjectiveGap.Relative", 0.0)
+            solver.updateSetting("Primal.Tolerance.NonlinearConstraint", 1e-8)
             problem = self.make_convex_problem(solver, perturbed)
             assert solver.setProblem(problem)
             assert solver.solveProblem()
@@ -508,6 +513,8 @@ class TestSharedAuxiliaryVariables:
         import SHOTpy
 
         solver = make_solver(self.ALWAYS)
+        # The feasibility assertion below is tighter than the default 1e-5.
+        solver.updateSetting("Primal.Tolerance.NonlinearConstraint", 1e-8)
         problem = SHOTpy.Problem(solver)
         x, y, z, u = (problem.addVariable(name, SHOTpy.VariableType.Real, 0.5, 2.0) for name in "xyzu")
 

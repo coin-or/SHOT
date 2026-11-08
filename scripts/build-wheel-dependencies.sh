@@ -25,7 +25,7 @@ else
     # Ipopt uses LAPACK from the Accelerate framework; MUMPS needs gfortran from Homebrew's gcc, and
     # coinbrew needs a newer bash than the one in macOS
     brew install gcc pkgconf bash
-    export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-14.0}"
+    export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-15.0}"
     jobs="$(sysctl -n hw.ncpu)"
     shell="$(brew --prefix)/bin/bash"
 fi
