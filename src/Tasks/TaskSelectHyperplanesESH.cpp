@@ -521,12 +521,6 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
     std::vector<std::pair<ConstraintHyperplanePtr, double>> hyperplanesCuttingAwayPrimals;
 
-    // The primal solutions are in the variables of the original problem, and the cuts in those of the dual problem
-    std::vector<VectorDouble> primalPoints;
-
-    for(auto& P : env->results->primalSolutions)
-        primalPoints.push_back(env->dualSolver->getPrimalPointInDualProblem(P));
-
     // If no hyperplanes added, do rootsearch also on nonconvex constraints
     if(addedHyperplanes == 0 && nonconvexSelectedNumericValues.size() > 0)
     {
@@ -534,6 +528,13 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
             fmt::format("         No cutting planes added for convex constraints, {} candidates from nonconvex "
                         "constraints.",
                 nonconvexSelectedNumericValues.size()));
+
+        // The primal solutions are points of the original problem, while the terms of the hyperplanes use the variable
+        // indices of the MIP solver, which also has the auxiliary variables of the reformulated problem
+        std::vector<VectorDouble> primalSolutionPoints;
+
+        for(auto& P : env->results->primalSolutions)
+            primalSolutionPoints.push_back(env->dualSolver->getAugmentedPrimalSolutionPoint(P));
 
         for(auto& values : nonconvexSelectedNumericValues)
         {
@@ -618,7 +619,7 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                     bool cutsAwayPrimalSolution = false;
 
-                    for(auto& point : primalPoints)
+                    for(auto& point : primalSolutionPoints)
                     {
                         if(auto terms = env->dualSolver->MIPSolver->createHyperplaneTerms(hyperplane))
                         {
@@ -626,7 +627,7 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                             for(auto& T : terms->first)
                             {
-                                constraintValue += T.second * point[T.first];
+                                constraintValue += T.second * point.at(T.first);
                             }
 
                             if(constraintValue > 0)
@@ -737,7 +738,7 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                         bool cutsAwayPrimalSolution = false;
 
-                        for(auto& point : primalPoints)
+                        for(auto& point : primalSolutionPoints)
                         {
                             if(auto terms = env->dualSolver->MIPSolver->createHyperplaneTerms(hyperplane))
                             {
@@ -745,7 +746,7 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                                 for(auto& T : terms->first)
                                 {
-                                    constraintValue += T.second * point[T.first];
+                                    constraintValue += T.second * point.at(T.first);
                                 }
 
                                 if(constraintValue > 0)

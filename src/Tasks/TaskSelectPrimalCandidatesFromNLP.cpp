@@ -479,42 +479,56 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
         std::string source = (sourceIsReformulatedProblem) ? "R" : "O";
 
         std::string sourceDesc;
+        std::string candidateSource;
+
         switch(CAND.sourceType)
         {
         case E_PrimalNLPSource::FirstSolution:
             env->output->outputDebug("         Source from candidate point is first MIP solution point.");
             sourceDesc = "SOLPT-" + source;
+            candidateSource = "best dual solution";
             break;
         case E_PrimalNLPSource::FeasibleSolution:
             env->output->outputDebug("         Source from candidate point is MIP solution pool.");
             sourceDesc = "FEASP-" + source;
+            candidateSource = "feasible starting point";
             break;
         case E_PrimalNLPSource::InfeasibleSolution:
             env->output->outputDebug("         Source from candidate point is infeasible MIP solution.");
-            sourceDesc = "UNFEA-" + source;
+            sourceDesc = "POOL-" + source;
+            candidateSource = "dual pool point violating the nonlinear constraints";
             break;
         case E_PrimalNLPSource::SmallestDeviationSolution:
             env->output->outputDebug(
                 "         Source from candidate point is MIP solution with smallest nonlinear error.");
             sourceDesc = "SMDEV-" + source;
+            candidateSource = "dual solution with the smallest nonlinear constraint deviation";
             break;
         case E_PrimalNLPSource::FirstSolutionNewDualBound:
             env->output->outputDebug(
                 "         Source from candidate point is first MIP solution point which gave dual bound update.");
             sourceDesc = "NEWDB-" + source;
+            candidateSource = isFinalPolish ? "dual solution selected for final polishing"
+                                           : "best dual solution associated with a dual-bound update";
             break;
         case E_PrimalNLPSource::Enumeration:
             env->output->outputDebug(
                 "         Source from candidate point is the exhaustive search of the discrete variables.");
             sourceDesc = "ENUM-" + source;
+            candidateSource = "enumerated discrete assignment";
             break;
         case E_PrimalNLPSource::StartingPoint:
             env->output->outputDebug("         Source from candidate point is a given starting point.");
             sourceDesc = "START-" + source;
+            candidateSource = "given starting point";
             break;
         default:
             break;
         }
+
+        env->output->outputInfo(fmt::format(" NLP solve #{} (SHOT iteration {}), start {}/{}: {} ({} problem).",
+            env->solutionStatistics.numberOfProblemsFixedNLP, currIter->iterationNumber, counter + 1, candidates.size(),
+            candidateSource, sourceIsReformulatedProblem ? "reformulated" : "original"));
 
         switch(solvestatus)
         {
@@ -559,16 +573,16 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
             auto variableSolution = NLPSolver->getSolution();
 
             // The objective variable of an epigraph constraint that has been reformulated into an objective function
-            // is not in any constraint of the reformulated problem, so the NLP solver can give it any value. Its
-            // value is that of the objective function, as for the solution points from the MIP solver.
+            // is not in any constraint of the reformulated problem, so the NLP solver can give it any value.
+            // Reconstruct it using the coefficient, constant and direction of the antiepigraph objective.
             if(sourceIsReformulatedProblem && env->reformulatedProblem->antiEpigraphObjectiveVariable
                 && !variableSolution.empty())
             {
-                variableSolution.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->getIndex())
-                    = sourceProblem->objectiveFunction->calculateValue(variableSolution);
+                sourceProblem->updateAntiEpigraphObjectiveVariableValue(
+                    variableSolution, sourceProblem->objectiveFunction->calculateValue(variableSolution));
             }
 
-            env->primalSolver->addPrimalSolutionCandidate(
+            bool isAccepted = env->primalSolver->addPrimalSolutionCandidate(
                 variableSolution, E_PrimalSolutionSource::NLPFixedIntegers, currIter->iterationNumber);
 
             if(sourceProblem->properties.numberOfNonlinearConstraints > 0
@@ -579,18 +593,18 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
                 env->output->outputDebug(fmt::format("         Max error {} from nonlinear or quadratic constraint {}.",
                     mostDevConstr->normalizedValue, mostDevConstr->constraint->name));
 
-                env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP,
-                    ("NLP" + sourceDesc), env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded,
-                    currIter->totNumHyperplanes, env->results->getCurrentDualBound(), env->results->getPrimalBound(),
+                env->report->outputIterationDetail(currIter->iterationNumber, ("NLP" + sourceDesc),
+                    env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded, currIter->totNumHyperplanes,
+                    env->results->getCurrentDualBound(), env->results->getPrimalBound(),
                     env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(),
                     tmpObj, mostDevConstr->constraint->getIndex(), mostDevConstr->normalizedValue,
                     E_IterationLineType::PrimalNLP);
             }
             else
             {
-                env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP,
-                    ("NLP" + sourceDesc), env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded,
-                    currIter->totNumHyperplanes, env->results->getCurrentDualBound(), env->results->getPrimalBound(),
+                env->report->outputIterationDetail(currIter->iterationNumber, ("NLP" + sourceDesc),
+                    env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded, currIter->totNumHyperplanes,
+                    env->results->getCurrentDualBound(), env->results->getPrimalBound(),
                     env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(),
                     tmpObj,
                     -1, // Not shown
@@ -598,10 +612,18 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
                     E_IterationLineType::PrimalNLP);
             }
 
-            // Add integer cut.
+            // A convex fixed-integer problem can still contain a better solution if the NLP point was only feasible,
+            // or if its optimum was rejected as a primal solution. Nonconvex problems keep the cut to avoid cycling.
             if(!isEnumeration && env->settings->getSetting<bool>("Dual.HyperplaneCuts.UseIntegerCuts")
                 && sourceProblem->properties.numberOfDiscreteVariables > 0)
-                createIntegerCut(CAND.point);
+            {
+                if(env->reformulatedProblem->properties.convexity != E_ProblemConvexity::Convex
+                    || (solvestatus == E_NLPSolutionStatus::Optimal && isAccepted))
+                    createIntegerCut(CAND.point);
+                else
+                    env->output->outputDebug(
+                        "         No integer cut: the convex fixed NLP has no accepted optimal solution.");
+            }
 
             if(!isEnumeration && env->settings->getSetting<bool>("Primal.FixedInteger.CreateInfeasibilityCut"))
                 createInfeasibilityCut(variableSolution);
@@ -612,11 +634,18 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
         else if(solvestatus == E_NLPSolutionStatus::Error || solvestatus == E_NLPSolutionStatus::Unbounded
             || solvestatus == E_NLPSolutionStatus::Infeasible)
         {
-            env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP, ("NLP" + sourceDesc),
+            env->report->outputIterationDetail(currIter->iterationNumber, ("NLP" + sourceDesc),
                 env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded, currIter->totNumHyperplanes,
                 env->results->getCurrentDualBound(), env->results->getPrimalBound(),
                 env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(), NAN, -1,
                 NAN, E_IterationLineType::PrimalNLP);
+
+            // Add integer cut. Otherwise the MIP solver can return the same infeasible integer combination again, e.g.,
+            // when the cuts of a nonconvex constraint in it cannot cut off the solution point.
+            if(solvestatus == E_NLPSolutionStatus::Infeasible && !isEnumeration
+                && env->settings->getSetting<bool>("Dual.HyperplaneCuts.UseIntegerCuts")
+                && sourceProblem->properties.numberOfDiscreteVariables > 0)
+                createIntegerCut(CAND.point);
         }
         else if(sourceProblem->properties.numberOfNonlinearConstraints > 0
             || sourceProblem->properties.numberOfQuadraticConstraints > 0)
@@ -632,18 +661,18 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
                 if(!isEnumeration && env->settings->getSetting<bool>("Primal.FixedInteger.CreateInfeasibilityCut"))
                     createInfeasibilityCut(variableSolution);
 
-                env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP,
-                    ("NLP" + sourceDesc), env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded,
-                    currIter->totNumHyperplanes, env->results->getCurrentDualBound(), env->results->getPrimalBound(),
+                env->report->outputIterationDetail(currIter->iterationNumber, ("NLP" + sourceDesc),
+                    env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded, currIter->totNumHyperplanes,
+                    env->results->getCurrentDualBound(), env->results->getPrimalBound(),
                     env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(),
                     tmpObj, mostDevConstr->constraint->getIndex(), mostDevConstr->normalizedValue,
                     E_IterationLineType::PrimalNLP);
             }
             else
             {
-                env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP,
-                    ("NLP" + sourceDesc), env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded,
-                    currIter->totNumHyperplanes, env->results->getCurrentDualBound(), env->results->getPrimalBound(),
+                env->report->outputIterationDetail(currIter->iterationNumber, ("NLP" + sourceDesc),
+                    env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded, currIter->totNumHyperplanes,
+                    env->results->getCurrentDualBound(), env->results->getPrimalBound(),
                     env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(), NAN,
                     -1, NAN, E_IterationLineType::PrimalNLP);
             }
@@ -655,9 +684,9 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
 
             if(variableSolution.size() > 0)
             {
-                env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP,
-                    ("NLP" + sourceDesc), env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded,
-                    currIter->totNumHyperplanes, env->results->getCurrentDualBound(), env->results->getPrimalBound(),
+                env->report->outputIterationDetail(currIter->iterationNumber, ("NLP" + sourceDesc),
+                    env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded, currIter->totNumHyperplanes,
+                    env->results->getCurrentDualBound(), env->results->getPrimalBound(),
                     env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(), NAN,
                     -1, NAN, E_IterationLineType::PrimalNLP);
             }

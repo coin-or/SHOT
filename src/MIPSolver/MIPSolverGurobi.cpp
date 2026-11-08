@@ -412,15 +412,14 @@ void MIPSolverGurobi::initializeSolverSettings()
         gurobiModel->set(GRB_DoubleParam_PSDTol,
             env->settings->getSetting<double>("Model.Convexity.Quadratics.EigenValueTolerance"));
 
-#if GRB_VERSION_MAJOR >= 9
-        // Supports nonconvex MIQCQP
-        if(static_cast<ES_QuadraticProblemStrategy>(
-               env->settings->getSetting<int>("Model.Reformulation.Quadratics.Strategy"))
-            == ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained)
+        // A nonconvex quadratic objective can also be passed under the other quadratic strategies.
+        if(hasQuadraticObjective
+            || static_cast<ES_QuadraticProblemStrategy>(
+                   env->settings->getSetting<int>("Model.Reformulation.Quadratics.Strategy"))
+                == ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained)
         {
             gurobiModel->set(GRB_IntParam_NonConvex, 2);
         }
-#endif
 
         // Set various solver specific MIP settings
         gurobiModel->set(GRB_IntParam_ScaleFlag, env->settings->getSetting<int>("Subsolver.Gurobi.ScaleFlag"));
@@ -828,6 +827,16 @@ E_ProblemSolutionStatus MIPSolverGurobi::getSolutionStatus()
     return (MIPSolutionStatus);
 }
 
+void MIPSolverGurobi::restoreObjectiveCoefficients()
+{
+    for(auto& coefficient : objectiveCoefficientsToRestore)
+    {
+        gurobiModel->getVar(coefficient.index).set(GRB_DoubleAttr_Obj, coefficient.value);
+        modelUpdated = true;
+    }
+    objectiveCoefficientsToRestore.clear();
+}
+
 E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
 {
     E_ProblemSolutionStatus MIPSolutionStatus;
@@ -835,13 +844,7 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
 
     try
     {
-        for(auto& P : objectiveCoefficientsToRestore)
-        {
-            gurobiModel->getVar(P.index).set(GRB_DoubleAttr_Obj, P.value);
-            modelUpdated = true;
-        }
-
-        objectiveCoefficientsToRestore.clear();
+        restoreObjectiveCoefficients();
 
         if(modelUpdated)
         {
@@ -859,9 +862,16 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
-    // An unbounded exact dual problem means that the problem is unbounded, so no point is needed
-    if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->results->getNumberOfIterations() > 0
-        && env->dualSolver->isDualProblemExact())
+    if(MIPSolutionStatus == E_ProblemSolutionStatus::Numeric
+        || (MIPSolutionStatus == E_ProblemSolutionStatus::Infeasible
+            && gurobiModel->get(GRB_IntAttr_Status) == GRB_INFEASIBLE))
+        MIPSolutionStatus = resolveWithNumericFocus(MIPSolutionStatus);
+
+    // An unbounded exact dual problem means that the problem is unbounded, so no point is needed. Gurobi's presolve
+    // can report a bounded problem as infeasible or unbounded, e.g., the minimax problem, whose objective variable has
+    // a large lower bound, so this and the problems solved before the main iterations are solved again to find out
+    if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded
+        && (env->results->getNumberOfIterations() == 0 || env->dualSolver->isDualProblemExact()))
     {
         MIPSolutionStatus = resolveInfeasibleOrUnbounded(MIPSolutionStatus);
     }
@@ -871,21 +881,17 @@ E_ProblemSolutionStatus MIPSolverGurobi::solveProblem()
         std::vector<PairIndexValue> originalObjectiveCoefficients;
         bool problemUpdated = false;
 
-        if((env->reformulatedProblem->objectiveFunction->properties.classification
-                   == E_ObjectiveFunctionClassification::Linear
-               && std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                   ->isUnbounded())
-            || (env->reformulatedProblem->objectiveFunction->properties.classification
-                    == E_ObjectiveFunctionClassification::Quadratic
-                && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                    ->isUnbounded()))
+        auto objectiveClass = env->reformulatedProblem->objectiveFunction->properties.classification;
+        if((objectiveClass == E_ObjectiveFunctionClassification::Linear
+               || objectiveClass == E_ObjectiveFunctionClassification::Quadratic)
+            && (env->reformulatedProblem->objectiveFunction->isUnbounded() || hasUnboundedObjectiveVariableInSolver()))
         {
             for(auto& V : env->reformulatedProblem->allVariables)
             {
                 if(!V->properties.inObjectiveFunction)
                     continue;
 
-                if(V->isUnbounded())
+                if(V->isUnbounded() || isVariableUnboundedInSolver(V->getIndex()))
                 {
                     // Temporarily remove unbounded terms from objective
                     originalObjectiveCoefficients.emplace_back(
@@ -970,6 +976,60 @@ E_ProblemSolutionStatus MIPSolverGurobi::resolveInfeasibleOrUnbounded(E_ProblemS
     catch(GRBException& e)
     {
         env->output->outputError("        Error when solving MIP/LP problem without dual reductions", e.getMessage());
+        status = E_ProblemSolutionStatus::Error;
+    }
+
+    return (status);
+}
+
+E_ProblemSolutionStatus MIPSolverGurobi::resolveWithNumericFocus(E_ProblemSolutionStatus status)
+{
+    try
+    {
+        int numericFocus = gurobiModel->get(GRB_IntParam_NumericFocus);
+
+        int presolve = gurobiModel->get(GRB_IntParam_Presolve);
+        double timeLimit = gurobiModel->get(GRB_DoubleParam_TimeLimit);
+        double remainingTime = timeLimit;
+
+        auto optimize = [&]()
+        {
+            remainingTime -= gurobiModel->get(GRB_DoubleAttr_Runtime);
+            if(remainingTime <= 0.0)
+                return E_ProblemSolutionStatus::TimeLimit;
+
+            gurobiModel->set(GRB_DoubleParam_TimeLimit, remainingTime);
+            // Discard the previous infeasibility result so parameter changes cause a fresh solve.
+            gurobiModel->reset();
+            gurobiModel->optimize();
+            return getSolutionStatus();
+        };
+
+        if(numericFocus != 3)
+        {
+            env->output->outputDebug("        Numerical trouble or infeasibility in Gurobi, so the problem is solved "
+                                     "again with NumericFocus 3.");
+
+            gurobiModel->set(GRB_IntParam_NumericFocus, 3);
+            status = optimize();
+        }
+
+        if(status == E_ProblemSolutionStatus::Infeasible && gurobiModel->get(GRB_IntAttr_Status) == GRB_INFEASIBLE
+            && presolve != 0)
+        {
+            env->output->outputDebug(
+                "        Gurobi reports infeasibility, so the problem is solved again without presolve.");
+            gurobiModel->set(GRB_IntParam_Presolve, 0);
+            status = optimize();
+        }
+
+        gurobiModel->set(GRB_DoubleParam_TimeLimit, timeLimit);
+        gurobiModel->set(GRB_IntParam_Presolve, presolve);
+        gurobiModel->set(GRB_IntParam_NumericFocus, numericFocus);
+    }
+    catch(GRBException& e)
+    {
+        env->output->outputError("        Error when solving MIP/LP problem with NumericFocus 3", e.getMessage());
         status = E_ProblemSolutionStatus::Error;
     }
 
@@ -1531,10 +1591,7 @@ PairDouble MIPSolverGurobi::getCurrentVariableBounds(int varIndex)
     return (tmpBounds);
 }
 
-bool MIPSolverGurobi::supportsQuadraticObjective() { return (true); }
-bool MIPSolverGurobi::supportsQuadraticConstraints() { return (true); }
-
-double MIPSolverGurobi::getUnboundedVariableBoundValue() { return (1e+20); }
+double MIPSolverGurobi::getUnboundedVariableBoundValue() { return capabilities.unboundedVariableBound; }
 
 double MIPSolverGurobi::getDualObjectiveValue()
 {
@@ -1542,16 +1599,16 @@ double MIPSolverGurobi::getDualObjectiveValue()
     double objVal = (isMinimizationProblem ? SHOT_DBL_MIN : SHOT_DBL_MAX);
 
     // Gurobi solves a continuous problem with nonconvex quadratic terms with branch and bound, which has a bound also
-    // when it is interrupted, and whose objective value is not a bound when the gap is not zero. Only then is ObjBound
-    // available for a continuous problem.
+    // when it is interrupted, and whose objective value is not a bound when the gap is not zero. Only then does
+    // ObjBound have a finite value for a continuous problem; for a convex problem with quadratic constraints, it is
+    // available but infinite, and the objective value of the optimal solution is then the bound.
     bool isBranchAndBound = isMIP;
 
     if(!isMIP)
     {
         try
         {
-            gurobiModel->get(GRB_DoubleAttr_ObjBound);
-            isBranchAndBound = true;
+            isBranchAndBound = std::abs(gurobiModel->get(GRB_DoubleAttr_ObjBound)) < GRB_INFINITY;
         }
         catch(GRBException&)
         {
@@ -1617,7 +1674,7 @@ void GurobiCallbackMultiTree::callback()
             message.erase(std::remove(message.begin(), message.end(), '\n'), message.end());
             env->output->outputInfo(fmt::format("      | {} ", message));
         }
-        else if(where == GRB_CB_MIP)
+        else if(where == GRB_CB_MIP && env->results->getNumberOfIterations() > 0)
         // Used to get the number of open nodes
         {
             auto currIter = env->results->getCurrentIteration();

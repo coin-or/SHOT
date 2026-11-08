@@ -4,7 +4,18 @@ set(CMAKE_CXX_STANDARD 17)
 
 # The main groups of tests, there should be a file matching the name +"test".cpp
 # in the test directory
-set(cpptests Model Settings)
+set(cpptests Model Settings MIPCapabilities PrimalNLP)
+set(MIPCapabilities_parts 1 2 3 4 5 6)
+set(PrimalNLP_parts 1 2)
+
+if(HAS_IPOPT)
+  list(APPEND PrimalNLP_parts 3)
+endif()
+
+add_test(NAME GurobiVersion COMMAND ${CMAKE_COMMAND}
+    -DSHOT_SOURCE_DIR=${PROJECT_SOURCE_DIR}
+    -DSHOT_TEST_DIR=${PROJECT_BINARY_DIR}/test/gurobi-version
+    -P ${CMAKE_CURRENT_SOURCE_DIR}/GurobiVersionTest.cmake)
 
 set(Model_parts
     1
@@ -80,7 +91,9 @@ set(Model_parts
     71
     72
     73
-    74) # The different parts of each test (if any)
+    74
+    75
+    76) # The different parts of each test (if any)
 
 set(Settings_parts 1 2 3 4 5 6 7 8 9 10 11 12 13)
 
@@ -90,17 +103,17 @@ if(HAS_CBC)
 endif()
 
 if(HAS_CPLEX)
-  set(Cplex_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23)
+  set(Cplex_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31)
   set(cpptests ${cpptests} Cplex)
 endif()
 
 if(HAS_GUROBI)
-  set(Gurobi_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15)
+  set(Gurobi_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22)
   set(cpptests ${cpptests} Gurobi)
 endif()
 
 if(HAS_HIGHS)
-  set(Highs_parts 1 2 3 4 5 6 7 8 9 10 11 12)
+  set(Highs_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14)
   set(cpptests ${cpptests} Highs)
 endif()
 
@@ -121,7 +134,9 @@ if(HAS_GAMS)
       12
       13
       14
-      15)
+      15
+      16
+      17)
   # HiGHS does not implement SHOT's SOS interface.
   if(NOT (HAS_CBC OR HAS_CPLEX OR HAS_GUROBI))
     list(REMOVE_ITEM GAMS_parts 8 9 10)
@@ -129,7 +144,7 @@ if(HAS_GAMS)
   set(cpptests ${cpptests} GAMS)
 endif()
 
-set(DualBound_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15)
+set(DualBound_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)
 set(cpptests ${cpptests} DualBound)
 
 set(Determinism_parts 1 2 3)
@@ -172,8 +187,44 @@ set(Solver_parts
     34
     35
     36
-    37)
+    37
+    38
+    39
+    40
+    41
+    42
+    43
+    44
+    45
+    47
+    48
+    49
+    50
+    51)
+if(HAS_IPOPT)
+  list(APPEND Solver_parts 46)
+endif()
+if(HAS_GUROBI)
+  list(APPEND Solver_parts 52)
+endif()
 set(cpptests ${cpptests} Solver)
+
+set(StrategySelection_parts)
+if(HAS_CBC)
+  list(APPEND StrategySelection_parts 1)
+endif()
+if(HAS_HIGHS)
+  list(APPEND StrategySelection_parts 2)
+endif()
+if(HAS_CPLEX)
+  list(APPEND StrategySelection_parts 3)
+endif()
+if(HAS_GUROBI)
+  list(APPEND StrategySelection_parts 4)
+endif()
+if(StrategySelection_parts)
+  list(APPEND cpptests StrategySelection)
+endif()
 
 if(HAS_CONOPT)
   list(APPEND cpptests Conopt)
@@ -226,7 +277,7 @@ endif()
 
 if(HAS_IPOPT)
   set(cpptests ${cpptests} Ipopt)
-  set(Ipopt_parts 1 2 3)
+  set(Ipopt_parts 1 2 3 4 5)
 endif()
 
 if(HAS_UNO)
@@ -464,49 +515,13 @@ if(TARGET SHOTpy)
                               ${CMAKE_CURRENT_SOURCE_DIR}/python
                               ${CMAKE_CURRENT_BINARY_DIR}/python)
       
-      # Add a single test that runs all Python tests via pytest
-      add_test(
-        NAME Python_API_Tests
-        COMMAND ${Python3_EXECUTABLE} -m pytest 
-                ${CMAKE_CURRENT_BINARY_DIR}/python
-                -v
-                --tb=short
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-      )
-      
-      # Set environment so pytest can find SHOTpy module. All Python tests take about three minutes on their own,
-      # and longer when run in parallel with the other tests
-      set_tests_properties(Python_API_Tests PROPERTIES
-        ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR};SHOT_TUTORIAL_NOTEBOOK=${PROJECT_SOURCE_DIR}/docs/SHOTpy_Tutorial.ipynb"
-        FAIL_REGULAR_EXPRESSION "FAILED;ERROR"
-        TIMEOUT 1200
-      )
-      
-      # Individual Python test files (for more granular testing)
-      set(PYTHON_TEST_FILES
-        test_module_api
-        test_variables_expressions
-        test_constraints
-        test_objectives
-        test_settings
-        test_problem_io
-        test_create_and_solve_problems
-        test_reformulation
-        test_bound_tightening
-        test_optimization_problems
-        test_modeling_systems
-        test_gradients_hessians
-        test_callbacks
-        test_enumeration
-        test_constraint_expressions
-        test_equality_constraints
-        test_api_safety
-        test_interval_evaluation
-        test_interval_derivatives
-        test_tutorial
-      )
-      
-      foreach(pytest_file ${PYTHON_TEST_FILES})
+      # One test per Python test file. The files are found rather than listed, so that a new file cannot be left out;
+      # as the copy above, a new file is added when CMake configures again
+      file(GLOB PYTHON_TEST_PATHS ${CMAKE_CURRENT_SOURCE_DIR}/python/test_*.py)
+      list(SORT PYTHON_TEST_PATHS)
+
+      foreach(pytest_path ${PYTHON_TEST_PATHS})
+        get_filename_component(pytest_file ${pytest_path} NAME_WE)
         add_test(
           NAME Python_${pytest_file}
           COMMAND ${Python3_EXECUTABLE} -m pytest 
@@ -515,9 +530,12 @@ if(TARGET SHOTpy)
                   --tb=short
           WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         )
+        # pytest returns 5 when no test was collected, e.g., when a file is skipped since it only applies to an
+        # installed SHOTpy package
         set_tests_properties(Python_${pytest_file} PROPERTIES
           ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR};SHOT_TUTORIAL_NOTEBOOK=${PROJECT_SOURCE_DIR}/docs/SHOTpy_Tutorial.ipynb"
           FAIL_REGULAR_EXPRESSION "FAILED;ERROR"
+          SKIP_RETURN_CODE 5
           TIMEOUT 300
         )
       endforeach()

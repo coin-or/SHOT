@@ -63,6 +63,27 @@ private:
 
     int maxBilinearIntegerReformulationDomain = 2;
 
+    // Whether an integer variable in a bilinear term can be discretized: it must have bounds, not the artificial ones
+    // from Model.Variables.Integer, and their difference must be less than
+    // Model.Reformulation.Bilinear.IntegerFormulation.MaxDomain
+    bool isDiscretizableInBilinearTerm(const VariablePtr& variable);
+
+    // An explicit Yes for integer-bilinear reformulation takes precedence over default native quadratic retention.
+    bool requiresIntegerBilinearReformulation(const QuadraticTerms& terms);
+
+    // Keep a product in its original expression if its binary/integer linearization would require an unsafe big-M.
+    bool hasSafeBilinearLinearizationBounds(const VariablePtr& firstVariable, const VariablePtr& secondVariable);
+    std::set<std::pair<int, int>> unsafeBilinearLinearizations;
+
+    // The bilinear terms, as pairs of variable indexes, whose integer variables are not discretized because of their
+    // bounds or Model.Reformulation.Bilinear.IntegerFormulation.MaxDomain
+    std::set<std::pair<int, int>> nonDiscretizedIntegerBilinearTerms;
+    void noteNonDiscretizedIntegerBilinearTerm(const VariablePtr& firstVariable, const VariablePtr& secondVariable);
+
+    // Tells about the bilinear terms that are not discretized, and warns about the nonconvex auxiliary constraints of
+    // bilinear terms when the problem is assumed to be convex
+    void reportBilinearReformulations();
+
     bool useIntegerBilinearTermReformulation = false; // integer term i1*i2 or i1*x2
 
     void reformulateObjectiveFunction();
@@ -108,17 +129,18 @@ private:
     void copyQuadraticTermsToObjectiveFunction(const QuadraticTerms& terms, T destination, bool reversedSigns = false);
 
     // Quadratic terms in the sum are partitioned with partitionQuadraticTermsStrategy, i.e., the
-    // PartitionQuadraticTerms setting of the constraint or objective function
+    // PartitionQuadraticTerms setting of the constraint or objective function. isObjective selects the corresponding
+    // native quadratic support, which determines whether the default partitioning can be skipped.
     LinearTerms partitionNonlinearSum(const std::shared_ptr<ExpressionSum>& source, bool reversedSigns,
-        ES_PartitionNonlinearSums partitionQuadraticTermsStrategy);
+        ES_PartitionNonlinearSums partitionQuadraticTermsStrategy, bool isObjective);
     LinearTerms partitionMonomialTerms(const MonomialTerms& sourceTerms, bool reversedSigns);
     LinearTerms partitionSignomialTerms(const SignomialTerms& sourceTerms, bool reversedSigns);
 
     LinearTerms partitionNonlinearBinaryProduct(const std::shared_ptr<ExpressionSum> source, bool reversedSigns);
 
     // Returns the linear terms and the quadratic terms replacing the terms, and a constant from fixed variables
-    std::tuple<LinearTerms, QuadraticTerms, double> reformulateAndPartitionQuadraticSum(
-        QuadraticTerms& quadraticTerms, bool reversedSigns, ES_PartitionNonlinearSums partitionStrategy);
+    std::tuple<LinearTerms, QuadraticTerms, double> reformulateAndPartitionQuadraticSum(QuadraticTerms& quadraticTerms,
+        bool reversedSigns, ES_PartitionNonlinearSums partitionStrategy, bool isObjective);
     std::tuple<LinearTerms, MonomialTerms> reformulateMonomialSum(
         const MonomialTerms& monomialTerms, bool reversedSigns);
 

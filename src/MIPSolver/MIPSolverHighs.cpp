@@ -91,6 +91,16 @@ HighsCallbackFunctionType highsCallback
     if(callback_type == kCallbackSimplexInterrupt || callback_type == kCallbackIpmInterrupt
         || callback_type == kCallbackMipInterrupt)
     {
+        // Check the shared solve budget before throttling user callbacks. Some HiGHS solves without presolve do
+        // not enforce their native time limit reliably, including when only a few iterations have been performed.
+        if(std::chrono::duration<double>(std::chrono::steady_clock::now() - callback_data.solveStarted).count()
+            >= callback_data.timeLimit)
+        {
+            MIPSolver->interruptedByTimeLimit = true;
+            data_in->user_interrupt = true;
+            return;
+        }
+
         // For LP/IPM solves, only check termination every 1000 iterations to avoid overhead
         if(callback_type == kCallbackSimplexInterrupt && data_out->simplex_iteration_count % 1000 != 0)
             return;
@@ -168,7 +178,12 @@ HighsCallbackFunctionType highsCallback
     }
 };
 
-MIPSolverHighs::MIPSolverHighs(EnvironmentPtr envPtr) { env = envPtr; }
+MIPSolverHighs::MIPSolverHighs(EnvironmentPtr envPtr)
+{
+    env = envPtr;
+    // Model loading can log before initializeSolverSettings() installs the logging callback.
+    highsInstance.setOptionValue("log_to_console", false);
+}
 
 MIPSolverHighs::~MIPSolverHighs() = default;
 
@@ -190,6 +205,12 @@ bool MIPSolverHighs::initializeProblem()
 bool MIPSolverHighs::addVariable(
     std::string name, E_VariableType type, double lowerBound, double upperBound, double semiBound)
 {
+    if((type == E_VariableType::Semicontinuous || type == E_VariableType::Semiinteger) && semiBound < 0.0)
+    {
+        env->output->outputError(" Negative semi-variable branches are not supported by SHOT's HiGHS interface.");
+        return false;
+    }
+
     if(lowerBound < -getUnboundedVariableBoundValue())
         lowerBound = -getUnboundedVariableBoundValue();
 
@@ -482,8 +503,6 @@ void MIPSolverHighs::initializeSolverSettings()
     }
 
     highsInstance.setOptionValue("highs_debug_level", env->settings->getSetting<int>("Subsolver.Highs.DebugLevel"));
-    highsInstance.setOptionValue("log_to_console",
-        false); // Prevent HiGHS from writing directly to stdout; logging is handled through the callback instead
 
     // highsInstance.setOptionValue("simplex_strategy", 0);
     // highsInstance.setOptionValue("solver", "choose");
@@ -603,9 +622,7 @@ int MIPSolverHighs::addLinearConstraint(
 bool MIPSolverHighs::addSpecialOrderedSet(
     E_SOSType /*type*/, VectorInteger /*variableIndexes*/, VectorDouble /*variableWeights*/)
 {
-    // TODO: Not implemented
-    throw OperationNotImplementedException(
-        "Special ordered set functionality not yet implemented in HiGHS interface.");
+    env->output->outputError(" Special ordered sets are not supported by SHOT's HiGHS interface.");
     return (false);
 }
 
@@ -681,6 +698,11 @@ bool MIPSolverHighs::isFailedSolve(HighsModelStatus modelStatus)
 
 E_ProblemSolutionStatus MIPSolverHighs::getSolutionStatus()
 {
+    if(interruptedByTimeLimit)
+        return E_ProblemSolutionStatus::TimeLimit;
+    if(unsafeIntegerDomainWithoutPresolve)
+        return E_ProblemSolutionStatus::Numeric;
+
     E_ProblemSolutionStatus MIPSolutionStatus;
 
     auto modelStatus = highsInstance.getModelStatus();
@@ -756,7 +778,11 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
 
     interruptedBySolutionLimit = false;
     interruptedByTermination = false;
+    interruptedByTimeLimit = false;
+    unsafeIntegerDomainWithoutPresolve = false;
     numberOfPartialMIPStartSolutions = 0;
+    highsCallbackData.solveStarted = std::chrono::steady_clock::now();
+    highsInstance.getOptionValue("time_limit", highsCallbackData.timeLimit);
 
     for(auto& I : variableBoundsToRestore)
         highsInstance.changeColBounds(I, variableLowerBounds[I], variableUpperBounds[I]);
@@ -768,7 +794,7 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
     // HiGHS gives no status, or a solve error, when it runs into numerical trouble, which it does e.g. when a warm
     // started simplex does not converge on a badly scaled problem. Solving again from a clean state, which lets it
     // presolve and factorize from scratch, often succeeds.
-    if(isFailedSolve(highsInstance.getModelStatus()))
+    if(isFailedSolve(highsInstance.getModelStatus()) && !unsafeIntegerDomainWithoutPresolve && !interruptedByTimeLimit)
     {
         env->output->outputDebug(
             "        The MIP solver did not return a solution, solving again from a clean state.");
@@ -834,21 +860,17 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
     {
         bool problemUpdated = false;
 
-        if((env->reformulatedProblem->objectiveFunction->properties.classification
-                   == E_ObjectiveFunctionClassification::Linear
-               && std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                   ->isUnbounded())
-            || (env->reformulatedProblem->objectiveFunction->properties.classification
-                    == E_ObjectiveFunctionClassification::Quadratic
-                && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                    ->isUnbounded()))
+        auto objectiveClass = env->reformulatedProblem->objectiveFunction->properties.classification;
+        if((objectiveClass == E_ObjectiveFunctionClassification::Linear
+               || objectiveClass == E_ObjectiveFunctionClassification::Quadratic)
+            && (env->reformulatedProblem->objectiveFunction->isUnbounded() || hasUnboundedObjectiveVariableInSolver()))
         {
             for(auto& V : env->reformulatedProblem->allVariables)
             {
                 if(!V->properties.inObjectiveFunction)
                     continue;
 
-                if(V->isUnbounded())
+                if(V->isUnbounded() || isVariableUnboundedInSolver(V->getIndex()))
                 {
                     // Temporarily bound the variable, keeping the objective so that the point found is in the
                     // direction of improvement
@@ -903,13 +925,101 @@ HighsStatus MIPSolverHighs::runSolver()
     highsInstance.getOptionValue("threads", numberOfThreads);
     prepareGlobalScheduler(numberOfThreads);
 
-    return (highsInstance.run());
+    double remainingTime = highsCallbackData.timeLimit
+        - std::chrono::duration<double>(std::chrono::steady_clock::now() - highsCallbackData.solveStarted).count();
+
+    if(remainingTime <= 0.0)
+    {
+        // Clear stale solutions and bounds from the preceding attempt before returning without another solve.
+        highsInstance.clearSolver();
+        currentSolutions.clear();
+        interruptedByTimeLimit = true;
+        return HighsStatus::kOk;
+    }
+
+    std::string presolve;
+    highsInstance.getOptionValue("presolve", presolve);
+    if(presolve == "off")
+    {
+        auto& lp = highsInstance.getLp();
+        // HiGHS 1.15.1 root reduced-cost probing computes (range + 1023) in HighsInt and increments integral
+        // bounds in the same type. Overflow can cause a loop with no interrupt callbacks or time-limit checks.
+        const long double limit = std::numeric_limits<HighsInt>::max();
+        for(size_t i = 0; i < lp.integrality_.size(); ++i)
+        {
+            if(lp.integrality_[i] == HighsVarType::kContinuous || lp.integrality_[i] == HighsVarType::kSemiContinuous)
+                continue;
+            long double lower = lp.col_lower_[i];
+            long double upper = lp.col_upper_[i];
+            if(lower == upper)
+                continue;
+            long double range = upper - lower;
+            // The probing routine takes between 32 and 1024 steps, including one increment beyond its last bound.
+            long double maxStep = std::max(1.0L, std::ceil(range / 32.0L));
+            if(lower - maxStep <= -limit || upper + maxStep >= limit || range + 1024 >= limit)
+            {
+                env->output->outputWarning("        HiGHS solve without presolve skipped: an integer domain risks "
+                                           "overflow in reduced-cost probing. Returning a numerical status.");
+                highsInstance.clearSolver();
+                currentSolutions.clear();
+                unsafeIntegerDomainWithoutPresolve = true;
+                return HighsStatus::kOk;
+            }
+        }
+    }
+
+    double originalLimit;
+    highsInstance.getOptionValue("time_limit", originalLimit);
+    highsInstance.setOptionValue("time_limit", remainingTime);
+    auto status = highsInstance.run();
+    highsInstance.setOptionValue("time_limit", originalLimit);
+    return status;
 }
 
 E_ProblemSolutionStatus MIPSolverHighs::resolveInfeasibleOrUnbounded(E_ProblemSolutionStatus status)
 {
     if(highsInstance.getModelStatus() != HighsModelStatus::kUnboundedOrInfeasible)
         return (status);
+
+    // An unbounded root LP does not establish integer feasibility. Check that separately before disabling
+    // presolve, which can be unsafe for unbounded integer domains in HiGHS's reduced-cost probing.
+    if(highsInstance.getLp().isMip())
+    {
+        auto model = highsInstance.getModel();
+        std::fill(model.lp_.col_cost_.begin(), model.lp_.col_cost_.end(), 0.0);
+        model.lp_.offset_ = 0.0;
+        model.lp_.sense_ = ObjSense::kMinimize;
+
+        Highs feasibilityModel;
+        feasibilityModel.passOptions(highsInstance.getOptions());
+        feasibilityModel.setOptionValue("output_flag", false);
+        feasibilityModel.passModel(model);
+        feasibilityModel.setOptionValue("presolve", "on");
+        feasibilityModel.setOptionValue("objective_bound", kHighsInf);
+        feasibilityModel.setOptionValue("objective_target", -kHighsInf);
+        feasibilityModel.setOptionValue("time_limit",
+            std::max(0.0,
+                highsCallbackData.timeLimit
+                    - std::chrono::duration<double>(std::chrono::steady_clock::now() - highsCallbackData.solveStarted)
+                        .count()));
+        feasibilityModel.setCallback(highsCallback, reinterpret_cast<void*>(&highsCallbackData));
+        feasibilityModel.startCallback(kCallbackMipInterrupt);
+        feasibilityModel.startCallback(kCallbackSimplexInterrupt);
+        feasibilityModel.startCallback(kCallbackIpmInterrupt);
+        feasibilityModel.run();
+
+        if(feasibilityModel.getModelStatus() == HighsModelStatus::kOptimal)
+            return E_ProblemSolutionStatus::Unbounded;
+
+        if(feasibilityModel.getModelStatus() == HighsModelStatus::kInfeasible)
+            return E_ProblemSolutionStatus::Infeasible;
+
+        if(interruptedByTermination)
+            return E_ProblemSolutionStatus::Abort;
+
+        if(interruptedByTimeLimit || feasibilityModel.getModelStatus() == HighsModelStatus::kTimeLimit)
+            return E_ProblemSolutionStatus::TimeLimit;
+    }
 
     std::string presolve;
     highsInstance.getOptionValue("presolve", presolve);
@@ -935,9 +1045,9 @@ bool MIPSolverHighs::repairInfeasibility()
         // (Dual.MIP.InfeasibilityRepair.TimeLimit), the number of threads and the tolerances, are copied as well, since
         // the relaxation is a MIP problem that can otherwise take any time
         Highs feasModel;
-        feasModel.passModel(highsInstance.getModel());
         feasModel.passOptions(highsInstance.getOptions());
         feasModel.setOptionValue("output_flag", false);
+        feasModel.passModel(highsInstance.getModel());
 
         // Remove cutoff constraint if present (similar to Gurobi's cutoff removal)
         if(isMinimizationProblem)
@@ -982,9 +1092,9 @@ bool MIPSolverHighs::repairInfeasibility()
         // nothing the repair can fix.
         {
             Highs feasibilityCheckModel;
-            feasibilityCheckModel.passModel(feasModel.getModel());
             feasibilityCheckModel.passOptions(feasModel.getOptions());
             feasibilityCheckModel.setOptionValue("output_flag", false);
+            feasibilityCheckModel.passModel(feasModel.getModel());
 
             double checkInfinity = feasibilityCheckModel.getInfinity();
 
@@ -1674,16 +1784,15 @@ PairDouble MIPSolverHighs::getCurrentVariableBounds(int varIndex)
     return (tmpBounds);
 }
 
-bool MIPSolverHighs::supportsQuadraticObjective() { return (false); }
-
-bool MIPSolverHighs::supportsQuadraticConstraints() { return (false); }
-
 double MIPSolverHighs::getUnboundedVariableBoundValue() { return (highsInstance.getInfinity()); }
 
 double MIPSolverHighs::getDualObjectiveValue()
 {
     bool isMIP = getDiscreteVariableStatus();
     double objVal = (isMinimizationProblem ? SHOT_DBL_MIN : SHOT_DBL_MAX);
+
+    if(!highsInstance.getInfo().valid)
+        return objVal;
 
     if(!isDualBoundAvailable(getSolutionStatus(), isMIP))
         return (objVal);

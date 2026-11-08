@@ -468,7 +468,7 @@ void Solver::initializeSettings()
         enumBilinearIntegerReformulation, 0);
     enumBilinearIntegerReformulation.clear();
 
-    env->settings->createSetting("Model.Reformulation.Bilinear.IntegerFormulation.MaxDomain", 100,
+    env->settings->createSetting("Model.Reformulation.Bilinear.IntegerFormulation.MaxDomain", 250,
         "Do not reformulate integer variables in bilinear terms which can assume more than this number of discrete "
         "values",
         2, SHOT_INT_MAX);
@@ -790,6 +790,14 @@ void Solver::initializeSettings()
     enumPrimalBoundNLPStartingPoint.clear();
     env->settings->addConditionalValue(
         "Primal.FixedInteger.Source", nonconvex, static_cast<int>(ES_PrimalNLPFixedPoint::AllSolutions));
+    env->settings->addConditionalValue("Primal.FixedInteger.Source",
+        { E_SettingCondition::Nonconvex, E_SettingCondition::Continuous },
+        static_cast<int>(ES_PrimalNLPFixedPoint::FirstSolution));
+
+    env->settings->createSetting("Primal.FixedInteger.MaxStartsPerCall", 5,
+        "Maximum number of starting points selected from the dual solution pool per call, for each selected NLP "
+        "formulation: 0: Unlimited. Does not limit model starting points, final polishing or exhaustive integer search",
+        0, SHOT_INT_MAX);
 
     VectorString enumPrimalBoundNLPProblemSource;
     enumPrimalBoundNLPProblemSource.push_back("Original problem");
@@ -814,10 +822,10 @@ void Solver::initializeSettings()
         "Number of threads for each NLP problem, in the NLP solver and its BLAS and OpenMP libraries: 0: Automatic", 0,
         SHOT_INT_MAX);
 
-    env->settings->createSetting("Primal.FixedInteger.UseStartingPoint", false,
-        "Solve an NLP problem from a given starting point, e.g. the levels of the variables in GAMS or the initial "
-        "values in AMPL, before the first dual problem, and from points given by the PrimalCandidateSearch callback "
-        "at the next NLP call. Off by default until benchmarked on all of MINLPLib");
+    env->settings->createSetting("Primal.FixedInteger.UseStartingPoint", true,
+        "Solve an NLP problem from a given starting point that is not feasible, e.g. the levels of the variables in "
+        "GAMS or the initial values in AMPL, before the first dual problem, and from such points given by the "
+        "PrimalCandidateSearch callback at the next NLP call");
 
     env->settings->createSetting("Primal.FixedInteger.Use", true, "Use the fixed integer primal strategy");
 
@@ -842,7 +850,7 @@ void Solver::initializeSettings()
         "These settings sets various tolerances for accepting primal solutions.");
 
     env->settings->createSetting("Primal.Tolerance.TrustLinearConstraintValues", true,
-        "Trust that subsolvers (NLP, MIP) give primal solutions that respect linear constraints");
+        "Trust that fixed-integer NLP and LP solvers respect linear constraints; MIP candidates are always checked");
 
     // The integer and linear constraint tolerances are also used as MIP solver tolerances, and the MIP solver
     // interfaces move them into the range each solver accepts. With an integer tolerance of 0.5, any value is integral.

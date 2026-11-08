@@ -10,9 +10,11 @@
 
 #pragma once
 #include "MIPSolverBase.h"
+#include "MIPSolverCapabilities.h"
 #include "MIPSolverCallbackBase.h"
 
 #include <optional>
+#include <chrono>
 
 #include "Highs.h"
 
@@ -29,11 +31,31 @@ struct HighsMipData
 {
     EnvironmentPtr env;
     HighsTerminationHelper* terminationHandler = nullptr;
+    std::chrono::steady_clock::time_point solveStarted;
+    double timeLimit = SHOT_DBL_MAX;
 };
 
 class MIPSolverHighs : public IMIPSolver, public MIPSolverBase
 {
 public:
+    inline static constexpr MIPSolverCapabilities capabilities = []
+    {
+        MIPSolverCapabilities result;
+        result.convexQuadraticObjective = false;
+        result.nonconvexQuadraticObjective = false;
+        result.convexQuadraticConstraints = false;
+        result.nonconvexQuadraticConstraints = false;
+        result.nonconvexObjectiveExcludesQuadraticConstraints = false;
+        result.SOS1 = false;
+        result.SOS2 = false;
+        result.singleTree = false;
+        result.semicontinuous = E_SemiVariableSupport::NonnegativeInterval;
+        result.semiinteger = E_SemiVariableSupport::NonnegativeInterval;
+        result.unboundedVariableBound = 1e20;
+
+        return result;
+    }();
+
     MIPSolverHighs(EnvironmentPtr envPtr);
     ~MIPSolverHighs() override;
 
@@ -147,9 +169,6 @@ public:
     void addPartialMIPStart(VectorInteger variableIndexes, VectorDouble variableValues) override;
     void deleteMIPStarts() override;
 
-    bool supportsQuadraticObjective() override;
-    bool supportsQuadraticConstraints() override;
-
     double getUnboundedVariableBoundValue() override;
 
     int getNumberOfExploredNodes() override;
@@ -185,6 +204,7 @@ public:
     // HiGHS reports the same status regardless of why the callback interrupted it, so the cause is recorded here
     bool interruptedBySolutionLimit = false;
     bool interruptedByTermination = false;
+    bool interruptedByTimeLimit = false;
 
     // HiGHS only keeps one start, so a partial start replaces the start from addMIPStart until the next solve. HiGHS
     // reports the completed start as a solution, which is not counted towards the solution limit, since the solve
@@ -201,6 +221,7 @@ private:
     HighsStatus highsReturnStatus;
     HighsMipData highsCallbackData;
     bool mipIpmSolverWarningShown = false;
+    bool unsafeIntegerDomainWithoutPresolve = false;
 
     // Solves the problem, after making sure that the scheduler of HiGHS has the number of threads of this solver
     HighsStatus runSolver();

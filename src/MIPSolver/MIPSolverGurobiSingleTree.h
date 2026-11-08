@@ -23,6 +23,9 @@ public:
     GurobiCallbackSingleTree(GRBVar* xvars, EnvironmentPtr envPtr);
     ~GurobiCallbackSingleTree();
 
+    // Replaces the variables, e.g., after variables have been added to the model for integer cuts
+    void updateVariables(GRBVar* xvars);
+
     // A lazy constraint sum(terms) sense rhs, as recorded in debug mode
     struct LazyConstraint
     {

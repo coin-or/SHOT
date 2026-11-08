@@ -167,6 +167,83 @@ class TestConstants:
             assert SHOTpy.PrimalNLPSolver.GAMS in solvers
 
 
+class TestMIPSolverCapabilities:
+    """Capability queries do not require a solver instance or a license."""
+
+    @pytest.mark.parametrize("backend, available", [
+        ("Cplex", "HAS_CPLEX"),
+        ("Gurobi", "HAS_GUROBI"),
+        ("Cbc", "HAS_CBC"),
+        ("Highs", "HAS_HIGHS"),
+        ("NotUsed", None),
+    ])
+    def test_lookup(self, backend, available):
+        import SHOTpy
+
+        caps = SHOTpy.getMIPSolverCapabilities(getattr(SHOTpy.MIPSolver, backend))
+
+        if available is None or not getattr(SHOTpy, available):
+            assert caps is None
+            return
+
+        assert isinstance(caps, SHOTpy.MIPSolverCapabilities)
+        assert caps.SOS1 is (backend != "Highs")
+        assert caps.SOS2 is (backend != "Highs")
+        assert caps.singleTree is (backend in ("Cplex", "Gurobi"))
+        assert caps.unboundedVariableBound == (1e50 if backend == "Cbc" else 1e20)
+        expected = (SHOTpy.SemiVariableSupport.NonnegativeInterval
+                    if backend in ("Cplex", "Highs") else SHOTpy.SemiVariableSupport.SignedInterval)
+        assert caps.semicontinuous == expected
+        assert caps.semiinteger == expected
+
+    @pytest.mark.parametrize("field", [
+        "convexQuadraticObjective",
+        "nonconvexQuadraticObjective",
+        "convexQuadraticConstraints",
+        "nonconvexQuadraticConstraints",
+        "nonconvexObjectiveExcludesQuadraticConstraints",
+        "SOS1",
+        "SOS2",
+        "singleTree",
+        "semicontinuous",
+        "semiinteger",
+        "unboundedVariableBound",
+    ])
+    def test_fields_are_read_only(self, field):
+        import SHOTpy
+
+        backend = SHOTpy.getSupportedMIPSolvers()[0]
+        caps = SHOTpy.getMIPSolverCapabilities(backend)
+        value = getattr(caps, field)
+
+        if isinstance(value, bool):
+            replacement = not value
+        elif isinstance(value, SHOTpy.SemiVariableSupport):
+            replacement = SHOTpy.SemiVariableSupport.None_
+        else:
+            replacement = value / 10
+
+        with pytest.raises(AttributeError):
+            setattr(caps, field, replacement)
+
+        with pytest.raises(AttributeError):
+            delattr(caps, field)
+
+        assert getattr(caps, field) == value
+        assert getattr(SHOTpy.getMIPSolverCapabilities(backend), field) == value
+
+    def test_snapshot_cannot_be_constructed_or_extended(self):
+        import SHOTpy
+
+        with pytest.raises(TypeError):
+            SHOTpy.MIPSolverCapabilities()
+
+        caps = SHOTpy.getMIPSolverCapabilities(SHOTpy.getSupportedMIPSolvers()[0])
+
+        with pytest.raises(AttributeError):
+            caps.extra = True
+
+
 class TestEnums:
     """Tests for SHOT enumerations."""
 

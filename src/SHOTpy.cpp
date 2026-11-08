@@ -56,6 +56,7 @@ static CppADErrorHandlerRegistrar cppad_error_handler_registrar;
 #include "Callback.h"
 
 #include "DualSolver.h"
+#include "MIPSolver/MIPSolverCapabilities.h"
 #include "PrimalSolver.h"
 #include "Report.h"
 #include "Results.h"
@@ -1024,6 +1025,43 @@ PYBIND11_MODULE(SHOTpy, m)
     // Function to get list of supported MIP solvers - uses C++ API directly
     m.def("getSupportedMIPSolvers", &Solver::getSupportedMIPSolvers,
         "Returns a list of MIP solvers supported in this build");
+
+    py::enum_<E_SemiVariableSupport>(
+        m, "SemiVariableSupport", "The nonzero intervals supported for a semi-variable, in addition to zero")
+        .value("None_", E_SemiVariableSupport::None, "The variable type is not supported")
+        .value("NonnegativeInterval", E_SemiVariableSupport::NonnegativeInterval,
+            "A nonnegative nonzero interval is supported")
+        .value("SignedInterval", E_SemiVariableSupport::SignedInterval,
+            "Both positive and negative nonzero intervals are supported");
+
+    py::class_<MIPSolverCapabilities>(m, "MIPSolverCapabilities",
+        "A read-only snapshot of the features supported by a compiled SHOT MIP backend.\n"
+        "Obtained with getMIPSolverCapabilities(), without constructing or licensing a solver.")
+        .def_readonly("convexQuadraticObjective", &MIPSolverCapabilities::convexQuadraticObjective,
+            "Supports convex quadratic minimization and concave quadratic maximization objectives")
+        .def_readonly("nonconvexQuadraticObjective", &MIPSolverCapabilities::nonconvexQuadraticObjective,
+            "Supports nonconvex quadratic objectives")
+        .def_readonly("convexQuadraticConstraints", &MIPSolverCapabilities::convexQuadraticConstraints,
+            "Supports convex quadratic constraints")
+        .def_readonly("nonconvexQuadraticConstraints", &MIPSolverCapabilities::nonconvexQuadraticConstraints,
+            "Supports nonconvex quadratic constraints")
+        .def_readonly("nonconvexObjectiveExcludesQuadraticConstraints",
+            &MIPSolverCapabilities::nonconvexObjectiveExcludesQuadraticConstraints,
+            "A nonconvex quadratic objective cannot be combined with quadratic constraints")
+        .def_readonly("SOS1", &MIPSolverCapabilities::SOS1, "Supports special ordered sets of type 1")
+        .def_readonly("SOS2", &MIPSolverCapabilities::SOS2, "Supports special ordered sets of type 2")
+        .def_readonly("singleTree", &MIPSolverCapabilities::singleTree,
+            "SHOT supports single-tree callback integration with this backend")
+        .def_readonly("semicontinuous", &MIPSolverCapabilities::semicontinuous,
+            "The nonzero intervals supported for semicontinuous variables")
+        .def_readonly("semiinteger", &MIPSolverCapabilities::semiinteger,
+            "The nonzero intervals supported for semi-integer variables")
+        .def_readonly("unboundedVariableBound", &MIPSolverCapabilities::unboundedVariableBound,
+            "The finite default magnitude for missing variable bounds; may differ from the backend's native infinity");
+
+    m.def("getMIPSolverCapabilities", &getMIPSolverCapabilities, py::arg("solver"),
+        "Returns a read-only capability snapshot for a compiled MIP backend, or None if unavailable or NotUsed.\n"
+        "No solver instance is constructed and no solver license is required.");
 
     // ===== NLP Solver Availability =====
     // These constants indicate which NLP solvers are available in this build
@@ -3166,10 +3204,10 @@ PYBIND11_MODULE(SHOTpy, m)
             "Set a starting point, with a value for each variable of the original problem in its order, after\n"
             "setProblem(), which replaces it with the starting point in the problem file, e.g., the initial values\n"
             "in an AMPL .nl file. A feasible point is the first primal solution and the MIP start of the dual\n"
-            "problems. It is also the starting point of an NLP problem with the discrete variables fixed to their\n"
-            "rounded values if Primal.FixedInteger.UseStartingPoint is True. An empty list removes the starting\n"
-            "point. Returns False if no problem has been set, or if the point has the wrong size or a value that\n"
-            "is not finite")
+            "problems. A point that is not feasible is the starting point of an NLP problem with the discrete\n"
+            "variables fixed to their rounded values if Primal.FixedInteger.UseStartingPoint is True. An empty list\n"
+            "removes the starting point. Returns False if no problem has been set, or if the point has the wrong\n"
+            "size or a value that is not finite")
         .def("getStartingPoint", &Solver::getStartingPoint,
             "The starting point given to setStartingPoint() or in the problem file, or an empty list if there is none")
         // The GIL is released while the problem is solved, so that the MIP solver can call Python callbacks from its

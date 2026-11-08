@@ -20,6 +20,7 @@
 #include "../Utilities.h"
 
 #include "../MIPSolver/IMIPSolver.h"
+#include "../MIPSolver/MIPSolverBase.h"
 
 #include "../Model/Problem.h"
 
@@ -76,12 +77,9 @@ void TaskSolveIteration::run()
     auto timeLim = env->settings->getSetting<double>("Termination.TimeLimit") - env->timing->getElapsedTime("Total");
     env->dualSolver->MIPSolver->setTimeLimit(timeLim);
 
-    // The cutoff in the original problem's sense, if one is used when solving
-    std::optional<double> usedCutOff;
-
     if(env->dualSolver->useCutOff && !currIter->MIPSolutionLimitUpdated)
     {
-        usedCutOff = env->dualSolver->cutOffToUse;
+        env->dualSolver->cutOffInMIPSolver = env->dualSolver->cutOffToUse;
 
         double cutOffValue;
         double cutOffValueConstraint;
@@ -110,21 +108,33 @@ void TaskSolveIteration::run()
             env->dualSolver->MIPSolver->setCutOffAsConstraint(cutOffValueConstraint);
     }
 
+    // The cutoff in the original problem's sense, if one is used when solving. It is not set again when only the
+    // solution limit has been updated, but the one set in an earlier iteration is still used by the MIP solver
+    std::optional<double> usedCutOff = env->dualSolver->cutOffInMIPSolver;
+
     if(env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable()
         && env->settings->getSetting<bool>("Dual.MIP.UpdateObjectiveBounds") && !currIter->MIPSolutionLimitUpdated)
     {
-        auto newLB = env->results->getCurrentDualBound();
-        auto newUB = env->results->getPrimalBound();
+        // The bounds are in the original problem's sense, and the objective variable in the reformulated problem's
+        double dualBound = objectiveSignFactor * env->results->getCurrentDualBound();
+        double primalBound = objectiveSignFactor * env->results->getPrimalBound();
 
         auto currBounds = env->dualSolver->MIPSolver->getCurrentVariableBounds(
             env->dualSolver->MIPSolver->getDualAuxiliaryObjectiveVariableIndex());
 
-        if(newLB > currBounds.first || newUB < currBounds.second)
+        // The bounds are only tightened, also when there is no dual or primal bound yet
+        auto newLB = std::max(isMinimization ? dualBound : primalBound, currBounds.first);
+        auto newUB = std::min(isMinimization ? primalBound : dualBound, currBounds.second);
+
+        auto bounds = MIPSolverBase::getAuxiliaryVariableBoundsForSolver(
+            newLB, newUB, env->dualSolver->MIPSolver->getUnboundedVariableBoundValue());
+
+        if(newLB <= newUB && (bounds.first > currBounds.first || bounds.second < currBounds.second))
         {
             env->dualSolver->MIPSolver->updateVariableBound(
-                env->dualSolver->MIPSolver->getDualAuxiliaryObjectiveVariableIndex(), newLB, newUB);
-            env->output->outputDebug(
-                fmt::format("        Bounds for nonlinear objective function updated to {} and {}", newLB, newUB));
+                env->dualSolver->MIPSolver->getDualAuxiliaryObjectiveVariableIndex(), bounds.first, bounds.second);
+            env->output->outputDebug(fmt::format(
+                "        Bounds for nonlinear objective function updated to {} and {}", bounds.first, bounds.second));
         }
     }
 
@@ -227,7 +237,7 @@ void TaskSolveIteration::run()
 
     // Must update the pointer to the current iteration if we use the lazy
     // strategy since new iterations have been created when solving
-    if(static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("Dual.TreeStrategy")) == ES_TreeStrategy::SingleTree)
+    if(env->dualSolver->isSingleTree)
     {
         currIter = env->results->getCurrentIteration();
     }
@@ -253,8 +263,7 @@ void TaskSolveIteration::run()
     {
         solStatus = solveDualProblem();
 
-        if(static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("Dual.TreeStrategy"))
-            == ES_TreeStrategy::SingleTree)
+        if(env->dualSolver->isSingleTree)
             currIter = env->results->getCurrentIteration();
 
         currIter->solutionStatus = solStatus;
@@ -284,11 +293,10 @@ void TaskSolveIteration::run()
         resolveProblem();
     }
 
-    // If the dual problem is infeasible with the cutoff, it is solved again without the artificial bounds, since they
-    // restrict the problem and the cutoff can only be used as dual bound for a relaxation
-    if(solStatus == E_ProblemSolutionStatus::Infeasible && sols.size() == 0 && usedCutOff
-        && env->results->solutionIsGlobal && !currIter->hasInfeasibilityRepairBeenPerformed
-        && env->results->hasPrimalSolution() && env->problem->hasArtificialBounds())
+    // Artificial bounds restrict the relaxation, so infeasibility does not prove infeasibility of the original
+    // problem, with or without an incumbent or cutoff. Remove them before drawing that conclusion.
+    if(solStatus == E_ProblemSolutionStatus::Infeasible && sols.size() == 0 && env->results->solutionIsGlobal
+        && !currIter->hasInfeasibilityRepairBeenPerformed && env->problem->hasArtificialBounds())
     {
         std::vector<VariablePtr> variables;
 
@@ -335,8 +343,7 @@ void TaskSolveIteration::run()
         if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
         {
             for(auto& SOL : sols)
-                SOL.point.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->getIndex())
-                    = currIter->objectiveValue;
+                env->reformulatedProblem->updateAntiEpigraphObjectiveVariableValue(SOL.point, SOL.objectiveValue);
         }
 
         currIter->solutionPoints = sols;

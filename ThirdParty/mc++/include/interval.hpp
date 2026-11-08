@@ -914,11 +914,8 @@ max(const unsigned int n, const Interval* I)
 inline Interval
 cos(Interval const& I)
 {
-  // A period or more contains the whole range, and for large bounds, k does not
-  // fit in an int and the shift by 2*k*pi loses the position in the period
-  if (I._u - I._l >= 2. * PI || std::fabs(I._l) > 1e9 || std::fabs(I._u) > 1e9)
-    return Interval(-1., 1.);
-  const int k    = std::ceil(-(1. + I._l / PI) / 2.);  // -pi <= xL+2*k*pi < pi
+  if (!(std::fabs(I._l) <= 1e8 && std::fabs(I._u) <= 1e8)) return Interval(-1., 1.);  // SHOT
+  const double k = std::ceil(-(1. + I._l / PI) / 2.);  // -pi <= xL+2*k*pi < pi
   const double l = I._l + 2. * PI * k, u = I._u + 2. * PI * k;
   if (l <= 0)
   {
@@ -940,11 +937,9 @@ sin(Interval const& I)
 inline Interval
 tan(Interval const& I)
 {
-  // For large bounds, k does not fit in an int and the shift by k*pi loses the
-  // position in the period, so whether the interval contains a pole is unknown
-  if (std::fabs(I._l) > 1e9 || std::fabs(I._u) > 1e9)
+  if (!(std::fabs(I._l) <= 1e8 && std::fabs(I._u) <= 1e8))  // SHOT
     throw Interval::Exceptions(Interval::Exceptions::TAN);
-  const int k    = std::ceil(-0.5 - I._l / PI);  // -pi/2 <= xL+k*pi < pi/2
+  const double k = std::ceil(-0.5 - I._l / PI);  // -pi/2 <= xL+k*pi < pi/2
   const double l = I._l + PI * k, u = I._u + PI * k;
   if (u >= 0.5 * PI) throw Interval::Exceptions(Interval::Exceptions::TAN);
   return Interval(std::tan(l), std::tan(u));

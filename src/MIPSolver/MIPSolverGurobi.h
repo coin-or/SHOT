@@ -10,6 +10,7 @@
 
 #pragma once
 #include "MIPSolverBase.h"
+#include "MIPSolverCapabilities.h"
 #include "MIPSolverCallbackBase.h"
 
 #include "gurobi_c++.h"
@@ -32,6 +33,24 @@ private:
 class MIPSolverGurobi : public IMIPSolver, public MIPSolverBase
 {
 public:
+    inline static constexpr MIPSolverCapabilities capabilities = []
+    {
+        MIPSolverCapabilities result;
+        result.convexQuadraticObjective = true;
+        result.nonconvexQuadraticObjective = true;
+        result.convexQuadraticConstraints = true;
+        result.nonconvexQuadraticConstraints = true;
+        result.nonconvexObjectiveExcludesQuadraticConstraints = false;
+        result.SOS1 = true;
+        result.SOS2 = true;
+        result.singleTree = true;
+        result.semicontinuous = E_SemiVariableSupport::SignedInterval;
+        result.semiinteger = E_SemiVariableSupport::SignedInterval;
+        result.unboundedVariableBound = 1e20;
+
+        return result;
+    }();
+
     MIPSolverGurobi();
     MIPSolverGurobi(EnvironmentPtr envPtr);
     ~MIPSolverGurobi() override;
@@ -148,9 +167,6 @@ public:
     void addPartialMIPStart(VectorInteger variableIndexes, VectorDouble variableValues) override;
     void deleteMIPStarts() override;
 
-    bool supportsQuadraticObjective() override;
-    bool supportsQuadraticConstraints() override;
-
     double getUnboundedVariableBoundValue() override;
 
     int getNumberOfExploredNodes() override;
@@ -196,6 +212,14 @@ public:
     // Gurobi can only tell whether a problem is infeasible or unbounded if dual reductions are not used in presolve,
     // so such a problem is solved again without them
     E_ProblemSolutionStatus resolveInfeasibleOrUnbounded(E_ProblemSolutionStatus status);
+
+    // Numerical trouble and apparent infeasibility can be caused by badly scaled cuts. Retry with careful numerical
+    // settings and, if still infeasible, without presolve, within the remaining time of the solve.
+    E_ProblemSolutionStatus resolveWithNumericFocus(E_ProblemSolutionStatus status);
+
+protected:
+    // Restores the objective after a feasibility solve, also before a single-tree solve.
+    void restoreObjectiveCoefficients();
 
 private:
     // The objective coefficients removed to find a feasible point of an unbounded dual problem. They are restored

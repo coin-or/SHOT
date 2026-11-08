@@ -27,13 +27,15 @@ public:
         fixedPrimalNLPCandidates.clear();
     }
 
-    void addPrimalSolutionCandidate(VectorDouble pt, E_PrimalSolutionSource source, int iter);
+    // Returns whether the candidate passed callbacks and feasibility checks, also for an already known point.
+    bool addPrimalSolutionCandidate(VectorDouble pt, E_PrimalSolutionSource source, int iter);
     void addPrimalSolutionCandidates(std::vector<VectorDouble> pts, E_PrimalSolutionSource source, int iter);
 
-    void addPrimalSolutionCandidate(SolutionPoint pt, E_PrimalSolutionSource source);
+    bool addPrimalSolutionCandidate(SolutionPoint pt, E_PrimalSolutionSource source);
     void addPrimalSolutionCandidates(std::vector<SolutionPoint> pts, E_PrimalSolutionSource source);
 
-    void checkPrimalSolutionCandidates();
+    // Returns whether the last queued candidate was accepted, or false if there were no candidates.
+    bool checkPrimalSolutionCandidates();
 
     bool checkPrimalSolutionPoint(PrimalSolution primalSol);
 
@@ -51,9 +53,9 @@ public:
     std::vector<PrimalFixedNLPCandidate> fixedPrimalNLPCandidates;
     std::vector<PrimalFixedNLPCandidate> usedPrimalNLPCandidates;
 
-    // The points given as external solutions, e.g., the starting point of the model. They are also starting points
-    // for the NLP solver, which a local solver may improve, and are added to its candidates once the reformulated
-    // problem exists.
+    // The points given as external solutions, e.g., the starting point of the model, that are not primal solutions.
+    // They are starting points for the NLP solver, which may repair them, and are added to its candidates once the
+    // reformulated problem exists.
     std::vector<VectorDouble> startingPointsForNLP;
 
     // The hashes of the combinations of the discrete variables whose NLP problems have been solved in the exhaustive

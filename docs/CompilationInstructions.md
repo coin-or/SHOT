@@ -31,7 +31,7 @@ there's nothing extra to fetch for those.
 Exact release pins, source checksums, and licenses are recorded in
 [`ThirdParty/versions.json`](../ThirdParty/versions.json). See
 [`ThirdParty/README.md`](../ThirdParty/README.md) for the vendoring procedures.
-Boost is a coherent 1.92.0 header subset, and MC++ contains only its 5.0.4
+Boost is a coherent 1.92.0 header subset, and MC++ contains only its 5.1.0
 interval arithmetic headers. The AMPL `.nl` reader uses selected AMPL MP 4.1.0
 sources. CppAD's headers are installed into the build directory together with
 its matching shared library; do not substitute a system CppAD header tree.
@@ -127,7 +127,7 @@ A shared build is easiest, since a static `libuno.a` has to be linked together
 with BLAS/LAPACK and the Fortran runtime.
 
 ```bash
-git clone https://github.com/cvanaret/Uno
+git clone --branch v2.9.3 --depth 1 https://github.com/cvanaret/Uno
 cmake -S Uno -B Uno/build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON \
     -DBUILD_STATIC_LIBS=OFF -DCMAKE_INSTALL_PREFIX=<SHOT>/ThirdParty/Uno
 cmake --build Uno/build -j && cmake --install Uno/build
@@ -316,8 +316,8 @@ GAMS, CPLEX, Gurobi, CONOPT, and Uno are excluded from these wheels.
 
 #### Adding Uno
 
-Download the Windows x64 bundle from [Uno 2.9.1](https://github.com/cvanaret/Uno/releases/tag/v2.9.1):
-`Uno_binaries.v2.9.1.x86_64-w64-mingw32-cxx11.zip`. Extract it to, for example,
+Download the Windows x64 bundle from [Uno 2.9.3](https://github.com/cvanaret/Uno/releases/tag/v2.9.3):
+`Uno_binaries.v2.9.3.x86_64-w64-mingw32-cxx11.zip`. Extract it to, for example,
 `C:/solvers/uno`, preserving its `bin`, `deps`, `include`, and `lib` directories.
 Enable Uno in an existing MSVC build:
 
@@ -388,7 +388,7 @@ but SHOT only needs their SDK/headers+libraries at compile time:
   `$HOME/Applications` (this is how a Mac install under
   `~/Applications/CPLEX_Studio<version>` gets found); override with
   `-DCPLEX_DIR=<path>/cplex` if installed elsewhere.
-- **Gurobi**: auto-detected (`cmake/FindGUROBI.cmake`) under
+- **Gurobi 10.0 or newer**: auto-detected (`cmake/FindGUROBI.cmake`) under
   `/opt/gurobi*/linux64` (Linux) or `/Library/gurobi*/mac64`,
   `/Library/gurobi*/macos_universal2`, `/Library/gurobi*/macos_arm64`
   (macOS) — these are Gurobi's own standard installer locations; override
@@ -618,7 +618,7 @@ expected objectives — a fast way to check whether a change regressed
 solver behavior. For the full breakdown of test structure, how to run a
 single failing test in isolation, and how to use `InstanceTest` results to
 drive a `--debug` investigation, see
-[Automated tests as a debugging aid](DebuggingSHOT.md#automated-tests-as-a-debugging-aid).
+[Automated tests as a debugging aid](DeveloperDebugging.md#automated-tests-as-a-debugging-aid).
 
 ## CONOPT primal NLP solver
 

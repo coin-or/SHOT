@@ -133,9 +133,6 @@ public:
 
     virtual std::optional<std::pair<std::map<int, double>, double>> createHyperplaneTerms(HyperplanePtr hyperplane) = 0;
 
-    virtual bool supportsQuadraticObjective() = 0;
-    virtual bool supportsQuadraticConstraints() = 0;
-
     virtual double getUnboundedVariableBoundValue() = 0;
 
     virtual int getNumberOfExploredNodes() = 0;

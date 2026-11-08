@@ -77,6 +77,10 @@ public:
 
     double cutOffToUse = SHOT_DBL_INF;
     bool useCutOff = false;
+
+    // The cutoff, in the original problem's sense, last given to the MIP solver, which keeps it until it is set again
+    std::optional<double> cutOffInMIPSolver;
+
     bool isSingleTree = false;
 
     // Whether the dual problem contains the whole reformulated problem instead of only being a relaxation of it. What
@@ -89,9 +93,10 @@ public:
     // reformulated problem has the objective variable itself, and its value is already in the point.
     bool hasObjectiveVariableOnlyInMIPSolver();
 
-    // The point of a primal solution, which is in the variables of the original problem, in the variables of the dual
-    // problem, so that it can be checked against the cuts
-    VectorDouble getPrimalPointInDualProblem(const PrimalSolution& solution);
+    // A primal solution is a point of the original problem. Returns it with the values of the variables that the MIP
+    // solver has in addition, i.e. the auxiliary variables of the reformulated problem and the objective variable,
+    // so that it can be used with the variable indices of the MIP solver, e.g. those of the terms of a hyperplane.
+    VectorDouble getAugmentedPrimalSolutionPoint(const PrimalSolution& solution);
 
     // The cuts of nonconvex constraints may cut off feasible solutions. A cut that a known primal solution violates is
     // relaxed so that the solution fulfills it, and returns how many cuts were relaxed

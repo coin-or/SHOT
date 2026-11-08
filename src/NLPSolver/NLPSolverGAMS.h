@@ -15,8 +15,15 @@
 #include "gevmcc.h"
 #include "palmcc.h"
 
+#include <set>
+
 namespace SHOT
 {
+struct GAMSNLPLicenseState
+{
+    std::set<std::string> unavailableSolvers;
+};
+
 class NLPSolverGAMS : public NLPSolverBase
 {
 private:
@@ -62,10 +69,14 @@ public:
 protected:
     E_NLPSolutionStatus solveProblemInstance() override;
 
+    virtual int callSolver(double solveTimeLimit, char* message);
+
     VectorDouble getVariableLowerBounds() override;
     VectorDouble getVariableUpperBounds() override;
 
 private:
     std::string selectedNLPSolver = "";
+    std::shared_ptr<GAMSNLPLicenseState> licenseState;
+    void useLicenseFallback();
 };
 } // namespace SHOT

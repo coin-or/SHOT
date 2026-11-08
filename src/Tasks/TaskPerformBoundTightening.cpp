@@ -13,6 +13,7 @@
 #include "../Callback.h"
 #include "../DualSolver.h"
 #include "../MIPSolver/IMIPSolver.h"
+#include "../MIPSolver/MIPSolverBase.h"
 #include "../Output.h"
 #include "../PrimalSolver.h"
 #include "../Report.h"
@@ -167,8 +168,12 @@ void TaskPerformBoundTightening::updateObjectiveBounds()
     bool sourceIsSignReversed
         = sourceProblem->objectiveFunction->direction != env->problem->objectiveFunction->direction;
 
-    Interval originalSenseBounds
-        = sourceIsSignReversed ? Interval(-objectiveBoundsAfter.u(), -objectiveBoundsAfter.l()) : objectiveBoundsAfter;
+    // A huge interval upper bound is also an unsafe cutoff row, even when the objective variable itself is unbounded
+    // in the MIP model. Keep the interval in the problem, but only pass its numerically useful sides to the solver.
+    auto boundsForSolver = MIPSolverBase::getAuxiliaryVariableBoundsForSolver(
+        objectiveBoundsAfter.l(), objectiveBoundsAfter.u(), SHOT_DBL_MAX);
+    Interval originalSenseBounds = sourceIsSignReversed ? Interval(-boundsForSolver.second, -boundsForSolver.first)
+                                                        : Interval(boundsForSolver.first, boundsForSolver.second);
 
     if(env->problem->objectiveFunction->properties.isMinimize)
     {
@@ -325,17 +330,10 @@ void TaskPerformBoundTightening::addPOACuts(std::shared_ptr<NLPSolverSHOT> solve
             if(!isOk)
                 continue;
 
-            // Small fix to fix badly scaled cuts.
-            // TODO: this should be made so it also takes into account small/large coefficients of the linear terms
-            if(std::abs(tmpPair.second) > 1e15)
-            {
-                double scalingFactor = std::abs(tmpPair.second) - 1e15;
-
-                for(auto& E : tmpPair.first)
-                    E.second /= scalingFactor;
-
-                tmpPair.second /= scalingFactor;
-            }
+            // The cuts are scaled as those of the dual problem, since a cut generated where a variable is close to a
+            // singularity, e.g., of x^2/y for y close to zero, can have such large coefficients that the MIP solver
+            // returns a solution that is not optimal
+            MIPSolverBase::scaleHyperplaneTerms(tmpPair);
 
             auto linearConstraint = std::make_shared<LinearConstraint>(fmt::format(
                 "initPOA_{}_{}", newHP->sourceConstraint->name, hyperplaneCounter), SHOT_DBL_MIN, -tmpPair.second);

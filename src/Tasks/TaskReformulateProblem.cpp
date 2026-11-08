@@ -12,6 +12,8 @@
 
 #include "../DualSolver.h"
 #include "../MIPSolver/IMIPSolver.h"
+#include "../MIPSolver/MIPSolverBase.h"
+#include "../MIPSolver/MIPSolverCapabilities.h"
 #include "../Output.h"
 #include "../Results.h"
 #include "../Settings.h"
@@ -20,10 +22,6 @@
 
 #include "../Model/Simplifications.h"
 #include "TaskPerformBoundTightening.h"
-
-#ifdef HAS_GUROBI
-#include "gurobi_c.h"
-#endif
 
 #include <algorithm>
 #include <cstdio>
@@ -98,161 +96,43 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     auto integerBilinearStrategy = static_cast<ES_ReformulateBilinearInteger>(
         env->settings->getSetting<int>("Model.Reformulation.Bilinear.IntegerFormulation"));
 
-    if(env->settings->getSetting<int>("Dual.MIP.Solver") == (int)ES_MIPSolver::Cplex)
+    auto solver = static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver"));
+    auto capabilities = getMIPSolverCapabilities(solver);
+
+    if(!capabilities)
+        throw Exception(" Cannot reformulate a problem for an unavailable MIP solver.");
+
+    bool retainObjective = quadraticStrategy != ES_QuadraticProblemStrategy::Nonlinear;
+    bool retainConstraints = quadraticStrategy >= ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained;
+    bool retainNonconvex = quadraticStrategy == ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained;
+    useConvexQuadraticObjective = retainObjective && capabilities->convexQuadraticObjective;
+    useNonconvexQuadraticObjective = retainObjective && capabilities->nonconvexQuadraticObjective;
+    useConvexQuadraticConstraints = retainConstraints && capabilities->convexQuadraticConstraints;
+    useNonconvexQuadraticConstraints = retainNonconvex && capabilities->nonconvexQuadraticConstraints;
+
+    // Gurobi's PSDTol is configured from SHOT's eigenvalue tolerance. This numerical acceptance rule is separate
+    // from support for genuinely nonconvex quadratic constraints.
+    useConvexQuadraticConstraintsWithinTolerance = useConvexQuadraticConstraints && solver == ES_MIPSolver::Gurobi;
+
+    useIntegerBilinearTermReformulation = integerBilinearStrategy == ES_ReformulateBilinearInteger::Yes
+        || (integerBilinearStrategy == ES_ReformulateBilinearInteger::NoIfQuadraticSupport
+            && !useNonconvexQuadraticConstraints);
+
+    // Some backends solve nonconvex quadratic objectives globally only with linear constraints. Keep the exact
+    // objective and handle the convex constraints with cuts instead, unless the objective is made an epigraph.
+    const auto& objective = env->problem->objectiveFunction->properties;
+
+    if(capabilities->nonconvexObjectiveExcludesQuadraticConstraints
+        && (useConvexQuadraticObjective || useNonconvexQuadraticObjective)
+        && objective.classification == E_ObjectiveFunctionClassification::Quadratic
+        && objective.convexity != (objective.isMinimize ? E_Convexity::Convex : E_Convexity::Concave)
+        && objective.convexity != E_Convexity::Linear
+        && static_cast<ES_ObjectiveEpigraphStrategy>(
+               env->settings->getSetting<int>("Model.Reformulation.ObjectiveFunction.EpigraphStrategy"))
+            != ES_ObjectiveEpigraphStrategy::EpigraphConstraint)
     {
-        switch(quadraticStrategy)
-        {
-        case(ES_QuadraticProblemStrategy::Nonlinear):
-            useConvexQuadraticConstraints = false;
-            useConvexQuadraticConstraintsWithinTolerance = false;
-            useNonconvexQuadraticConstraints = false;
-            useConvexQuadraticObjective = false;
-            useNonconvexQuadraticObjective = false;
-            break;
-        case(ES_QuadraticProblemStrategy::QuadraticObjective):
-            useConvexQuadraticConstraints = false;
-            useConvexQuadraticConstraintsWithinTolerance = false;
-            useNonconvexQuadraticConstraints = false;
-            useConvexQuadraticObjective = true;
-            useNonconvexQuadraticObjective = false;
-            break;
-        case(ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained):
-            useConvexQuadraticConstraints = true;
-            useConvexQuadraticConstraintsWithinTolerance = false;
-            useNonconvexQuadraticConstraints = false;
-            useConvexQuadraticObjective = true;
-            useNonconvexQuadraticObjective = false;
-            break;
-        case(ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained):
-            useConvexQuadraticConstraints = true;
-            useConvexQuadraticConstraintsWithinTolerance = false; // No support in Cplex
-            useNonconvexQuadraticConstraints = false; // No support in Cplex
-            useConvexQuadraticObjective = true;
-            useNonconvexQuadraticObjective = true;
-            break;
-        default:
-            break;
-        }
-
-        switch(integerBilinearStrategy)
-        {
-        case(ES_ReformulateBilinearInteger::No):
-            useIntegerBilinearTermReformulation = false;
-            break;
-        case(ES_ReformulateBilinearInteger::NoIfQuadraticSupport):
-            useIntegerBilinearTermReformulation = true;
-            break;
-        case(ES_ReformulateBilinearInteger::Yes):
-            useIntegerBilinearTermReformulation = true;
-            break;
-        default:
-            break;
-        }
-
-        // CPLEX solves a dual problem with a nonconvex quadratic objective function to global optimality
-        // (OptimalityTarget = 3), but not one that also has quadratic constraints, which it rejects with "objective is
-        // not convex". The quadratic objective function of a nonconvex problem keeps its nonconvex terms when it is
-        // regarded as nonlinear, so the convex quadratic constraints are considered as nonlinear instead, which keeps
-        // the objective function exact and the cuts of the constraints valid.
-        auto& objective = env->problem->objectiveFunction;
-
-        if((useConvexQuadraticObjective || useNonconvexQuadraticObjective)
-            && objective->properties.classification == E_ObjectiveFunctionClassification::Quadratic
-            && objective->properties.convexity != E_Convexity::Convex
-            && static_cast<ES_ObjectiveEpigraphStrategy>(
-                   env->settings->getSetting<int>("Model.Reformulation.ObjectiveFunction.EpigraphStrategy"))
-                != ES_ObjectiveEpigraphStrategy::EpigraphConstraint)
-        {
-            useConvexQuadraticConstraints = false;
-            useConvexQuadraticConstraintsWithinTolerance = false;
-        }
-    }
-    else if(env->settings->getSetting<int>("Dual.MIP.Solver") == (int)ES_MIPSolver::Gurobi)
-    {
-        switch(quadraticStrategy)
-        {
-        case(ES_QuadraticProblemStrategy::Nonlinear):
-            useConvexQuadraticConstraints = false;
-            useConvexQuadraticConstraintsWithinTolerance = false;
-            useNonconvexQuadraticConstraints = false;
-            useConvexQuadraticObjective = false;
-            useNonconvexQuadraticObjective = false;
-            break;
-        case(ES_QuadraticProblemStrategy::QuadraticObjective):
-            useConvexQuadraticConstraints = false;
-            useConvexQuadraticConstraintsWithinTolerance = false;
-            useNonconvexQuadraticConstraints = false;
-            useConvexQuadraticObjective = true;
-            useNonconvexQuadraticObjective = false;
-            break;
-        case(ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained):
-            useConvexQuadraticConstraints = true;
-            useConvexQuadraticConstraintsWithinTolerance = true;
-            useNonconvexQuadraticConstraints = false;
-            useConvexQuadraticObjective = true;
-            useNonconvexQuadraticObjective = false;
-            break;
-        case(ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained):
-            useConvexQuadraticConstraints = true;
-            useConvexQuadraticConstraintsWithinTolerance = true;
-            useNonconvexQuadraticConstraints = true;
-            useConvexQuadraticObjective = true;
-            useNonconvexQuadraticObjective = true;
-            break;
-        default:
-            break;
-        }
-
-        switch(integerBilinearStrategy)
-        {
-        case(ES_ReformulateBilinearInteger::No):
-            useIntegerBilinearTermReformulation = false;
-            break;
-
-        case(ES_ReformulateBilinearInteger::NoIfQuadraticSupport):
-            // Gurobi from version 9 supports nonconvex quadratic terms, but they are only passed to it with
-            // Model.Reformulation.Quadratics.Strategy = NonconvexQuadraticallyConstrained
-#if defined(HAS_GUROBI) && GRB_VERSION_MAJOR >= 9
-            useIntegerBilinearTermReformulation = !useNonconvexQuadraticConstraints;
-#else
-            useIntegerBilinearTermReformulation = true;
-#endif
-            break;
-        case(ES_ReformulateBilinearInteger::Yes):
-            useIntegerBilinearTermReformulation = true;
-            break;
-        default:
-            break;
-        }
-    }
-    else if(env->settings->getSetting<int>("Dual.MIP.Solver") == (int)ES_MIPSolver::Cbc
-        || env->settings->getSetting<int>("Dual.MIP.Solver") == (int)ES_MIPSolver::Highs)
-    {
-        // Cbc and HiGHS are not given quadratic terms
         useConvexQuadraticConstraints = false;
         useConvexQuadraticConstraintsWithinTolerance = false;
-        useNonconvexQuadraticConstraints = false;
-        useConvexQuadraticObjective = false;
-        useNonconvexQuadraticObjective = false;
-
-        switch(integerBilinearStrategy)
-        {
-        case(ES_ReformulateBilinearInteger::No):
-            useIntegerBilinearTermReformulation = false;
-            break;
-        case(ES_ReformulateBilinearInteger::NoIfQuadraticSupport):
-            useIntegerBilinearTermReformulation = true;
-            break;
-        case(ES_ReformulateBilinearInteger::Yes):
-            useIntegerBilinearTermReformulation = true;
-            break;
-        default:
-            break;
-        }
-    }
-    else
-    {
-        // Will not happen
     }
 
     extractQuadraticTermsFromNonconvexExpressions
@@ -312,6 +192,8 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     // Creating expressions for the bilinear reformulations
     createBilinearReformulations();
 
+    reportBilinearReformulations();
+
     reformulatedProblem->properties.isReformulated = true;
     reformulatedProblem->properties.numberOfAddedLinearizations = env->problem->properties.numberOfAddedLinearizations;
 
@@ -342,7 +224,9 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     {
         if(auto objective
             = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(reformulatedProblem->objectiveFunction);
-            objective && objective->quadraticTerms.getConvexity() != E_Convexity::Convex
+            objective
+            && objective->quadraticTerms.getConvexity()
+                != (objective->properties.isMinimize ? E_Convexity::Convex : E_Convexity::Concave)
             && objective->quadraticTerms.getConvexity() != E_Convexity::Linear)
             isQuadraticObjectiveUnsupported = true;
     }
@@ -389,6 +273,82 @@ std::string TaskReformulateProblem::getType()
     return (type);
 }
 
+// Antiepigraph reformulation is safe only when the defining inequality is tight at an optimum and the objective
+// variable's value always satisfies its domain. Inspect the original row: partitioning or splitting a ranged row
+// can change which constraint contains the variable in the reformulated problem.
+static bool canApplyAntiEpigraphReformulation(const ProblemPtr& problem, const LinearObjectiveFunctionPtr& objective)
+{
+    const auto variable = objective->linearTerms.front()->variable;
+    const double objectiveCoefficient = objective->linearTerms.front()->coefficient;
+
+    if(variable->properties.type != E_VariableType::Real || !std::isfinite(objectiveCoefficient)
+        || objectiveCoefficient == 0.0)
+        return false;
+
+    for(const auto& sos : problem->specialOrderedSets)
+    {
+        if(std::find(sos->variables.begin(), sos->variables.end(), variable) != sos->variables.end())
+            return false;
+    }
+
+    for(const auto& constraint : problem->numericConstraints)
+    {
+        auto definition = std::dynamic_pointer_cast<QuadraticConstraint>(constraint);
+
+        if(!definition)
+            continue;
+
+        for(const auto& term : definition->linearTerms)
+        {
+            if(term->variable != variable)
+                continue;
+
+            const bool upperSide = definition->valueLHS == SHOT_DBL_MIN && definition->valueRHS != SHOT_DBL_MAX;
+            const bool lowerSide = definition->valueRHS == SHOT_DBL_MAX && definition->valueLHS != SHOT_DBL_MIN;
+
+            if((!upperSide && !lowerSide) || !std::isfinite(term->coefficient) || term->coefficient == 0.0
+                || definition->properties.hasNonalgebraicPart)
+                return false;
+
+            const bool improvesDownwards
+                = (objectiveCoefficient > 0.0) == (objective->direction == E_ObjectiveFunctionDirection::Minimize);
+            const bool definesLowerBound = upperSide ? term->coefficient < 0.0 : term->coefficient > 0.0;
+
+            if(improvesDownwards != definesLowerBound)
+                return false;
+
+            try
+            {
+                IntervalVector box;
+                box.reserve(problem->allVariables.size());
+
+                for(const auto& v : problem->allVariables)
+                    box.push_back(v == variable ? Interval(0.0) : v->getBound());
+
+                // An unbounded term or an interval-domain error gives the full interval, not a finite proof.
+                const Interval remainder = definition->calculateFunctionValue(box);
+
+                if(remainder.l() == SHOT_DBL_MIN || remainder.u() == SHOT_DBL_MAX)
+                    return false;
+
+                const double side = upperSide ? definition->valueRHS : definition->valueLHS;
+                const Interval values = (Interval(side) - remainder) / Interval(term->coefficient);
+
+                return std::isfinite(values.l()) && std::isfinite(values.u()) && variable->lowerBound <= values.l()
+                    && variable->upperBound >= values.u();
+            }
+
+            catch(IntervalError&)
+            {
+                // Keep the constraint if interval arithmetic cannot prove the variable bounds redundant.
+                return false;
+            }
+        }
+    }
+
+    return false;
+}
+
 void TaskReformulateProblem::reformulateObjectiveFunction()
 {
     auto epigraphStrategy = static_cast<ES_ObjectiveEpigraphStrategy>(
@@ -415,7 +375,8 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
                 && (!originalObjectiveVariable->properties.inQuadraticTerms // Not in quadratic terms
                     && !originalObjectiveVariable->properties.inNonlinearExpression // Not in nonlinear expressions
                     && !originalObjectiveVariable->properties.inMonomialTerms // Not in monomial terms
-                    && !originalObjectiveVariable->properties.inSignomialTerms)) // Not in signomial terms
+                    && !originalObjectiveVariable->properties.inSignomialTerms) // Not in signomial terms
+                && canApplyAntiEpigraphReformulation(env->problem, sourceObjective))
             {
                 // Now know the objective variable is present in a nonlinear or quadratic constraint and only in one
                 // unique linear term. Need to find the constraint
@@ -427,7 +388,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
                 {
                     for(auto const& LT : C->linearTerms)
                     {
-                        if(LT->variable->name == originalObjectiveVariable->name)
+                        if(LT->variable == reformulatedProblem->getVariable(originalObjectiveVariable->getIndex()))
                         {
                             epigraphConstraint = C;
                             epigraphConstraintTerm = LT;
@@ -445,7 +406,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
                     {
                         for(auto const& LT : C->linearTerms)
                         {
-                            if(LT->variable->name == originalObjectiveVariable->name)
+                            if(LT->variable == reformulatedProblem->getVariable(originalObjectiveVariable->getIndex()))
                             {
                                 epigraphConstraint = C;
                                 epigraphConstraintTerm = LT;
@@ -458,9 +419,16 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
                     }
                 }
 
-                if(epigraphConstraint && epigraphConstraintTerm)
+                // Reformulated one-sided rows use an upper bound. Keep any other shape unchanged.
+                auto definition = std::dynamic_pointer_cast<LinearConstraint>(epigraphConstraint);
+
+                if(definition && epigraphConstraintTerm && definition->valueLHS == SHOT_DBL_MIN
+                    && definition->valueRHS != SHOT_DBL_MAX && std::isfinite(definition->valueRHS))
                 {
-                    double epigraphFactor = -originalObjectiveCoefficient / epigraphConstraintTerm->coefficient;
+                    const double objectiveSign
+                        = sourceObjective->direction == E_ObjectiveFunctionDirection::Maximize ? -1.0 : 1.0;
+                    double epigraphFactor
+                        = -objectiveSign * originalObjectiveCoefficient / epigraphConstraintTerm->coefficient;
 
                     ObjectiveFunctionPtr destinationObjective;
 
@@ -573,10 +541,10 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
                     }
 
                     destinationObjective->ownerProblem = reformulatedProblem;
-                    destinationObjective->direction = sourceObjective->direction;
+                    destinationObjective->direction = E_ObjectiveFunctionDirection::Minimize;
 
                     // The constant already contains the terms of the fixed variables added above
-                    destinationObjective->constant += env->problem->objectiveFunction->constant
+                    destinationObjective->constant += objectiveSign * sourceObjective->constant
                         + epigraphFactor
                             * (std::dynamic_pointer_cast<LinearConstraint>(epigraphConstraint)->constant
                                 - std::dynamic_pointer_cast<LinearConstraint>(epigraphConstraint)->valueRHS);
@@ -611,6 +579,9 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
                     }
 
                     reformulatedProblem->antiEpigraphObjectiveVariable = epigraphConstraintTerm->variable;
+                    reformulatedProblem->antiEpigraphObjectiveCoefficient
+                        = objectiveSign * originalObjectiveCoefficient;
+                    reformulatedProblem->antiEpigraphObjectiveConstant = objectiveSign * sourceObjective->constant;
 
                     reformulatedProblem->add(std::move(destinationObjective));
 
@@ -660,10 +631,16 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
             == (env->problem->objectiveFunction->properties.isMinimize ? E_Convexity::Convex : E_Convexity::Concave);
     }
 
-    if(((env->problem->properties.convexity == E_ProblemConvexity::Convex && useConvexQuadraticObjective)
-           || useNonconvexQuadraticObjective)
+    const auto& objectiveProperties = env->problem->objectiveFunction->properties;
+    bool isObjectiveConvex = objectiveProperties.convexity == E_Convexity::Linear
+        || objectiveProperties.convexity
+            == (objectiveProperties.isMinimize ? E_Convexity::Convex : E_Convexity::Concave);
+
+    if(((isObjectiveConvex && useConvexQuadraticObjective) || useNonconvexQuadraticObjective)
         && env->problem->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic
-        && isQuadraticObjectiveSupported)
+        && isQuadraticObjectiveSupported
+        && !requiresIntegerBilinearReformulation(
+            std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->problem->objectiveFunction)->quadraticTerms))
     {
         // Quadratic objective function
         auto destinationObjective = std::make_shared<QuadraticObjectiveFunction>();
@@ -721,7 +698,8 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpConstant]
             = reformulateAndPartitionQuadraticSum(sourceObjective->quadraticTerms, isSignReversed,
                 static_cast<ES_PartitionNonlinearSums>(
-                    env->settings->getSetting<int>("Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms")));
+                    env->settings->getSetting<int>("Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms")),
+                true);
 
         destinationLinearTerms.add(tmpLinearTerms);
         destinationQuadraticTerms.add(tmpQuadraticTerms);
@@ -825,7 +803,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
         {
             auto tmpLinearTerms
                 = partitionNonlinearSum(std::dynamic_pointer_cast<ExpressionSum>(sourceObjective->nonlinearExpression),
-                    isSignReversed, objectivePartitionQuadraticTermsStrategy);
+                    isSignReversed, objectivePartitionQuadraticTermsStrategy, true);
             destinationLinearTerms.add(tmpLinearTerms);
         }
         else if(static_cast<ES_PartitionNonlinearSums>(
@@ -844,7 +822,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
             if(areAllConvex)
             {
                 auto tmpLinearTerms
-                    = partitionNonlinearSum(sum, isSignReversed, objectivePartitionQuadraticTermsStrategy);
+                    = partitionNonlinearSum(sum, isSignReversed, objectivePartitionQuadraticTermsStrategy, true);
                 destinationLinearTerms.add(tmpLinearTerms);
             }
             else
@@ -1076,6 +1054,11 @@ void TaskReformulateProblem::createEpigraphConstraint()
 
     reformulatedProblem->add(objectiveVariable);
     constraint->add(std::make_shared<LinearTerm>(-1.0, std::dynamic_pointer_cast<Variable>(objectiveVariable)));
+
+    // The constraint is reformulated before it is added to the problem, but the bounds of its terms, e.g., when
+    // monomial or signomial terms are partitioned, are calculated from the bounds of the variables in their problem
+    constraint->takeOwnership(reformulatedProblem);
+
     auto reformulatedConstraints = reformulateConstraint(constraint);
 
     for(auto& RC : reformulatedConstraints)
@@ -1142,7 +1125,8 @@ void TaskReformulateProblem::reformulateConstraints()
         {
             reformulatedConstraints = reformulateConstraint(C);
         }
-        else if(isQuadraticConstraint && useNonconvexQuadraticConstraints)
+        else if(isQuadraticConstraint && useNonconvexQuadraticConstraints
+            && !requiresIntegerBilinearReformulation(std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms))
         {
             // A quadratic constraint with both bounds is nonconvex, also when its quadratic terms are convex, so it
             // can only be given to a MIP solver that supports nonconvex quadratic constraints. It is then copied as
@@ -1223,12 +1207,14 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms.getConvexity();
 
     if(isQuadraticConstraint
-        && (C->properties.convexity == E_Convexity::Convex
-            && ((useConvexQuadraticConstraints
-                    && std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms.minEigenValue >= 0.0)
-                || (useConvexQuadraticConstraintsWithinTolerance
-                    && std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms.minEigenValueWithinTolerance)
-                || useNonconvexQuadraticConstraints)))
+        && !requiresIntegerBilinearReformulation(std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms)
+        && (useNonconvexQuadraticConstraints
+            || (C->properties.convexity == E_Convexity::Convex
+                && ((useConvexQuadraticConstraints
+                        && std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms.minEigenValue >= 0.0)
+                    || (useConvexQuadraticConstraintsWithinTolerance
+                        && std::dynamic_pointer_cast<QuadraticConstraint>(C)
+                            ->quadraticTerms.minEigenValueWithinTolerance)))))
     {
         // Quadratic constraint (not considered as nonlinear)
         QuadraticConstraintPtr constraint = std::make_shared<QuadraticConstraint>(C->name, valueLHS, valueRHS);
@@ -1294,7 +1280,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         auto sourceConstraint = std::dynamic_pointer_cast<QuadraticConstraint>(C);
 
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpConstant] = reformulateAndPartitionQuadraticSum(
-            sourceConstraint->quadraticTerms, isSignReversed, partitionQuadraticTermsStrategy);
+            sourceConstraint->quadraticTerms, isSignReversed, partitionQuadraticTermsStrategy, false);
 
         destinationLinearTerms.add(tmpLinearTerms);
         destinationQuadraticTerms.add(tmpQuadraticTerms);
@@ -1403,7 +1389,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         if(tmpQuadraticTerms.size() > 0)
         {
             auto [tmpLinearTerms2, tmpQuadraticTerms2, tmpConstant2] = reformulateAndPartitionQuadraticSum(
-                tmpQuadraticTerms, isSignReversed, partitionQuadraticTermsStrategy);
+                tmpQuadraticTerms, isSignReversed, partitionQuadraticTermsStrategy, false);
 
             destinationLinearTerms.add(tmpLinearTerms2);
             destinationQuadraticTerms.add(tmpQuadraticTerms2);
@@ -1427,7 +1413,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
             && destinationExpression->getType() == E_NonlinearExpressionTypes::Sum)
         {
             auto tmpLinearTerms = partitionNonlinearSum(std::dynamic_pointer_cast<ExpressionSum>(destinationExpression),
-                isSignReversed, partitionQuadraticTermsStrategy);
+                isSignReversed, partitionQuadraticTermsStrategy, false);
             destinationLinearTerms.add(tmpLinearTerms);
         }
         else if(static_cast<ES_PartitionNonlinearSums>(
@@ -1445,7 +1431,8 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 
             if(areAllConvex)
             {
-                auto tmpLinearTerms = partitionNonlinearSum(sum, isSignReversed, partitionQuadraticTermsStrategy);
+                auto tmpLinearTerms
+                    = partitionNonlinearSum(sum, isSignReversed, partitionQuadraticTermsStrategy, false);
                 destinationLinearTerms.add(tmpLinearTerms);
             }
             else
@@ -1844,7 +1831,7 @@ NumericConstraintPtr TaskReformulateProblem::copyConstraintWithUserSpecifiedConv
 }
 
 LinearTerms TaskReformulateProblem::partitionNonlinearSum(const std::shared_ptr<ExpressionSum>& source,
-    bool reversedSigns, ES_PartitionNonlinearSums partitionQuadraticTermsStrategy)
+    bool reversedSigns, ES_PartitionNonlinearSums partitionQuadraticTermsStrategy, bool isObjective)
 {
     LinearTerms resultLinearTerms;
     resultLinearTerms.takeOwnership(reformulatedProblem);
@@ -1876,8 +1863,8 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(const std::shared_ptr<
                 quadTerms.takeOwnership(reformulatedProblem);
                 quadTerms.add(optionalQuadraticTerm.value());
 
-                auto [tmpLinearTerms, tmpQuadraticTerms, tmpConstant]
-                    = reformulateAndPartitionQuadraticSum(quadTerms, reversedSigns, partitionQuadraticTermsStrategy);
+                auto [tmpLinearTerms, tmpQuadraticTerms, tmpConstant] = reformulateAndPartitionQuadraticSum(
+                    quadTerms, reversedSigns, partitionQuadraticTermsStrategy, isObjective);
 
                 // A constant from a fixed variable cannot be returned here, so the term is then partitioned as a
                 // nonlinear term instead; the expressions have been simplified, so this should not happen
@@ -2216,7 +2203,8 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
 }
 
 std::tuple<LinearTerms, QuadraticTerms, double> TaskReformulateProblem::reformulateAndPartitionQuadraticSum(
-    QuadraticTerms& sourceQuadraticTerms, bool reversedSigns, ES_PartitionNonlinearSums partitionStrategy)
+    QuadraticTerms& sourceQuadraticTerms, bool reversedSigns, ES_PartitionNonlinearSums partitionStrategy,
+    bool isObjective)
 {
     LinearTerms resultLinearTerms;
     resultLinearTerms.takeOwnership(reformulatedProblem);
@@ -2288,12 +2276,43 @@ std::tuple<LinearTerms, QuadraticTerms, double> TaskReformulateProblem::reformul
 
     QuadraticTerms& quadraticTerms = hasFixedVariables ? reducedQuadraticTerms : sourceQuadraticTerms;
 
+    // Native quadratic support also applies to the quadratic part of a higher-degree function. Keep it by
+    // default, but honor an explicit partitioning setting from the options file or API.
+    const auto partitionSetting = isObjective ? "Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms"
+                                              : "Model.Reformulation.Constraint.PartitionQuadraticTerms";
+
+    if(env->settings->getSettingPriority(partitionSetting) < E_SettingPriority::OptionsFile
+        && !requiresIntegerBilinearReformulation(quadraticTerms))
+    {
+        bool canRetain = isObjective ? useNonconvexQuadraticObjective : useNonconvexQuadraticConstraints;
+        bool canRetainConvex = isObjective ? useConvexQuadraticObjective : useConvexQuadraticConstraints;
+
+        if(!canRetain && canRetainConvex)
+        {
+            auto convexity = quadraticTerms.getConvexity();
+            bool hasConvexClassification = convexity == E_Convexity::Linear
+                || convexity == (reversedSigns ? E_Convexity::Concave : E_Convexity::Convex);
+            bool isConvex = reversedSigns ? quadraticTerms.maxEigenValue <= 0.0 : quadraticTerms.minEigenValue >= 0.0;
+            bool isConvexWithinTolerance = reversedSigns ? quadraticTerms.maxEigenValueWithinTolerance
+                                                         : quadraticTerms.minEigenValueWithinTolerance;
+            // Obvious convex/nonconvex sums can be classified without computing their eigenvalue bounds.
+            canRetain = hasConvexClassification
+                && (isConvex
+                    || (!isObjective && useConvexQuadraticConstraintsWithinTolerance && isConvexWithinTolerance));
+        }
+
+        if(canRetain)
+            partitionStrategy = ES_PartitionNonlinearSums::Never;
+    }
+
     bool performPartitioning = true;
 
     if(partitionStrategy != ES_PartitionNonlinearSums::Always)
     {
         for(auto& T : quadraticTerms)
         {
+            noteNonDiscretizedIntegerBilinearTerm(T->firstVariable, T->secondVariable);
+
             if(!T->isSquare
                 && (T->firstVariable->upperBound > 1e15 || T->secondVariable->upperBound > 1e15
                     || T->firstVariable->lowerBound < -1e15 || T->secondVariable->lowerBound < -1e15))
@@ -2321,14 +2340,8 @@ std::tuple<LinearTerms, QuadraticTerms, double> TaskReformulateProblem::reformul
             {
             }
             else if(useIntegerBilinearTermReformulation && T->isBilinear
-                && (((T->firstVariable->properties.type == E_VariableType::Integer
-                         || T->firstVariable->properties.type == E_VariableType::Semiinteger)
-                        && (T->firstVariable->upperBound - T->firstVariable->lowerBound
-                            < maxBilinearIntegerReformulationDomain))
-                    || ((T->secondVariable->properties.type == E_VariableType::Integer
-                            || T->secondVariable->properties.type == E_VariableType::Semiinteger)
-                        && (T->secondVariable->upperBound - T->secondVariable->lowerBound
-                            < maxBilinearIntegerReformulationDomain))))
+                && (isDiscretizableInBilinearTerm(T->firstVariable)
+                    || isDiscretizableInBilinearTerm(T->secondVariable)))
             // bilinear term i1*i2 or i1*x2
             {
             }
@@ -2394,6 +2407,15 @@ std::tuple<LinearTerms, QuadraticTerms, double> TaskReformulateProblem::reformul
             auto firstVariable = reformulatedProblem->getVariable(T->firstVariable->getIndex());
             auto secondVariable = reformulatedProblem->getVariable(T->secondVariable->getIndex());
 
+            noteNonDiscretizedIntegerBilinearTerm(firstVariable, secondVariable);
+
+            if(T->isBilinear && !hasSafeBilinearLinearizationBounds(firstVariable, secondVariable))
+            {
+                remainingTerms.push_back(
+                    std::make_shared<QuadraticTerm>(signfactor * T->coefficient, firstVariable, secondVariable));
+                continue;
+            }
+
             if(T->isSquare && T->isBinary) // Square term b^2 -> b
             {
                 resultTerms.push_back(std::make_shared<LinearTerm>(signfactor * T->coefficient, firstVariable));
@@ -2421,14 +2443,7 @@ std::tuple<LinearTerms, QuadraticTerms, double> TaskReformulateProblem::reformul
                 resultTerms.push_back(std::make_shared<LinearTerm>(signfactor * T->coefficient, auxVariable));
             }
             else if(useIntegerBilinearTermReformulation && T->isBilinear
-                && (((firstVariable->properties.type == E_VariableType::Integer
-                         || firstVariable->properties.type == E_VariableType::Semiinteger)
-                        && (firstVariable->upperBound - firstVariable->lowerBound
-                            < maxBilinearIntegerReformulationDomain))
-                    || ((secondVariable->properties.type == E_VariableType::Integer
-                            || secondVariable->properties.type == E_VariableType::Semiinteger)
-                        && (secondVariable->upperBound - secondVariable->lowerBound
-                            < maxBilinearIntegerReformulationDomain))))
+                && (isDiscretizableInBilinearTerm(firstVariable) || isDiscretizableInBilinearTerm(secondVariable)))
             // bilinear term i1*i2 or i1*x2
             {
                 auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(firstVariable, secondVariable);
@@ -3743,8 +3758,21 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
 
             for(auto& T : tmpQuadraticTerms)
             {
-                auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(T->firstVariable, T->secondVariable);
-                sum->children.push_back(std::make_shared<ExpressionVariable>(auxVariable));
+                if(!hasSafeBilinearLinearizationBounds(T->firstVariable, T->secondVariable))
+                {
+                    auto product = std::make_shared<ExpressionProduct>();
+                    product->children = { std::make_shared<ExpressionConstant>(T->coefficient),
+                        std::make_shared<ExpressionVariable>(
+                            reformulatedProblem->getVariable(T->firstVariable->getIndex())),
+                        std::make_shared<ExpressionVariable>(
+                            reformulatedProblem->getVariable(T->secondVariable->getIndex())) };
+                    sum->children.push_back(product);
+                }
+                else
+                {
+                    auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(T->firstVariable, T->secondVariable);
+                    sum->children.push_back(std::make_shared<ExpressionVariable>(auxVariable));
+                }
             }
 
             if(tmpNonlinearExpression)
@@ -3777,8 +3805,21 @@ NonlinearExpressionPtr TaskReformulateProblem::reformulateNonlinearExpression(st
 
             for(auto& T : tmpQuadraticTerms)
             {
-                auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(T->firstVariable, T->secondVariable);
-                sum->children.push_back(std::make_shared<ExpressionVariable>(auxVariable));
+                if(!hasSafeBilinearLinearizationBounds(T->firstVariable, T->secondVariable))
+                {
+                    auto product = std::make_shared<ExpressionProduct>();
+                    product->children = { std::make_shared<ExpressionConstant>(T->coefficient),
+                        std::make_shared<ExpressionVariable>(
+                            reformulatedProblem->getVariable(T->firstVariable->getIndex())),
+                        std::make_shared<ExpressionVariable>(
+                            reformulatedProblem->getVariable(T->secondVariable->getIndex())) };
+                    sum->children.push_back(product);
+                }
+                else
+                {
+                    auto [auxVariable, newVariable] = getBilinearAuxiliaryVariable(T->firstVariable, T->secondVariable);
+                    sum->children.push_back(std::make_shared<ExpressionVariable>(auxVariable));
+                }
             }
 
             if(tmpNonlinearExpression)
@@ -3833,7 +3874,12 @@ std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getSquareAuxiliary
     else if(variable->properties.type == E_VariableType::Integer
         || variable->properties.type == E_VariableType::Semiinteger)
     {
-        variableType = E_VariableType::Integer;
+        // The defining relation determines the auxiliary's value, so its integrality is redundant. Very large
+        // integer columns have implicit solver limits even when given infinite bounds, so keep these real.
+        variableType
+            = (lowerBound <= -MIPSolverBase::largeAuxiliaryBound || upperBound >= MIPSolverBase::largeAuxiliaryBound)
+            ? E_VariableType::Real
+            : E_VariableType::Integer;
     }
     else
     {
@@ -3917,6 +3963,12 @@ std::pair<AuxiliaryVariablePtr, bool> TaskReformulateProblem::getBilinearAuxilia
         auxVariableType = E_AuxiliaryVariableType::ContinuousBilinear;
     }
 
+    // As for a square, explicit integrality is unnecessary for the value of a product and can impose implicit limits
+    // on a column whose bounds are too large for the solver's integer representation.
+    if(variableType == E_VariableType::Integer
+        && (lowerBound <= -MIPSolverBase::largeAuxiliaryBound || upperBound >= MIPSolverBase::largeAuxiliaryBound))
+        variableType = E_VariableType::Real;
+
     auto auxVariable = std::make_shared<AuxiliaryVariable>(
         "s_bl_" + firstVariable->name + "_" + secondVariable->name, variableType, lowerBound, upperBound);
     auxVariableCounter++;
@@ -3970,6 +4022,124 @@ void TaskReformulateProblem::createSquareReformulations()
     }
 }
 
+void TaskReformulateProblem::noteNonDiscretizedIntegerBilinearTerm(
+    const VariablePtr& firstVariable, const VariablePtr& secondVariable)
+{
+    // Only terms that would be discretized if the domain limit allowed it
+    if(!useIntegerBilinearTermReformulation || firstVariable == secondVariable)
+        return;
+
+    auto isType = [](const VariablePtr& V, E_VariableType type) { return (V->properties.type == type); };
+    auto isInteger = [&](const VariablePtr& V)
+    { return (isType(V, E_VariableType::Integer) || isType(V, E_VariableType::Semiinteger)); };
+
+    if(isType(firstVariable, E_VariableType::Binary) || isType(secondVariable, E_VariableType::Binary)
+        || (!isInteger(firstVariable) && !isInteger(secondVariable)))
+        return;
+
+    if(isDiscretizableInBilinearTerm(firstVariable) || isDiscretizableInBilinearTerm(secondVariable))
+        return;
+
+    nonDiscretizedIntegerBilinearTerms.emplace(std::min(firstVariable->getIndex(), secondVariable->getIndex()),
+        std::max(firstVariable->getIndex(), secondVariable->getIndex()));
+}
+
+void TaskReformulateProblem::reportBilinearReformulations()
+{
+    if(!unsafeBilinearLinearizations.empty())
+    {
+        env->output->outputWarning(fmt::format(" {} bilinear terms could not be linearized: unsafe big-M values",
+            unsafeBilinearLinearizations.size()));
+    }
+
+    if(nonDiscretizedIntegerBilinearTerms.size() > 0)
+    {
+        env->output->outputInfo(fmt::format(
+            " {} integer bilinear terms not discretized: unbounded or domain over IntegerFormulation.MaxDomain "
+            "= {}.",
+            nonDiscretizedIntegerBilinearTerms.size(), maxBilinearIntegerReformulationDomain));
+    }
+
+    // The continuous formulation of a bilinear term, x * y = w, is nonconvex, which the assumption of convexity does
+    // not hold for, so cuts of these constraints can cut off solutions
+    if(env->settings->getSetting<bool>("Model.Convexity.AssumeConvex"))
+    {
+        if(auto numberOfTerms
+            = reformulatedProblem->getAuxiliaryVariablesOfType(E_AuxiliaryVariableType::ContinuousBilinear).size();
+            numberOfTerms > 0)
+        {
+            env->output->outputWarning(
+                fmt::format(" {} bilinear terms have nonconvex reformulations despite AssumeConvex; the result may be "
+                            "wrong.",
+                    numberOfTerms));
+        }
+    }
+}
+
+bool TaskReformulateProblem::requiresIntegerBilinearReformulation(const QuadraticTerms& terms)
+{
+    if(env->settings->getSetting<int>("Model.Reformulation.Bilinear.IntegerFormulation")
+        != static_cast<int>(ES_ReformulateBilinearInteger::Yes))
+        return false;
+
+    return std::any_of(terms.begin(), terms.end(),
+        [this](const QuadraticTermPtr& term)
+        {
+            return term->isBilinear
+                && (isDiscretizableInBilinearTerm(term->firstVariable)
+                    || isDiscretizableInBilinearTerm(term->secondVariable));
+        });
+}
+
+bool TaskReformulateProblem::isDiscretizableInBilinearTerm(const VariablePtr& variable)
+{
+    if(variable->properties.type != E_VariableType::Integer && variable->properties.type != E_VariableType::Semiinteger)
+        return (false);
+
+    if(variable->lowerBound <= SHOT_DBL_MIN || variable->upperBound >= SHOT_DBL_MAX)
+        return (false);
+
+    if(variable->upperBound - variable->lowerBound >= maxBilinearIntegerReformulationDomain)
+        return (false);
+
+    // The variables of the reformulated problem do not have the flags for artificial bounds, but those of the original
+    // problem have the same indexes
+    if(variable->getIndex() < env->problem->properties.numberOfVariables)
+    {
+        auto originalVariable = env->problem->getVariable(variable->getIndex());
+
+        if(originalVariable->properties.hasArtificialLowerBound || originalVariable->properties.hasArtificialUpperBound)
+            return (false);
+    }
+
+    return (true);
+}
+
+bool TaskReformulateProblem::hasSafeBilinearLinearizationBounds(
+    const VariablePtr& firstVariable, const VariablePtr& secondVariable)
+{
+    if(firstVariable == secondVariable)
+        return true;
+
+    bool hasDiscreteFactor = firstVariable->properties.type == E_VariableType::Binary
+        || secondVariable->properties.type == E_VariableType::Binary || isDiscretizableInBilinearTerm(firstVariable)
+        || isDiscretizableInBilinearTerm(secondVariable);
+
+    if(!hasDiscreteFactor)
+        return true;
+
+    double firstMagnitude = std::max(std::abs(firstVariable->lowerBound), std::abs(firstVariable->upperBound));
+    double secondMagnitude = std::max(std::abs(secondVariable->lowerBound), std::abs(secondVariable->upperBound));
+    double bigM = 2.0 * firstMagnitude * secondMagnitude;
+
+    if(std::isfinite(bigM) && bigM < MIPSolverBase::largeAuxiliaryBound)
+        return true;
+
+    unsafeBilinearLinearizations.emplace(std::min(firstVariable->getIndex(), secondVariable->getIndex()),
+        std::max(firstVariable->getIndex(), secondVariable->getIndex()));
+    return false;
+}
+
 void TaskReformulateProblem::createBilinearReformulations()
 {
     // Preserve the original index order of generated constraints despite hash-table lookup during construction.
@@ -4008,11 +4178,21 @@ void TaskReformulateProblem::createBilinearReformulations()
             reformulateBinaryContinuousBilinearTerm(firstVariable, secondVariable, AUXVAR);
             AUXVAR->properties.auxiliaryType = E_AuxiliaryVariableType::IntegerBilinear;
         }
-        else if(firstVariableType == E_VariableType::Integer || firstVariableType == E_VariableType::Semiinteger
-            || secondVariableType == E_VariableType::Integer || secondVariableType == E_VariableType::Semiinteger)
+        // Terms extracted from nonlinear expressions also get here, so the domain limit is checked again. The
+        // discretization has one binary variable for each value of the integer variable. It is used regardless of
+        // Model.Reformulation.Bilinear.IntegerFormulation, since the alternative for an extracted term is the
+        // nonconvex continuous formulation below, not keeping the quadratic term.
+        else if(isDiscretizableInBilinearTerm(firstVariable) || isDiscretizableInBilinearTerm(secondVariable))
         {
             reformulateIntegerBilinearTerm(firstVariable, secondVariable, AUXVAR);
             AUXVAR->properties.auxiliaryType = E_AuxiliaryVariableType::IntegerBilinear;
+        }
+        else if(firstVariableType == E_VariableType::Integer || firstVariableType == E_VariableType::Semiinteger
+            || secondVariableType == E_VariableType::Integer || secondVariableType == E_VariableType::Semiinteger)
+        {
+            nonDiscretizedIntegerBilinearTerms.emplace(key);
+            reformulateRealBilinearTerm(firstVariable, secondVariable, AUXVAR);
+            AUXVAR->properties.auxiliaryType = E_AuxiliaryVariableType::ContinuousBilinear;
         }
         else if(firstVariableType == E_VariableType::Real && secondVariableType == E_VariableType::Real)
         {
@@ -4206,25 +4386,10 @@ void TaskReformulateProblem::reformulateIntegerBilinearTerm(
             auto auxBinary = std::make_shared<AuxiliaryVariable>(
                 "s_bli" + std::to_string(auxVariableCounter + 1), E_VariableType::Binary, 0.0, 1.0);
 
-            // The binary is one if the variable has the value i, which at integer values is given by the product of
-            // (x - j) / (i - j) over the other values j; every factor is exact, so it is exactly one or zero
-            auto indicator = std::make_shared<ExpressionProduct>();
-
-            for(auto j = discretizationVariable->lowerBound; j <= discretizationVariable->upperBound; j++)
-            {
-                if(j == i)
-                    continue;
-
-                indicator->children.push_back(std::make_shared<ExpressionDivide>(
-                    std::make_shared<ExpressionSum>(std::make_shared<ExpressionVariable>(discretizationVariable),
-                        std::make_shared<ExpressionConstant>(-j)),
-                    std::make_shared<ExpressionConstant>(i - j)));
-            }
-
-            if(indicator->children.size() > 0)
-                auxBinary->nonlinearExpression = indicator;
-            else
-                auxBinary->constant = 1.0;
+            // Store only x - i. AuxiliaryVariable::calculate evaluates the corresponding one-hot weight.
+            auxBinary->properties.auxiliaryType = E_AuxiliaryVariableType::IntegerDiscretization;
+            auxBinary->constant = -i;
+            auxBinary->linearTerms.add(std::make_shared<LinearTerm>(1.0, discretizationVariable));
 
             auxFirstSum->add(std::make_shared<LinearTerm>(1.0, auxBinary));
             auxFirstSumVarDef->add(std::make_shared<LinearTerm>(i, auxBinary));

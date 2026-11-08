@@ -12,6 +12,7 @@
 #include "../src/DualSolver.h"
 #include "../src/Environment.h"
 #include "../src/MIPSolver/IMIPSolver.h"
+#include "../src/NLPSolver/NLPSolverSHOT.h"
 #include "../src/PrimalSolver.h"
 #include "../src/Results.h"
 #include "../src/Settings.h"
@@ -35,6 +36,7 @@
 
 #include "../src/Tasks/TaskPerformBoundTightening.h"
 #include "../src/Tasks/TaskReformulateProblem.h"
+#include "../src/Tasks/TaskSelectPrimalCandidatesFromNLP.h"
 #include "../src/Tasks/TaskCalculateSolutionChangeNorm.h"
 #include "../src/Tasks/TaskSequential.h"
 #include "../src/Iteration.h"
@@ -2582,7 +2584,7 @@ bool TestPrimalSolutionSlightlyOutsideBounds()
     return (passed);
 }
 
-// Linear problems must honor the tree setting, while genuine convex quadratic problems retain direct solves.
+// Complete MILPs and supported convex quadratic problems use direct solves regardless of the tree setting.
 bool TestStrategySelectionForLinearAndQuadraticProblems()
 {
     std::vector<ES_MIPSolver> backends;
@@ -2664,10 +2666,8 @@ bool TestStrategySelectionForLinearAndQuadraticProblems()
                     {
                         if(!discrete)
                             expected = E_SolutionStrategy::NLP;
-                        else if(supportsQuadratics && tree == ES_TreeStrategy::SingleTree)
-                            expected = E_SolutionStrategy::SingleTree;
                         else
-                            expected = E_SolutionStrategy::MultiTree;
+                            expected = E_SolutionStrategy::MILP;
                     }
                     if(env->results->usedSolutionStrategy != expected)
                     {
@@ -2680,6 +2680,104 @@ bool TestStrategySelectionForLinearAndQuadraticProblems()
             }
         }
     }
+    return true;
+}
+
+bool TestStrategySelectionForNonconvexQuadraticProblems()
+{
+#ifdef HAS_GUROBI
+    for(bool discrete : { false, true })
+    {
+        for(int quadraticType : { 1, 2, 3 }) // Nonconvex objective, constraints, or both
+        {
+            for(int quadraticStrategy : { -1, 0, 1, 2, 3 }) // Recommended settings, then each explicit strategy
+            {
+                auto solver = std::make_unique<Solver>();
+                auto env = solver->getEnvironment();
+                solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+                solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Gurobi));
+                solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+                solver->updateSetting("Primal.FixedInteger.Use", false);
+                solver->updateSetting("Primal.PolishSolution.NumberOfPoints", 0);
+                solver->updateSetting("Termination.TimeLimit", 10.0);
+                if(quadraticStrategy >= 0)
+                    solver->updateSetting("Model.Reformulation.Quadratics.Strategy", quadraticStrategy);
+
+                auto problem = std::make_shared<Problem>(env);
+                problem->name = "nonconvexquadraticstrategy";
+                auto type = discrete ? E_VariableType::Integer : E_VariableType::Real;
+                auto x = std::make_shared<Variable>("x", type, 0.0, 2.0);
+                auto y = std::make_shared<Variable>("y", type, 0.0, 2.0);
+                problem->add(x);
+                problem->add(y);
+                if(quadraticType & 1)
+                {
+                    auto objective
+                        = std::make_shared<QuadraticObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+                    objective->add(std::make_shared<QuadraticTerm>(-1.0, x, x));
+                    objective->add(std::make_shared<QuadraticTerm>(-1.0, y, y));
+                    problem->add(objective);
+                }
+                else
+                {
+                    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+                    objective->add(std::make_shared<LinearTerm>(-1.0, x));
+                    objective->add(std::make_shared<LinearTerm>(-1.0, y));
+                    problem->add(objective);
+                }
+                if(quadraticType & 2)
+                {
+                    for(int i : { 1, 2 })
+                    {
+                        auto constraint = std::make_shared<QuadraticConstraint>(
+                            "quadratic" + std::to_string(i), SHOT_DBL_MIN, -static_cast<double>(i));
+                        constraint->add(std::make_shared<QuadraticTerm>(-1.0, x, x));
+                        constraint->add(std::make_shared<QuadraticTerm>(-static_cast<double>(i), y, y));
+                        problem->add(constraint);
+                    }
+                }
+                problem->finalize();
+                if(!solver->setProblem(problem))
+                    return false;
+
+                bool direct = quadraticStrategy == -1 || quadraticStrategy == 3
+                    || (quadraticType == 1 && quadraticStrategy >= 1);
+                auto expected = direct ? (quadraticType & 2 ? E_SolutionStrategy::MIQCQP : E_SolutionStrategy::MIQP)
+                                       : (discrete ? E_SolutionStrategy::MultiTree : E_SolutionStrategy::NLP);
+
+                if(env->results->usedSolutionStrategy != expected)
+                {
+                    std::cout << "Incorrect strategy for nonconvex quadratic type " << quadraticType << ", discrete "
+                              << discrete << ", quadratic strategy " << quadraticStrategy << '\n';
+                    return false;
+                }
+                if(direct)
+                {
+                    double expectedObjective = quadraticType & 1 ? -8.0 : -4.0;
+                    if(!solver->solveProblem() || solver->getPrimalSolutions().empty()
+                        || std::abs(solver->getPrimalSolution().objValue - expectedObjective) > 1e-6
+                        || std::abs(solver->getGlobalDualBound() - expectedObjective) > 1e-6
+                        || solver->getModelReturnStatus() != E_ModelReturnStatus::OptimalGlobal)
+                    {
+                        std::cout << "Direct nonconvex quadratic solve failed for type " << quadraticType
+                                  << ", discrete " << discrete << '\n';
+                        return false;
+                    }
+                    if(!env->problem->numericConstraints.empty())
+                    {
+                        auto deviation = env->problem->getMaxNumericConstraintValue(
+                            solver->getPrimalSolution().point, env->problem->numericConstraints);
+                        if(!std::isfinite(deviation.error) || deviation.error > 1e-6)
+                        {
+                            std::cout << "Direct nonconvex quadratic solve returned an infeasible point\n";
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+#endif
     return true;
 }
 
@@ -3710,6 +3808,1260 @@ bool TestUserSpecifiedObjectiveConvexity()
     return passed;
 }
 
+// The components of an environment refer back to it, so the environment is only freed if the solver breaks these
+// references when it is destroyed
+// A point that violates the constraint x1^2 + x2^2 <= 2 by 1e-6 is accepted with the primal tolerances and has a
+// better objective value than the feasible optimum (1, 1) of min -x1 - x2. After the search, the solution that fulfils
+// the constraints to Termination.ConstraintTolerance replaces it if the objective values are within the termination
+// gap tolerances, and is otherwise put back in the solution pool of two solutions, from which two better points that
+// violate the constraint have removed it.
+bool TestAccuratePrimalSolution()
+{
+    bool passed = true;
+
+    auto makeSolver = []()
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        auto env = solver->getEnvironment();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Output.SaveNumberOfSolutions", 2);
+
+        auto problem = std::make_shared<SHOT::Problem>(env);
+        problem->name = "accurateprimal";
+
+        auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, 0.0, 2.0);
+        auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, 0.0, 2.0);
+        problem->add({ x1, x2 });
+
+        auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+        objective->add(std::make_shared<LinearTerm>(-1.0, x1));
+        objective->add(std::make_shared<LinearTerm>(-1.0, x2));
+        problem->add(objective);
+
+        auto constraint = std::make_shared<QuadraticConstraint>("c", SHOT_DBL_MIN, 2.0);
+        constraint->add(std::make_shared<QuadraticTerm>(1.0, x1, x1));
+        constraint->add(std::make_shared<QuadraticTerm>(1.0, x2, x2));
+        problem->add(constraint);
+
+        problem->updateProperties();
+        problem->finalize();
+        solver->setProblem(problem);
+
+        return std::make_pair(std::move(solver), env);
+    };
+
+    double inaccurateValue = 1.0 + 2.5e-7;
+    double inaccurateObjective = -2.0 * inaccurateValue;
+
+    for(double accurateValue : { 1.0, 0.5 })
+    {
+        auto [solver, env] = makeSolver();
+
+        env->primalSolver->addPrimalSolutionCandidate(
+            VectorDouble { accurateValue, accurateValue }, E_PrimalSolutionSource::NLPFixedIntegers, 0);
+        env->primalSolver->addPrimalSolutionCandidate(
+            VectorDouble { 1.0 + 1e-7, 1.0 + 1e-7 }, E_PrimalSolutionSource::MIPSolutionPool, 0);
+        env->primalSolver->addPrimalSolutionCandidate(
+            VectorDouble { inaccurateValue, inaccurateValue }, E_PrimalSolutionSource::MIPSolutionPool, 0);
+
+        if(std::abs(solver->getPrimalBound() - inaccurateObjective) > 1e-12)
+        {
+            std::cout << fmt::format("  The point violating the constraint by 1e-6 is not the incumbent, the primal "
+                                     "bound is {}\n",
+                solver->getPrimalBound());
+            passed = false;
+            continue;
+        }
+
+        env->results->useAccuratePrimalSolution();
+
+        // The objective value -1 of (0.5, 0.5) is not within the gap tolerances of the incumbent
+        double expected = (accurateValue == 1.0) ? -2.0 : inaccurateObjective;
+
+        if(std::abs(solver->getPrimalBound() - expected) > 1e-12
+            || std::abs(env->results->primalSolutions.front().objValue - expected) > 1e-12)
+        {
+            std::cout << fmt::format("  With the feasible point ({0}, {0}), the primal bound is {1}, expected {2}\n",
+                accurateValue, solver->getPrimalBound(), expected);
+            passed = false;
+        }
+
+        auto& pool = env->results->primalSolutions;
+
+        if(pool.size() != 2
+            || std::none_of(pool.begin(), pool.end(), [accurateValue](const PrimalSolution& S)
+                { return (S.point == VectorDouble { accurateValue, accurateValue }); }))
+        {
+            std::cout << fmt::format(
+                "  With the feasible point ({0}, {0}), it is not in the solution pool of two solutions\n",
+                accurateValue);
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
+bool TestEnvironmentReleased()
+{
+    bool passed = true;
+
+    auto expect = [&](bool condition, const std::string& message)
+    {
+        if(!condition)
+        {
+            std::cout << "  " << message << '\n';
+            passed = false;
+        }
+    };
+
+    std::weak_ptr<Environment> withoutProblem;
+    {
+        auto solver = std::make_unique<SHOT::Solver>();
+        withoutProblem = solver->getEnvironment();
+    }
+    expect(withoutProblem.expired(), "The environment of a solver without a problem is not freed");
+
+    std::weak_ptr<Environment> notSolved;
+    {
+        auto [solver, env] = MakeUserConvexitySolver(false, false);
+        notSolved = env;
+    }
+    expect(notSolved.expired(), "The environment of a solver whose problem has not been solved is not freed");
+
+    std::weak_ptr<Environment> solved;
+    {
+        auto [solver, env] = MakeUserConvexitySolver(false, false);
+        solver->solveProblem();
+        solved = env;
+    }
+    expect(solved.expired(), "The environment of a solver that has solved its problem is not freed");
+
+    // A problem used after its solver has been destroyed keeps its environment until the problem is freed
+    std::weak_ptr<Environment> keptByProblem;
+    ProblemPtr problem;
+    {
+        auto [solver, env] = MakeUserConvexitySolver(false, false);
+        solver->solveProblem();
+        problem = env->problem;
+        keptByProblem = env;
+    }
+    expect(!keptByProblem.expired(), "The environment of a problem that is still used has been freed");
+    expect(problem->getVariable(0)->name == "y1", "The problem cannot be used after its solver has been destroyed");
+
+    problem.reset();
+    expect(keptByProblem.expired(), "The environment of a problem is not freed with the problem");
+
+    return passed;
+}
+
+// The cutting planes of the interior point search are added to the dual problem before its first iteration
+bool TestReuseOfInteriorPointCuttingPlanes()
+{
+    const double expectedObjective = 6.00975909;
+
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Critical));
+    solver->updateSetting("Termination.TimeLimit", 30.0);
+    solver->updateSetting("Dual.ESH.InteriorPoint.CuttingPlane.Reuse", true);
+
+    if(!solver->setProblem("data/synthes1.osil"))
+    {
+        std::cout << "Could not set problem!\n";
+        return (false);
+    }
+
+    if(!solver->solveProblem())
+    {
+        std::cout << "Error while solving problem\n";
+        return (false);
+    }
+
+    double primalBound = solver->getPrimalBound();
+
+    std::cout << "  The primal bound is " << primalBound << ", the optimum is " << expectedObjective << '\n';
+
+    if(std::abs(primalBound - expectedObjective) > 1e-2)
+    {
+        std::cout << "The primal bound does not agree with the optimum.\n";
+        return (false);
+    }
+
+    return (true);
+}
+
+// The values in the OSrL file must be written with all significant digits, so that a solution with a value smaller
+// than 1e-6 is not written as zero
+bool TestPrecisionOfOSrLSolution()
+{
+    const double lowerBound = 1.2345678912345e-7;
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+    auto problem = std::make_shared<Problem>(env);
+    problem->name = "osrlprecision";
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, lowerBound, 1.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Integer, 0.0, 3.0);
+    problem->add(Variables { x, y });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, x));
+    objective->add(std::make_shared<LinearTerm>(1.0, y));
+    problem->add(objective);
+    problem->finalize();
+
+    if(!solver->setProblem(problem) || !solver->solveProblem() || !solver->hasPrimalSolution())
+    {
+        std::cout << "The problem could not be solved\n";
+        return (false);
+    }
+
+    auto solution = solver->getPrimalSolution();
+    std::string osrl = solver->getResultsOSrL();
+
+    // The value of the first element with the given start tag, e.g., <var idx="0" name="x">
+    auto valueOf = [&](const std::string& startTag) -> std::optional<double>
+    {
+        auto start = osrl.find(startTag);
+
+        if(start == std::string::npos)
+            return (std::nullopt);
+
+        start += startTag.size();
+        return (std::stod(osrl.substr(start, osrl.find('<', start) - start)));
+    };
+
+    auto variableValue = valueOf("name=\"x\">");
+    auto objectiveValue = valueOf("<obj idx=\"-1\">");
+
+    std::cout << "  The solution has x = " << solution.point[0] << " and objective value " << solution.objValue
+              << ", the OSrL file " << variableValue.value_or(NAN) << " and " << objectiveValue.value_or(NAN) << '\n';
+
+    if(!variableValue || std::abs(*variableValue - solution.point[0]) > 1e-12 * std::abs(solution.point[0]))
+    {
+        std::cout << "The value of x in the OSrL file is not the one of the solution\n";
+        return (false);
+    }
+
+    if(!objectiveValue || std::abs(*objectiveValue - solution.objValue) > 1e-12 * std::abs(solution.objValue))
+    {
+        std::cout << "The objective value in the OSrL file is not the one of the solution\n";
+        return (false);
+    }
+
+    return (true);
+}
+
+// A problem whose objective function has two monomial terms or two signomial terms that share variables, and a linear
+// constraint. With the epigraph constraint, the terms of the objective function are partitioned in a constraint that
+// has not been added to the problem, which crashed when the bounds of the terms were calculated.
+static ProblemPtr MakeObjectiveTermsProblem(EnvironmentPtr env, bool signomial)
+{
+    auto problem = std::make_shared<Problem>(env);
+    problem->name = signomial ? "epigraphsignomials" : "epigraphmonomials";
+
+    auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    auto constraint = std::make_shared<LinearConstraint>("c1", 3.0, SHOT_DBL_MAX);
+
+    if(signomial)
+    {
+        auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, 1.0, 4.0);
+        auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, 1.0, 2.0);
+        problem->add(Variables { x1, x2 });
+
+        // x1^1.5 * x2^0.5 + 2 * x1^0.5 / x2
+        objective->add(std::make_shared<SignomialTerm>(1.0,
+            SignomialElements(
+                { std::make_shared<SignomialElement>(x1, 1.5), std::make_shared<SignomialElement>(x2, 0.5) })));
+        objective->add(std::make_shared<SignomialTerm>(2.0,
+            SignomialElements(
+                { std::make_shared<SignomialElement>(x1, 0.5), std::make_shared<SignomialElement>(x2, -1.0) })));
+
+        constraint->add(std::make_shared<LinearTerm>(1.0, x1));
+        constraint->add(std::make_shared<LinearTerm>(1.0, x2));
+    }
+    else
+    {
+        auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, -1.0, 2.0);
+        auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, 0.0, 1.0);
+        auto x3 = std::make_shared<Variable>("x3", E_VariableType::Real, 0.0, 1.0);
+        auto y1 = std::make_shared<Variable>("y1", E_VariableType::Integer, -2.0, 1.0);
+        problem->add(Variables { x1, x2, x3, y1 });
+
+        // x1*x2*x3 + 0.5*x2*x3*y1
+        objective->add(std::make_shared<MonomialTerm>(1.0, Variables({ x1, x2, x3 })));
+        objective->add(std::make_shared<MonomialTerm>(0.5, Variables({ x2, x3, y1 })));
+
+        constraint->add(std::make_shared<LinearTerm>(1.0, x2));
+        constraint->add(std::make_shared<LinearTerm>(2.0, x3));
+    }
+
+    problem->add(objective);
+    problem->add(constraint);
+
+    problem->updateProperties();
+    problem->finalize();
+
+    return (problem);
+}
+
+bool TestEpigraphOfPartitionedObjectiveTerms()
+{
+    bool passed = true;
+
+    for(bool signomial : { false, true })
+    {
+        auto partitioningType = signomial ? E_AuxiliaryVariableType::SignomialTermsPartitioning
+                                          : E_AuxiliaryVariableType::MonomialTermsPartitioning;
+
+        // Solved without the epigraph constraint for the reference objective value
+        auto referenceSolver = std::make_unique<Solver>();
+        referenceSolver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        referenceSolver->updateSetting("Termination.TimeLimit", 30.0);
+        referenceSolver->setProblem(MakeObjectiveTermsProblem(referenceSolver->getEnvironment(), signomial));
+        referenceSolver->solveProblem();
+
+        auto solver = std::make_unique<Solver>();
+        auto env = solver->getEnvironment();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Termination.TimeLimit", 30.0);
+        solver->updateSetting("Model.Reformulation.ObjectiveFunction.EpigraphStrategy",
+            static_cast<int>(ES_ObjectiveEpigraphStrategy::EpigraphConstraint));
+        solver->updateSetting("Model.Reformulation.Constraint.PartitionNonlinearTerms",
+            static_cast<int>(ES_PartitionNonlinearSums::Always));
+
+        if(!solver->setProblem(MakeObjectiveTermsProblem(env, signomial)))
+        {
+            std::cout << "The problem could not be set.\n";
+            return false;
+        }
+
+        // The auxiliary variables of the two terms have the bounds of the terms divided by their coefficients
+        std::vector<Interval> expectedBounds = signomial
+            ? std::vector<Interval> { Interval(1.0, 8.0 * std::sqrt(2.0)), Interval(0.5, 2.0) }
+            : std::vector<Interval> { Interval(-1.0, 2.0), Interval(-2.0, 1.0) };
+
+        auto auxiliaryVariables = env->reformulatedProblem->getAuxiliaryVariablesOfType(partitioningType);
+
+        if(auxiliaryVariables.size() != expectedBounds.size())
+        {
+            std::cout << "The objective function has " << auxiliaryVariables.size()
+                      << " partitioning variables instead of " << expectedBounds.size() << ".\n";
+            passed = false;
+        }
+        else
+        {
+            for(size_t i = 0; i < expectedBounds.size(); i++)
+            {
+                if(std::abs(auxiliaryVariables[i]->lowerBound - expectedBounds[i].l()) > 1e-8
+                    || std::abs(auxiliaryVariables[i]->upperBound - expectedBounds[i].u()) > 1e-8)
+                {
+                    std::cout << "The bounds [" << auxiliaryVariables[i]->lowerBound << ", "
+                              << auxiliaryVariables[i]->upperBound << "] of " << auxiliaryVariables[i]->name
+                              << " are not the bounds [" << expectedBounds[i].l() << ", " << expectedBounds[i].u()
+                              << "] of its term.\n";
+                    passed = false;
+                }
+            }
+        }
+
+        solver->solveProblem();
+
+        if(!env->results->hasPrimalSolution()
+            || std::abs(solver->getPrimalBound() - referenceSolver->getPrimalBound()) > 1e-4)
+        {
+            std::cout << "The primal bound " << solver->getPrimalBound()
+                      << " is not the one without the epigraph constraint, " << referenceSolver->getPrimalBound()
+                      << ".\n";
+            passed = false;
+        }
+
+        if(solver->getGlobalDualBound() > solver->getPrimalBound() + 1e-4)
+        {
+            std::cout << "The dual bound " << solver->getGlobalDualBound() << " is past the primal bound "
+                      << solver->getPrimalBound() << ".\n";
+            passed = false;
+        }
+    }
+
+    return passed;
+}
+
+// A problem with the bilinear terms x1*i + x2*i - x1*j in a nonlinear objective function, where the integer variable i
+// has artificial bounds, as a problem reader gives an integer variable without bounds, and j has bounds. With the
+// extraction of quadratic terms to auxiliary variables, i was discretized with one binary variable for each value
+// between its artificial bounds, which used up all memory with the default bounds of +-2e9. Here they are +-1000.
+static ProblemPtr MakeIntegerBilinearArtificialBoundsProblem(EnvironmentPtr env)
+{
+    auto problem = std::make_shared<Problem>(env);
+    problem->name = "integerbilinearartificialbounds";
+
+    auto x1 = std::make_shared<Variable>("x1", E_VariableType::Real, 0.0, 1.0);
+    auto x2 = std::make_shared<Variable>("x2", E_VariableType::Real, 0.0, 1.0);
+    auto i = std::make_shared<Variable>("i", E_VariableType::Integer, -1000.0, 1000.0);
+    i->properties.hasArtificialLowerBound = true;
+    i->properties.hasArtificialUpperBound = true;
+    auto j = std::make_shared<Variable>("j", E_VariableType::Integer, 0.0, 3.0);
+    problem->add(Variables { x1, x2, i, j });
+
+    // x1*i + x2*i - x1*j + 0.1*exp(x1)
+    auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<QuadraticTerm>(1.0, x1, i));
+    objective->add(std::make_shared<QuadraticTerm>(1.0, x2, i));
+    objective->add(std::make_shared<QuadraticTerm>(-1.0, x1, j));
+    objective->add(std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(0.1),
+        std::make_shared<ExpressionExp>(std::make_shared<ExpressionVariable>(x1))));
+    problem->add(objective);
+
+    // i >= -2 as a constraint, so that i keeps its artificial bounds without bound tightening
+    auto c1 = std::make_shared<LinearConstraint>("c1", -2.0, SHOT_DBL_MAX);
+    c1->add(std::make_shared<LinearTerm>(1.0, i));
+    problem->add(c1);
+
+    auto c2 = std::make_shared<LinearConstraint>("c2", 1.0, SHOT_DBL_MAX);
+    c2->add(std::make_shared<LinearTerm>(1.0, x1));
+    c2->add(std::make_shared<LinearTerm>(1.0, x2));
+    problem->add(c2);
+
+    problem->updateProperties();
+    problem->finalize();
+
+    return (problem);
+}
+
+bool TestIntegerBilinearTermArtificialBounds()
+{
+    bool passed = true;
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Termination.TimeLimit", 30.0);
+    solver->updateSetting("Model.Reformulation.Quadratics.ExtractStrategy",
+        static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractToEqualityConstraintIfNonconvex));
+    solver->updateSetting(
+        "Model.Reformulation.Bilinear.IntegerFormulation", static_cast<int>(ES_ReformulateBilinearInteger::Yes));
+    solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+
+    if(!solver->setProblem(MakeIntegerBilinearArtificialBoundsProblem(env)))
+    {
+        std::cout << "The problem could not be set.\n";
+        return false;
+    }
+
+    auto integerBilinear
+        = env->reformulatedProblem->getAuxiliaryVariablesOfType(E_AuxiliaryVariableType::IntegerBilinear);
+    auto continuousBilinear
+        = env->reformulatedProblem->getAuxiliaryVariablesOfType(E_AuxiliaryVariableType::ContinuousBilinear);
+
+    // Only x1*j is discretized, through j, and x1*i and x2*i get the continuous formulation, since i has artificial
+    // bounds
+    if(integerBilinear.size() != 1 || continuousBilinear.size() != 2)
+    {
+        std::cout << "There are " << integerBilinear.size() << " integer and " << continuousBilinear.size()
+                  << " continuous bilinear auxiliary variables instead of 1 and 2.\n";
+        passed = false;
+    }
+
+    if(env->reformulatedProblem->properties.numberOfBinaryVariables > 4)
+    {
+        std::cout << "The reformulated problem has " << env->reformulatedProblem->properties.numberOfBinaryVariables
+                  << " binary variables, so the integer variable with artificial bounds has been discretized.\n";
+        passed = false;
+    }
+
+    solver->solveProblem();
+
+    // The optimum is at x1 = x2 = 1, i = -2 and j = 3
+    double optimum = -7.0 + 0.1 * std::exp(1.0);
+
+    if(!env->results->hasPrimalSolution() || std::abs(solver->getPrimalBound() - optimum) > 1e-4)
+    {
+        std::cout << "The primal bound " << solver->getPrimalBound() << " is not the optimum " << optimum << ".\n";
+        passed = false;
+    }
+
+    if(solver->getGlobalDualBound() > optimum + 1e-4)
+    {
+        std::cout << "The dual bound " << solver->getGlobalDualBound() << " is past the optimum " << optimum << ".\n";
+        passed = false;
+    }
+
+    return passed;
+}
+
+bool TestIntegerBilinearDiscretizationValues()
+{
+    bool passed = true;
+    auto expect = [&](bool condition, const std::string& message)
+    {
+        if(!condition)
+        {
+            std::cout << "  " << message << '\n';
+            passed = false;
+        }
+    };
+
+    for(auto bounds : { std::pair(-2.0, 2.0), std::pair(3.0, 7.0), std::pair(-7.0, -3.0), std::pair(-125.0, 124.0) })
+    {
+        auto solver = std::make_unique<Solver>();
+        auto env = solver->getEnvironment();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Termination.TimeLimit", 10.0);
+        solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+        solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+        solver->updateSetting("Model.Reformulation.Quadratics.ExtractStrategy",
+            static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractToEqualityConstraintIfNonconvex));
+        solver->updateSetting(
+            "Model.Reformulation.Bilinear.IntegerFormulation", static_cast<int>(ES_ReformulateBilinearInteger::Yes));
+        auto problem = std::make_shared<Problem>(env);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.0, 1.0);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.0, 1.0);
+        auto i = std::make_shared<Variable>("i", E_VariableType::Integer, bounds.first, bounds.second);
+        problem->add({ x, y, i });
+        auto objective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+        objective->add(std::make_shared<QuadraticTerm>(1.0, x, i));
+        objective->add(std::make_shared<QuadraticTerm>(1.0, y, i));
+        objective->add(std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(0.1),
+            std::make_shared<ExpressionExp>(std::make_shared<ExpressionVariable>(x))));
+        problem->add(objective);
+        problem->finalize();
+        expect(solver->setProblem(problem), "Could not reformulate the integer bilinear problem.");
+        auto reformulated = env->reformulatedProblem;
+        const auto count = static_cast<size_t>(bounds.second - bounds.first + 1.0);
+        expect(static_cast<size_t>(reformulated->properties.numberOfBinaryVariables) == count,
+            "Products sharing an integer variable did not share one set of binaries.");
+        expect(reformulated->getAuxiliaryVariablesOfType(E_AuxiliaryVariableType::IntegerBilinear).size() == 2,
+            "The two bilinear products were not both discretized.");
+
+        // Check integer values and interpolation throughout the domain, including both ends.
+        for(double value = bounds.first; value <= bounds.second; value += 0.25)
+        {
+            VectorDouble point = { 0.3, 0.8, value };
+            reformulated->augmentAuxiliaryVariableValues(point);
+            double sum = 0.0;
+            size_t nonzero = 0;
+
+            for(auto& binary : reformulated->auxiliaryVariables)
+            {
+                if(binary->properties.type != E_VariableType::Binary)
+                    continue;
+
+                double weight = point.at(binary->getIndex());
+                expect(std::isfinite(weight) && weight >= 0.0 && weight <= 1.0,
+                    "A discretization weight was not finite or outside [0, 1].");
+                sum += weight;
+                nonzero += weight != 0.0;
+            }
+
+            expect(sum == 1.0 && nonzero == (value == std::floor(value) ? 1 : 2),
+                "Discretization weights did not interpolate between adjacent integers.");
+            expect(reformulated->areNumericConstraintsFulfilled(point, 1e-6),
+                "Augmented point violates the reformulation constraints.");
+            expect(std::abs(reformulated->objectiveFunction->calculateValue(point)
+                       - problem->objectiveFunction->calculateValue(point))
+                    < 1e-8,
+                "The reformulation changed the objective value.");
+        }
+
+        if(count <= 5)
+        {
+            expect(solver->solveProblem(), "Could not solve the discretized problem.");
+            double optimum = bounds.first < 0.0 ? 2.0 * bounds.first + 0.1 * std::exp(1.0) : 0.1;
+            expect(solver->hasPrimalSolution() && std::abs(solver->getPrimalBound() - optimum) < 1e-5
+                    && std::abs(solver->getGlobalDualBound() - optimum) < 1e-5
+                    && solver->getModelReturnStatus() == E_ModelReturnStatus::OptimalGlobal,
+                "Discretization changed the optimum or termination status.");
+        }
+
+        auto copy = reformulated->createCopy(env, false, false, true);
+        VectorDouble point = { 0.3, 0.8, bounds.first + 0.25 };
+        reformulated->augmentAuxiliaryVariableValues(point);
+        expect(copy->areNumericConstraintsFulfilled(point, 1e-6)
+                && std::abs(copy->objectiveFunction->calculateValue(point)
+                       - reformulated->objectiveFunction->calculateValue(point))
+                    < 1e-8,
+            "Copying a reformulated problem changed its constraints or objective.");
+
+        for(auto& auxiliary : reformulated->auxiliaryVariables)
+        {
+            if(auxiliary->properties.type == E_VariableType::Binary)
+            {
+                auto interval = auxiliary->calculate(
+                    IntervalVector { Interval(0.0, 1.0), Interval(0.0, 1.0), Interval(bounds.first, bounds.second) });
+                expect(isValidInterval(interval) && interval.l() >= 0.0 && interval.u() <= 1.0,
+                    "Discretization interval bounds were outside [0, 1].");
+                expect(std::isnan(
+                           auxiliary->calculate(VectorDouble { 0.3, 0.8, std::numeric_limits<double>::quiet_NaN() })),
+                    "A non-finite source value was hidden by the discretization.");
+            }
+        }
+    }
+
+    return passed;
+}
+
+// MC++ converted the number of periods in the interval cosine and tangent to an int, which overflowed for bounds larger
+// than about 6.7e9 and gave wrong intervals: on arm64, e.g., cos([-1e12, -1e11]) in [0.37, 0.88], and on x86-64 also
+// cos([-1e20, 1]) in [-0.99, 0.54]. Bound tightening then used them, and SHOT reported a wrong optimum.
+bool TestTrigonometricIntervalsWithLargeBounds()
+{
+    bool passed = true;
+
+    auto expect = [&](bool condition, const std::string& message)
+    {
+        if(!condition)
+        {
+            std::cout << "  " << message << '\n';
+            passed = false;
+        }
+    };
+
+    for(auto [lowerBound, upperBound] : { std::pair(-1e12, -1e11), std::pair(-1e20, 1.0) })
+    {
+        auto y = std::make_shared<Variable>("y", E_VariableType::Real, lowerBound, upperBound);
+        auto description = fmt::format("y in [{}, {}]: ", lowerBound, upperBound);
+
+        for(auto [name, bounds] :
+            { std::pair("cos", std::make_shared<ExpressionCos>(std::make_shared<ExpressionVariable>(y))->getBounds()),
+                std::pair(
+                    "sin", std::make_shared<ExpressionSin>(std::make_shared<ExpressionVariable>(y))->getBounds()) })
+        {
+            expect(bounds.l() == -1.0 && bounds.u() == 1.0,
+                description
+                    + fmt::format("{}(y) has the bounds [{}, {}] instead of [-1, 1]", name, bounds.l(), bounds.u()));
+        }
+
+        auto tangent = std::make_shared<ExpressionTan>(std::make_shared<ExpressionVariable>(y))->getBounds();
+        expect(tangent.l() == SHOT_DBL_MIN && tangent.u() == SHOT_DBL_MAX,
+            description
+                + fmt::format("tan(y) has the bounds [{}, {}] instead of being unbounded", tangent.l(), tangent.u()));
+    }
+
+    // min z s.t. z >= cos(y) + 0.5 * sin(y), whose minimum is -sqrt(1.25)
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Termination.TimeLimit", 30.0);
+
+    auto problem = std::make_shared<Problem>(env);
+    problem->name = "trigonometriclargebounds";
+
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, -1e12, -1e11);
+    auto z = std::make_shared<Variable>("z", E_VariableType::Real, -10.0, 10.0);
+    problem->add(Variables { y, z });
+
+    auto constraint = std::make_shared<NonlinearConstraint>("c1", SHOT_DBL_MIN, 0.0);
+    constraint->add(std::make_shared<LinearTerm>(-1.0, z));
+    constraint->add(
+        std::make_shared<ExpressionSum>(std::make_shared<ExpressionCos>(std::make_shared<ExpressionVariable>(y)),
+            std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(0.5),
+                std::make_shared<ExpressionSin>(std::make_shared<ExpressionVariable>(y)))));
+    problem->add(constraint);
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, z));
+    problem->add(objective);
+
+    problem->updateProperties();
+    problem->finalize();
+
+    if(!solver->setProblem(problem))
+    {
+        std::cout << "  The problem could not be set.\n";
+        return false;
+    }
+
+    // Bound tightening on the problem gives z >= the lower bound of cos(y) + 0.5 * sin(y)
+    expect(env->problem->getVariable(1)->lowerBound <= -std::sqrt(1.25) + 1e-6,
+        fmt::format("Bound tightening gives z >= {}, which cuts off the optimum {}",
+            env->problem->getVariable(1)->lowerBound, -std::sqrt(1.25)));
+
+    solver->solveProblem();
+
+    expect(solver->getGlobalDualBound() <= -std::sqrt(1.25) + 1e-4,
+        fmt::format("The dual bound {} is past the optimum {}", solver->getGlobalDualBound(), -std::sqrt(1.25)));
+
+    return passed;
+}
+
+// MIP recovery and its callbacks can return points that violate the original linear constraints, even before the
+// iteration is marked repaired. Check both candidate entry points without relying on a particular backend's numerics.
+bool TestMIPPrimalLinearConstraintValidation()
+{
+    bool passed = true;
+
+    for(auto source : { E_PrimalSolutionSource::MIPSolutionPool, E_PrimalSolutionSource::MIPCallback })
+    {
+        // No iteration, an unrepaired iteration (including callbacks during recovery), and a repaired iteration.
+        for(int iterationState : { 0, 1, 2 })
+        {
+            auto solver = std::make_unique<Solver>();
+            auto env = solver->getEnvironment();
+            solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+            solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+
+            auto problem = std::make_shared<Problem>(env);
+            problem->name = "mipprimalvalidation";
+            auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.0, 10.0);
+            auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.0, 10.0);
+            problem->add(Variables { x, y });
+
+            auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+            objective->add(std::make_shared<LinearTerm>(1.0, x));
+            objective->add(std::make_shared<LinearTerm>(1.0, y));
+            problem->add(objective);
+
+            auto equality = std::make_shared<LinearConstraint>("equality", 10.0, 10.0);
+            equality->add(std::make_shared<LinearTerm>(1.0, x));
+            equality->add(std::make_shared<LinearTerm>(1.0, y));
+            problem->add(equality);
+
+            auto inequality = std::make_shared<LinearConstraint>("inequality", SHOT_DBL_MIN, 0.0);
+            inequality->add(std::make_shared<LinearTerm>(1.0, x));
+            inequality->add(std::make_shared<LinearTerm>(-1.0, y));
+            problem->add(inequality);
+            problem->updateProperties();
+            problem->finalize();
+
+            if(!solver->setProblem(problem))
+                return false;
+
+            // Some backends disable trust while setting the problem. Exercise the bypass explicitly.
+            solver->updateSetting("Primal.Tolerance.TrustLinearConstraintValues", true);
+            if(iterationState > 0)
+            {
+                env->results->createIteration();
+                env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = (iterationState == 2);
+            }
+
+            auto expect = [&](bool condition, const std::string& message)
+            {
+                if(!condition)
+                {
+                    std::cout << "  Source " << static_cast<int>(source) << ", iteration state " << iterationState
+                              << ": " << message << '\n';
+                    passed = false;
+                }
+            };
+
+            expect(!env->primalSolver->addPrimalSolutionCandidate(VectorDouble { 0.0, 0.0 }, source, 1),
+                "An infeasible candidate was reported accepted");
+            expect(!env->results->hasPrimalSolution(), "Accepted a point violating the linear equality");
+
+            SolutionPoint candidate;
+            candidate.point = { 10.0, 0.0 };
+            candidate.iterFound = 1;
+            expect(!env->primalSolver->addPrimalSolutionCandidate(candidate, source),
+                "An infeasible solution point was reported accepted");
+            expect(!env->results->hasPrimalSolution(), "Accepted a point violating the linear inequality");
+            expect(env->solutionStatistics.numberOfFoundPrimalSolutions == 0,
+                "An infeasible candidate updated the primal solution statistics");
+
+            expect(env->primalSolver->addPrimalSolutionCandidate(VectorDouble { 4.0, 6.0 }, source, 1),
+                "A feasible candidate was reported rejected");
+            expect(env->results->hasPrimalSolution() && env->results->getPrimalBound() == 10.0,
+                "A feasible candidate did not become the incumbent");
+
+            candidate.point = { 0.0, 0.0 };
+            expect(!env->primalSolver->addPrimalSolutionCandidate(candidate, source),
+                "An infeasible replacement was reported accepted");
+            expect(env->results->getPrimalBound() == 10.0 && env->results->primalSolution == VectorDouble({ 4.0, 6.0 }),
+                "An infeasible candidate replaced the incumbent or its bound");
+            expect(env->solutionStatistics.numberOfFoundPrimalSolutions == 1,
+                "An infeasible candidate was added to the solution pool");
+            candidate.point = { 4.0, 6.0 };
+            expect(env->primalSolver->addPrimalSolutionCandidate(candidate, source),
+                "An already known feasible point was reported rejected");
+        }
+    }
+
+    return passed;
+}
+
+#ifdef HAS_IPOPT
+// Rejecting a fixed-NLP point must not exclude its integer combination from a convex problem. A merely feasible
+// NLP point is also insufficient, while nonconvex problems retain the cuts that prevent repeated combinations.
+bool TestIntegerCutsAfterFixedNLPCandidateCheck()
+{
+    bool passed = true;
+    auto optionsFile = Utilities::createTemporaryDirectory("SHOT_fixed_nlp_cuts_") + "/feasible.opt";
+    if(!Utilities::writeStringToFile(optionsFile, "acceptable_iter 1\nacceptable_tol 1e20\ntol 1e-14\n"))
+        return false;
+
+    for(bool convex : { true, false })
+    {
+        for(bool feasibleOnly : { false, true })
+        {
+            for(bool reject : { false, true })
+            {
+                auto solver = std::make_unique<Solver>();
+                auto env = solver->getEnvironment();
+                solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+                solver->updateSetting("Termination.TimeLimit", 10.0);
+                solver->updateSetting("Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::Ipopt));
+                solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+                solver->updateSetting("Model.BoundTightening.InitialPOA.Use", false);
+                solver->updateSetting("Model.Reformulation.Quadratics.Strategy",
+                    static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
+                solver->updateSetting("Dual.HyperplaneCuts.UseIntegerCuts", true);
+                solver->updateSetting("Primal.FixedInteger.CreateInfeasibilityCut", false);
+                solver->updateSetting("Primal.FixedInteger.CreateSupportingHyperplanes", false);
+                if(feasibleOnly)
+                    solver->updateSetting("Subsolver.Ipopt.OptionsFile", optionsFile);
+
+                auto problem = std::make_shared<Problem>(env);
+                problem->name = "fixednlpintegercuts";
+                auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.25, 2.0);
+                auto b = std::make_shared<Variable>("b", E_VariableType::Binary, 0.0, 1.0);
+                problem->add(Variables { x, b });
+                auto objective = std::make_shared<QuadraticObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+                objective->add(std::make_shared<QuadraticTerm>(convex ? 1.0 : -1.0, x, x));
+                objective->add(std::make_shared<LinearTerm>(1.0, b));
+                problem->add(objective);
+                problem->updateProperties();
+                problem->finalize();
+
+                if(!solver->setProblem(problem))
+                    return false;
+
+                int candidateChecks = 0;
+                solver->registerCallback<PrimalCandidateCheckContext>(
+                    [&](PrimalCandidateCheckContext& context)
+                    {
+                        candidateChecks++;
+                        if(reject)
+                            context.rejectCandidate();
+                    });
+
+                env->results->createIteration();
+                TaskSelectPrimalCandidatesFromNLP task(env, false);
+                auto candidate = env->primalSolver->createFixedNLPCandidate(
+                    { 1.0, 0.0 }, E_PrimalNLPSource::FirstSolution, convex ? 1.0 : -1.0, 1, PairIndexValue(-1, 0.0));
+                auto status = task.solveFixedNLPCandidates({ candidate });
+
+                auto expect = [&](bool condition, const std::string& message)
+                {
+                    if(!condition)
+                    {
+                        std::cout << "  Convex=" << convex << ", feasible only=" << feasibleOnly
+                                  << ", reject=" << reject << ": " << message << '\n';
+                        passed = false;
+                    }
+                };
+
+                expect(status == (feasibleOnly ? E_NLPSolutionStatus::Feasible : E_NLPSolutionStatus::Optimal),
+                    "Unexpected fixed-NLP status " + std::to_string(static_cast<int>(status)));
+                expect(candidateChecks == 1, "The candidate-check callback did not run exactly once");
+                expect(
+                    env->results->hasPrimalSolution() == !reject, "The point was not accepted/rejected as requested");
+                expect((env->reformulatedProblem->properties.convexity == E_ProblemConvexity::Convex) == convex,
+                    "Unexpected reformulated convexity");
+                size_t expectedCuts = (!convex || (!reject && !feasibleOnly)) ? 1 : 0;
+                expect(env->dualSolver->integerCutWaitingList.size() == expectedCuts,
+                    "Expected " + std::to_string(expectedCuts) + " integer cuts, got "
+                        + std::to_string(env->dualSolver->integerCutWaitingList.size()));
+            }
+        }
+    }
+
+    return passed;
+}
+#endif
+
+// The same squares occur in the objective and a constraint, so their auxiliary variables are shared. Their interval
+// bounds can be huge even though the optimum is small; those bounds must not destabilize the MIP relaxation.
+bool TestLargeAuxiliaryBounds()
+{
+    bool passed = true;
+    std::vector<ES_MIPSolver> backends;
+#ifdef HAS_CPLEX
+    backends.push_back(ES_MIPSolver::Cplex);
+#endif
+#ifdef HAS_HIGHS
+    backends.push_back(ES_MIPSolver::Highs);
+#endif
+#ifdef HAS_GUROBI
+    backends.push_back(ES_MIPSolver::Gurobi);
+#endif
+#ifdef HAS_CBC
+    backends.push_back(ES_MIPSolver::Cbc);
+#endif
+
+    for(auto backend : backends)
+    {
+        auto solver = std::make_unique<Solver>();
+        auto env = solver->getEnvironment();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Dual.MIP.Solver", static_cast<int>(backend));
+        solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+        solver->updateSetting("Termination.TimeLimit", 10.0);
+        solver->updateSetting("Termination.ObjectiveGap.Relative", 1e-6);
+        solver->updateSetting("Termination.ObjectiveGap.Absolute", 1e-6);
+        solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+        solver->updateSetting("Model.BoundTightening.InitialPOA.Use", false);
+        solver->updateSetting("Model.Reformulation.Quadratics.Strategy", 1);
+        solver->updateSetting("Model.Reformulation.ObjectiveFunction.EpigraphStrategy", 2);
+        solver->updateSetting("Subsolver.SHOT.UseFBBT", false);
+
+        auto problem = std::make_shared<Problem>(env);
+        problem->name = "largeauxiliarybounds";
+        auto x = std::make_shared<Variable>("x", E_VariableType::Integer, 0.0, 2e9);
+        auto y = std::make_shared<Variable>("y", E_VariableType::Integer, 0.0, 2e9);
+        problem->add(Variables { x, y });
+
+        auto objective = std::make_shared<QuadraticObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+        objective->add(std::make_shared<QuadraticTerm>(2.0, x, x));
+        objective->add(std::make_shared<QuadraticTerm>(2.0, y, y));
+        objective->add(std::make_shared<LinearTerm>(-8.0, x));
+        objective->add(std::make_shared<LinearTerm>(-4.0, y));
+        problem->add(objective);
+
+        auto constraint = std::make_shared<QuadraticConstraint>("c1", SHOT_DBL_MIN, 16.0);
+        constraint->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+        constraint->add(std::make_shared<QuadraticTerm>(3.0, y, y));
+        problem->add(constraint);
+        problem->updateProperties();
+        problem->finalize();
+
+        if(!solver->setProblem(problem))
+            return false;
+
+        auto expect = [&](bool condition, const std::string& message)
+        {
+            if(!condition)
+            {
+                std::cout << "  Backend " << static_cast<int>(backend) << ": " << message << '\n';
+                passed = false;
+            }
+        };
+
+        bool hasUnsafeBound = false;
+        int largeAuxiliaries = 0;
+        double infinity = env->dualSolver->MIPSolver->getUnboundedVariableBoundValue();
+        for(auto& variable : env->reformulatedProblem->allVariables)
+        {
+            auto bounds = env->dualSolver->MIPSolver->getCurrentVariableBounds(variable->getIndex());
+            if(!variable->properties.isAuxiliary)
+            {
+                expect(bounds.first == variable->lowerBound && bounds.second == variable->upperBound,
+                    "An original variable's bounds were changed");
+                continue;
+            }
+
+            if(variable->upperBound >= 1e15 && variable->lowerBound != variable->upperBound)
+            {
+                largeAuxiliaries++;
+                if(bounds.second < infinity)
+                {
+                    hasUnsafeBound = true;
+                    expect(false,
+                        fmt::format("Unsafe finite upper bound {} on {} (infinity {})", bounds.second, variable->name,
+                            infinity));
+                }
+                expect(bounds.first == variable->lowerBound, "A useful auxiliary lower bound was changed");
+            }
+        }
+        expect(largeAuxiliaries >= 2, "The test did not create multiple large auxiliary bounds");
+        expect(env->reformulatedProblem->getAuxiliaryVariablesOfType(E_AuxiliaryVariableType::SquareTermsPartitioning)
+                    .size()
+                == 2,
+            "The square auxiliaries were not shared between the objective and constraint");
+        expect(x->upperBound == 2e9 && y->upperBound == 2e9, "The problem's original bounds were changed");
+
+        if(hasUnsafeBound)
+            continue;
+
+        solver->solveProblem();
+        // The objective is 2*(x-2)^2 + 2*(y-1)^2 - 10, and (2,1) fulfills the quadratic constraint.
+        expect(solver->hasPrimalSolution() && std::abs(solver->getPrimalBound() + 10.0) <= 1e-4,
+            "The optimum was not found");
+        expect(std::abs(solver->getGlobalDualBound() + 10.0) <= 1e-3,
+            "The global dual bound is incorrect: " + std::to_string(solver->getGlobalDualBound()));
+        expect(solver->getModelReturnStatus() == E_ModelReturnStatus::OptimalGlobal,
+            "The result was not proved globally optimal");
+
+        // A fixed-NLP solve updates all column bounds after model creation. Its large auxiliary bounds must stay
+        // relaxed as well, including when the subsolver's bound tightening is disabled.
+        NLPSolverSHOT nested(env, env->reformulatedProblem);
+        nested.reuseHyperplanes = false;
+        nested.useCutOff = false;
+        nested.fixVariables({ x->getIndex(), y->getIndex() }, { 2.0, 1.0 });
+        auto status = nested.solveProblem();
+        expect(status == E_NLPSolutionStatus::Optimal && std::abs(nested.getObjectiveValue() + 10.0) <= 1e-4,
+            "The nested SHOT solver did not find the fixed problem's optimum");
+        auto nestedEnv = nested.solver->getEnvironment();
+        for(auto& variable : nestedEnv->reformulatedProblem->allVariables)
+        {
+            if(variable->properties.isAuxiliary && variable->upperBound >= 1e15
+                && variable->lowerBound != variable->upperBound)
+            {
+                auto bounds = nestedEnv->dualSolver->MIPSolver->getCurrentVariableBounds(variable->getIndex());
+                expect(bounds.second >= infinity, "A nested solve restored a large finite auxiliary bound");
+            }
+        }
+
+        // Two products share an integer factor. Feasible graph points with products beyond the solver's exact
+        // integer range must remain representable on both sides of zero.
+        auto productSolver = std::make_unique<Solver>();
+        auto productEnv = productSolver->getEnvironment();
+        productSolver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        productSolver->updateSetting("Dual.MIP.Solver", static_cast<int>(backend));
+        productSolver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+        productSolver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree));
+        productSolver->updateSetting("Termination.TimeLimit", 5.0);
+        productSolver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+        productSolver->updateSetting("Model.BoundTightening.InitialPOA.Use", false);
+        productSolver->updateSetting("Model.Reformulation.Quadratics.Strategy", 0);
+        productSolver->updateSetting("Model.Reformulation.Quadratics.ExtractStrategy", 2);
+        productSolver->updateSetting("Model.Reformulation.ObjectiveFunction.EpigraphStrategy", 2);
+
+        auto productProblem = std::make_shared<Problem>(productEnv);
+        auto px = std::make_shared<Variable>("x", E_VariableType::Integer, -2e9, 2e9);
+        auto py = std::make_shared<Variable>("y", E_VariableType::Integer, 1.0, 2e9);
+        auto pz = std::make_shared<Variable>("z", E_VariableType::Integer, 1.0, 2e9);
+        auto fixed = std::make_shared<Variable>("fixed", E_VariableType::Real, 1e16, 1e16);
+        productProblem->add(Variables { px, py, pz, fixed });
+        auto productObjective = std::make_shared<QuadraticObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+        productObjective->add(std::make_shared<QuadraticTerm>(1.0, px, py));
+        productObjective->add(std::make_shared<QuadraticTerm>(1.0, px, pz));
+        productProblem->add(productObjective);
+        productProblem->updateProperties();
+        productProblem->finalize();
+        if(!productSolver->setProblem(productProblem))
+            return false;
+
+        auto fixedBounds = productEnv->dualSolver->MIPSolver->getCurrentVariableBounds(fixed->getIndex());
+        expect(fixedBounds.first == 1e16 && fixedBounds.second == 1e16, "A large original fixed value was relaxed");
+        int products = 0;
+        for(auto& variable : productEnv->reformulatedProblem->auxiliaryVariables)
+        {
+            if(variable->properties.auxiliaryType == E_AuxiliaryVariableType::ContinuousBilinear)
+            {
+                products++;
+                expect(variable->properties.type == E_VariableType::Real, "A large product kept explicit integrality");
+                auto bounds = productEnv->dualSolver->MIPSolver->getCurrentVariableBounds(variable->getIndex());
+                expect(bounds.first <= -infinity && bounds.second >= infinity,
+                    "Large positive or negative product bounds were retained");
+                for(double sign : { -1.0, 1.0 })
+                {
+                    double value = variable->calculate(VectorDouble { sign * 1e9, 1e9, 2e9, 1e16 });
+                    expect(value >= bounds.first && value <= bounds.second,
+                        "A feasible large product was excluded by solver bounds");
+                }
+            }
+        }
+        expect(products == 2, "The test did not extract both shared bilinear products");
+
+        // This first relaxation is unbounded because its product/objective columns have no outer cuts yet. Recovery
+        // must use the solver's relaxed bounds, rather than the finite interval bounds still stored in the problem.
+        productEnv->results->createIteration();
+        productEnv->dualSolver->MIPSolver->setTimeLimit(2.0);
+        auto recoveryStatus = productEnv->dualSolver->MIPSolver->solveProblem();
+        expect(recoveryStatus == E_ProblemSolutionStatus::Feasible || recoveryStatus == E_ProblemSolutionStatus::Optimal
+                || recoveryStatus == E_ProblemSolutionStatus::SolutionLimit,
+            "The unbounded relaxation did not produce a recovery point");
+        expect(productEnv->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed,
+            "The unbounded relaxation was not marked repaired");
+    }
+
+    return passed;
+}
+
+bool TestLargeAuxiliaryBoundInstances()
+{
+    bool passed = true;
+    std::vector<ES_MIPSolver> backends;
+#ifdef HAS_CPLEX
+    backends.push_back(ES_MIPSolver::Cplex);
+#endif
+#ifdef HAS_HIGHS
+    backends.push_back(ES_MIPSolver::Highs);
+#endif
+
+    for(auto backend : backends)
+    {
+        for(bool useFBBT : { false, true })
+        {
+            for(auto name : { "st_test3", "st_test4" })
+            {
+                auto solver = std::make_unique<Solver>();
+                auto env = solver->getEnvironment();
+                solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+                solver->updateSetting("Dual.MIP.Solver", static_cast<int>(backend));
+                solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+                solver->updateSetting("Termination.TimeLimit", 10.0);
+                solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", useFBBT);
+                solver->updateSetting("Model.Reformulation.ObjectiveFunction.EpigraphStrategy", 2);
+                if(std::string(name) == "st_test3")
+                    solver->updateSetting("Model.Reformulation.Quadratics.Strategy", 1);
+
+                if(!solver->setProblem(std::string("data/instances/MIQCQP-convex/") + name + ".osil")
+                    || !solver->solveProblem())
+                    return false;
+
+                if(!solver->hasPrimalSolution() || std::abs(solver->getPrimalBound() + 7.0) > 1e-4
+                    || !(std::abs(solver->getGlobalDualBound() + 7.0) <= 1e-3)
+                    || solver->getModelReturnStatus() != E_ModelReturnStatus::OptimalGlobal)
+                {
+                    std::cout << "  " << name << ", backend " << static_cast<int>(backend) << ", FBBT=" << useFBBT
+                              << ": expected optimal bounds of -7, got [" << solver->getGlobalDualBound() << ", "
+                              << solver->getPrimalBound() << "]\n";
+                    passed = false;
+                }
+                for(auto& solution : solver->getPrimalSolutions())
+                {
+                    auto deviation
+                        = env->problem->getMaxNumericConstraintValue(solution.point, env->problem->linearConstraints);
+                    if(deviation.error > 1e-6)
+                    {
+                        std::cout << "  " << name << ": infeasible primal point\n";
+                        passed = false;
+                    }
+                }
+            }
+        }
+    }
+
+    return passed;
+}
+
+bool TestScaledDualInfeasibilityRecovery()
+{
+    std::vector<ES_MIPSolver> backends;
+#ifdef HAS_GUROBI
+    backends.push_back(ES_MIPSolver::Gurobi);
+#endif
+#ifdef HAS_CBC
+    backends.push_back(ES_MIPSolver::Cbc);
+#endif
+    for(auto backend : backends)
+    {
+        auto solver = std::make_unique<Solver>();
+        solver->updateSetting("Dual.MIP.Solver", static_cast<int>(backend));
+        solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+        solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::MultiTree));
+        solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Termination.TimeLimit", 15.0);
+
+        if(!solver->setProblem("data/instances/MINLP-convex/ravempb.osil") || !solver->solveProblem()
+            || !solver->hasPrimalSolution())
+            return false;
+
+        constexpr double reference = 269590.2;
+        constexpr double tolerance = 0.3;
+        if(solver->getTerminationReason() == E_TerminationReason::InfeasibleProblem
+            || solver->getTerminationReason() == E_TerminationReason::Error
+            || std::abs(solver->getPrimalBound() - reference) > tolerance
+            || !std::isfinite(solver->getGlobalDualBound()) || solver->getGlobalDualBound() > reference + tolerance)
+        {
+            std::cout << "Backend " << static_cast<int>(backend) << ": recovery returned incorrect bounds ["
+                      << solver->getGlobalDualBound() << ", " << solver->getPrimalBound() << "]\n";
+            return false;
+        }
+
+        auto problem = solver->getOriginalProblem();
+        auto point = solver->getPrimalSolution().point;
+        if(!problem->areLinearConstraintsFulfilled(point, 1e-6)
+            || !problem->areQuadraticConstraintsFulfilled(point, 1e-5)
+            || !problem->areNonlinearConstraintsFulfilled(point, 1e-5)
+            || !problem->areVariableBoundsFulfilled(point, 1e-6)
+            || !problem->areIntegralityConstraintsFulfilled(point, 1e-5))
+            return false;
+    }
+    return true;
+}
+
+bool TestBilinearLinearizationWithHugeBounds()
+{
+    for(bool binary : { false, true })
+        for(bool assumeConvex : { false, true })
+            for(int extraction : { 2, 3 })
+                for(double bound : { 10.0, 1e50 })
+                {
+                    auto solver = std::make_unique<Solver>();
+                    auto env = solver->getEnvironment();
+                    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+                    solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+                    solver->updateSetting("Model.Reformulation.Quadratics.ExtractStrategy", extraction);
+                    solver->updateSetting("Model.Convexity.AssumeConvex", assumeConvex);
+                    solver->updateSetting("Model.Reformulation.ObjectiveFunction.EpigraphStrategy", 0);
+                    solver->updateSetting("Model.Reformulation.Constraint.PartitionQuadraticTerms", 0);
+                    solver->updateSetting("Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms", 0);
+
+                    auto problem = std::make_shared<Problem>(env);
+                    auto i = std::make_shared<Variable>(
+                        "i", binary ? E_VariableType::Binary : E_VariableType::Integer, 0.0, binary ? 1.0 : 3.0);
+                    auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.0, bound);
+                    auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.0, bound);
+                    auto z = std::make_shared<Variable>("z", E_VariableType::Real, 0.0, 1.0);
+                    problem->add(Variables { i, x, y, z });
+
+                    // Two products share the discrete factor and recur in both polynomial and nested nonlinear
+                    // expressions.
+                    auto objective
+                        = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+                    objective->add(std::make_shared<QuadraticTerm>(2.0, i, x));
+                    objective->add(std::make_shared<QuadraticTerm>(-3.0, i, y));
+                    objective->add(std::make_shared<ExpressionExp>(std::make_shared<ExpressionVariable>(z)));
+                    problem->add(objective);
+                    auto constraint = std::make_shared<NonlinearConstraint>("polynomial", SHOT_DBL_MIN, 100.0);
+                    constraint->add(std::make_shared<QuadraticTerm>(1.0, i, x));
+                    constraint->add(std::make_shared<QuadraticTerm>(1.0, i, y));
+                    constraint->add(std::make_shared<ExpressionExp>(std::make_shared<ExpressionVariable>(z)));
+                    problem->add(constraint);
+                    auto sum = std::make_shared<ExpressionSum>();
+                    sum->children = { std::make_shared<ExpressionConstant>(1.0),
+                        std::make_shared<ExpressionProduct>(
+                            std::make_shared<ExpressionVariable>(i), std::make_shared<ExpressionVariable>(x)),
+                        std::make_shared<ExpressionProduct>(
+                            std::make_shared<ExpressionVariable>(i), std::make_shared<ExpressionVariable>(y)) };
+                    auto nested = std::make_shared<NonlinearConstraint>("nested", 0.0, SHOT_DBL_MAX);
+                    nested->add(std::make_shared<ExpressionLog>(sum));
+                    problem->add(nested);
+                    problem->finalize();
+                    if(!solver->setProblem(problem))
+                        return false;
+
+                    auto reformulated = solver->getReformulatedProblem();
+                    auto linearized
+                        = reformulated->getAuxiliaryVariablesOfType(E_AuxiliaryVariableType::IntegerBilinear).size()
+                        + reformulated->getAuxiliaryVariablesOfType(E_AuxiliaryVariableType::BinaryContinuousBilinear)
+                              .size();
+                    if((bound > 1e15
+                           && (linearized != 0
+                               || reformulated->getAuxiliaryVariablesOfType(E_AuxiliaryVariableType::ContinuousBilinear)
+                                       .size()
+                                   != 0))
+                        || (bound < 1e15 && linearized != 2))
+                    {
+                        std::cout << "Unexpected bilinear auxiliary count " << linearized << " for bound " << bound
+                                  << ", binary " << binary << ", extraction " << extraction << ", AssumeConvex "
+                                  << assumeConvex << '\n';
+                        return false;
+                    }
+
+                    VectorDouble point { binary ? 1.0 : 2.0, 2.0, 3.0, 0.25 };
+                    double originalObjective = solver->getOriginalProblem()->objectiveFunction->calculateValue(point);
+                    reformulated->augmentAuxiliaryVariableValues(point);
+                    if(std::abs(reformulated->objectiveFunction->calculateValue(point) - originalObjective) > 1e-6
+                        || !reformulated->areNumericConstraintsFulfilled(point, 1e-6))
+                        return false;
+
+                    for(auto& row : reformulated->linearConstraints)
+                        for(auto& term : row->linearTerms)
+                            if(!std::isfinite(term->coefficient) || std::abs(term->coefficient) >= 1e15)
+                                return false;
+                }
+    return true;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -3915,6 +5267,78 @@ int SolverTest(int argc, char* argv[])
         std::cout << "Starting test for an objective function with user-specified convexity" << std::endl;
         passed = TestUserSpecifiedObjectiveConvexity();
         std::cout << "Finished test for an objective function with user-specified convexity." << std::endl;
+        break;
+    case 38:
+        std::cout << "Starting test for freeing the environment with the solver" << std::endl;
+        passed = TestEnvironmentReleased();
+        std::cout << "Finished test for freeing the environment with the solver." << std::endl;
+        break;
+    case 39:
+        std::cout << "Starting test for reporting the primal solution that fulfils the constraints" << std::endl;
+        passed = TestAccuratePrimalSolution();
+        std::cout << "Finished test for reporting the primal solution that fulfils the constraints." << std::endl;
+        break;
+    case 40:
+        std::cout << "Starting test for reusing the cutting planes of the interior point search" << std::endl;
+        passed = TestReuseOfInteriorPointCuttingPlanes();
+        std::cout << "Finished test for reusing the cutting planes of the interior point search." << std::endl;
+        break;
+    case 41:
+        std::cout << "Starting test for the precision of the solution in the OSrL file" << std::endl;
+        passed = TestPrecisionOfOSrLSolution();
+        std::cout << "Finished test for the precision of the solution in the OSrL file." << std::endl;
+        break;
+    case 42:
+        std::cout << "Starting test for partitioning the terms of an epigraph constraint" << std::endl;
+        passed = TestEpigraphOfPartitionedObjectiveTerms();
+        std::cout << "Finished test for partitioning the terms of an epigraph constraint." << std::endl;
+        break;
+    case 43:
+        std::cout << "Starting test for integer variables with artificial bounds in bilinear terms" << std::endl;
+        passed = TestIntegerBilinearTermArtificialBounds();
+        std::cout << "Finished test for integer variables with artificial bounds in bilinear terms." << std::endl;
+        break;
+    case 44:
+        std::cout << "Starting test for trigonometric intervals with large bounds" << std::endl;
+        passed = TestTrigonometricIntervalsWithLargeBounds();
+        std::cout << "Finished test for trigonometric intervals with large bounds." << std::endl;
+        break;
+    case 45:
+        std::cout << "Starting test for linear feasibility of MIP primal candidates" << std::endl;
+        passed = TestMIPPrimalLinearConstraintValidation();
+        std::cout << "Finished test for linear feasibility of MIP primal candidates." << std::endl;
+        break;
+#ifdef HAS_IPOPT
+    case 46:
+        std::cout << "Starting test for integer cuts after fixed-NLP candidate checks" << std::endl;
+        passed = TestIntegerCutsAfterFixedNLPCandidateCheck();
+        std::cout << "Finished test for integer cuts after fixed-NLP candidate checks." << std::endl;
+        break;
+#endif
+    case 47:
+        std::cout << "Starting test for large auxiliary bounds in the MIP relaxation" << std::endl;
+        passed = TestLargeAuxiliaryBounds();
+        std::cout << "Finished test for large auxiliary bounds in the MIP relaxation." << std::endl;
+        break;
+    case 48:
+        std::cout << "Starting test for wrong optima caused by large auxiliary bounds" << std::endl;
+        passed = TestLargeAuxiliaryBoundInstances();
+        std::cout << "Finished test for wrong optima caused by large auxiliary bounds." << std::endl;
+        break;
+    case 49:
+        std::cout << "Starting test for infeasibility recovery of badly scaled dual problems" << std::endl;
+        passed = TestScaledDualInfeasibilityRecovery();
+        std::cout << "Finished test for infeasibility recovery of badly scaled dual problems." << std::endl;
+        break;
+    case 50:
+        std::cout << "Testing bilinear products with unsafe big-M bounds" << std::endl;
+        passed = TestBilinearLinearizationWithHugeBounds();
+        break;
+    case 51:
+        passed = TestIntegerBilinearDiscretizationValues();
+        break;
+    case 52:
+        passed = TestStrategySelectionForNonconvexQuadraticProblems();
         break;
     default:
         passed = false;

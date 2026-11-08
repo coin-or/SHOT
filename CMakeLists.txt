@@ -204,6 +204,7 @@ file(
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/IRelaxationStrategy.h"
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyIncrease.h"
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverBase.h"
+    "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCapabilities.h"
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyBase.h"
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyStandard.h"
     "${PROJECT_SOURCE_DIR}/src/NLPSolver/INLPSolver.h"
@@ -301,7 +302,7 @@ endif(HAS_CPLEX)
 # Gurobi
 
 if(HAS_GUROBI)
-    find_package(GUROBI)
+    find_package(GUROBI 10.0)
 
     if(NOT GUROBI_FOUND)
         message(WARNING "Gurobi not found, setting HAS_GUROBI to OFF")
@@ -811,6 +812,8 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyIncrease.cpp
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverBase.h
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverBase.cpp
+    ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCapabilities.h
+    ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCapabilities.cpp
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyBase.h
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyBase.cpp
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyStandard.h

@@ -92,10 +92,18 @@ E_ProblemSolutionStatus MIPSolverGurobiSingleTree::solveProblem()
 
     try
     {
+        restoreObjectiveCoefficients();
+
         if(!isCallbackInitialized)
         {
             gurobiCallback = std::make_unique<GurobiCallbackSingleTree>(gurobiModel->getVars(), env);
             isCallbackInitialized = true;
+        }
+        else
+        {
+            // Integer cuts of nonbinary variables add variables to the model between the solves, and the callback
+            // reads the solution values of all variables in the model
+            gurobiCallback->updateVariables(gurobiModel->getVars());
         }
 
         gurobiModel->set(GRB_IntParam_LazyConstraints, 1);
@@ -134,70 +142,21 @@ E_ProblemSolutionStatus MIPSolverGurobiSingleTree::solveProblem()
         MIPSolutionStatus = E_ProblemSolutionStatus::Error;
     }
 
+    if(MIPSolutionStatus == E_ProblemSolutionStatus::Numeric
+        || (MIPSolutionStatus == E_ProblemSolutionStatus::Infeasible
+            && gurobiModel->get(GRB_IntAttr_Status) == GRB_INFEASIBLE))
+        MIPSolutionStatus = resolveWithNumericFocus(MIPSolutionStatus);
+
     // An unbounded exact dual problem means that the problem is unbounded, so no point is needed
     if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded && env->dualSolver->isDualProblemExact())
     {
         MIPSolutionStatus = resolveInfeasibleOrUnbounded(MIPSolutionStatus);
     }
-    // To find a feasible point for an unbounded dual problem
+    // Recovery only needs a point for generating cuts, not an optimal solution. Use the shared feasibility solve
+    // rather than huge temporary bounds, whose values can destroy the constant of a cut through cancellation.
     else if(MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded)
     {
-        bool variableBoundsUpdated = false;
-
-        if((env->reformulatedProblem->objectiveFunction->properties.classification
-                   == E_ObjectiveFunctionClassification::Linear
-               && std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                      ->isUnbounded())
-            || (env->reformulatedProblem->objectiveFunction->properties.classification
-                    == E_ObjectiveFunctionClassification::Quadratic
-                && std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->reformulatedProblem->objectiveFunction)
-                       ->isUnbounded()))
-        {
-            for(auto& V : env->reformulatedProblem->allVariables)
-            {
-                if(V->isUnbounded())
-                {
-                    updateVariableBound(
-                        V->getIndex(), -getUnboundedVariableBoundValue() / 1.1, getUnboundedVariableBoundValue() / 1.1);
-                    variableBoundsUpdated = true;
-                }
-            }
-        }
-        else if(env->reformulatedProblem->objectiveFunction->properties.classification
-                >= E_ObjectiveFunctionClassification::QuadraticConsideredAsNonlinear
-            && hasDualAuxiliaryObjectiveVariable())
-        {
-            // The auxiliary variable in the dual problem is unbounded
-            updateVariableBound(getDualAuxiliaryObjectiveVariableIndex(), -getUnboundedVariableBoundValue() / 1.1,
-                getUnboundedVariableBoundValue() / 1.1);
-            variableBoundsUpdated = true;
-        }
-
-        if(variableBoundsUpdated)
-        {
-            gurobiModel->update();
-
-            if(!isCallbackInitialized)
-            {
-                gurobiCallback = std::make_unique<GurobiCallbackSingleTree>(gurobiModel->getVars(), env);
-                isCallbackInitialized = true;
-            }
-
-            gurobiModel->set(GRB_IntParam_LazyConstraints, 1);
-            gurobiModel->setCallback(gurobiCallback.get());
-
-            gurobiModel->optimize();
-
-            MIPSolutionStatus = getSolutionStatus();
-
-            for(auto& V : env->reformulatedProblem->allVariables)
-            {
-                if(V->isUnbounded())
-                    updateVariableBound(V->getIndex(), V->lowerBound, V->upperBound);
-            }
-
-            env->results->getCurrentIteration()->hasInfeasibilityRepairBeenPerformed = true;
-        }
+        MIPSolutionStatus = MIPSolverGurobi::solveProblem();
     }
 
     return (MIPSolutionStatus);
@@ -296,6 +255,8 @@ void GurobiCallbackSingleTree::callback()
                     primalSolution.at(i) = getSolution(vars[i]);
                 }
 
+                env->problem->projectOntoVariableBounds(primalSolution);
+
                 SolutionPoint tmpPt;
 
                 if(env->problem->properties.numberOfNonlinearConstraints > 0)
@@ -343,6 +304,8 @@ void GurobiCallbackSingleTree::callback()
                 {
                     solution.at(i) = getNodeRel(vars[i]);
                 }
+
+                env->reformulatedProblem->projectOntoVariableBounds(solution);
 
                 SolutionPoint solutionRelaxed;
 
@@ -421,6 +384,8 @@ void GurobiCallbackSingleTree::callback()
             {
                 solution.at(i) = getSolution(vars[i]);
             }
+
+            env->reformulatedProblem->projectOntoVariableBounds(solution);
 
             // The bounds cannot be changed in the callback, so the MIP solver is interrupted and the artificial
             // bounds are removed before it solves again
@@ -578,24 +543,13 @@ bool GurobiCallbackSingleTree::createHyperplane(HyperplanePtr hyperplane)
             }
         }
 
-        // Small fix to fix badly scaled cuts.
-        // TODO: this should be made so it also takes into account small/large coefficients of the linear terms
-        if(std::abs(tmpPair.second) > 1e15)
+        // The lazy cuts are scaled as the cuts added to the dual problem between the solves
+        if(MIPSolverBase::scaleHyperplaneTerms(tmpPair) && !warningMessageShownLargeRHS)
         {
-            double scalingFactor = std::abs(tmpPair.second) - 1e15;
-
-            for(auto& E : tmpPair.first)
-                E.second /= scalingFactor;
-
-            tmpPair.second /= scalingFactor;
-
-            if(!warningMessageShownLargeRHS)
-            {
-                env->output->outputWarning(
-                    "        Large values found in RHS of cut, you might want to consider reducing the "
-                    "bounds of the nonlinear variables.");
-                warningMessageShownLargeRHS = true;
-            }
+            env->output->outputWarning(
+                "        Large values found in RHS or coefficients of cut, you might want to consider reducing the "
+                "bounds of the nonlinear variables.");
+            warningMessageShownLargeRHS = true;
         }
 
         GRBLinExpr expr = 0;
@@ -690,6 +644,12 @@ GurobiCallbackSingleTree::GurobiCallbackSingleTree(GRBVar* xvars, EnvironmentPtr
 }
 
 GurobiCallbackSingleTree::~GurobiCallbackSingleTree() { delete[] vars; }
+
+void GurobiCallbackSingleTree::updateVariables(GRBVar* xvars)
+{
+    delete[] vars;
+    vars = xvars;
+}
 
 bool GurobiCallbackSingleTree::createIntegerCut(IntegerCut& integerCut)
 {

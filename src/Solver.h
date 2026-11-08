@@ -40,6 +40,7 @@ private:
 
     void initializeSettings();
     void verifySettings();
+    void setMIPSolverCompatibilitySettings();
 
     // The conditions of the conditional setting values that hold for the problem and the selected MIP solver
     std::set<E_SettingCondition> getSettingConditions(ProblemPtr problem);
@@ -53,6 +54,7 @@ private:
     bool setDebugPath();
     void initializeDebugMode();
 
+    bool validateMIPFeatures(ProblemPtr problem);
     bool selectStrategy();
 
     void finalizeSolution();
@@ -73,6 +75,9 @@ public:
     Solver();
     Solver(std::shared_ptr<spdlog::sinks::sink> consoleSink);
     Solver(EnvironmentPtr environment);
+
+    // Frees the components of the environment, e.g., the results and the problems, which are only available while the
+    // solver exists. A problem that is still used keeps its environment, with the settings and output.
     ~Solver();
 
     EnvironmentPtr getEnvironment();
@@ -102,7 +107,7 @@ public:
      * The point is given to SHOT when solveProblem() is called. If it is feasible, it is the first primal solution,
      * so it is the cutoff and the MIP start of the dual problems with discrete variables. It is also the starting
      * point of an NLP problem with the discrete variables fixed to their rounded values if
-     * Primal.FixedInteger.UseStartingPoint is true, also if the point is not feasible.
+     * Primal.FixedInteger.UseStartingPoint is true and the point is not feasible.
      *
      * Must be called after setProblem(), which replaces the starting point with the one of the modeling system,
      * e.g., the initial values in an AMPL .nl file or the levels of the variables in GAMS, or removes it.
@@ -200,7 +205,11 @@ public:
 
     VectorString getSettingIdentifiers(E_SettingType type);
 
+    // The dual bound of the current dual problem. For a nonconvex problem, it is not a valid bound for the problem once
+    // cuts have been added to nonconvex functions; getGlobalDualBound() is a valid bound.
     double getCurrentDualBound();
+    // The best dual bound that is valid for the problem, also when it is nonconvex. The objective gaps are calculated
+    // from it.
     double getGlobalDualBound();
     double getPrimalBound();
     double getAbsoluteObjectiveGap();

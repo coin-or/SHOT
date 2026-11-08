@@ -12,7 +12,9 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 GUIDES = ('CompilationInstructions.md', 'CommandLineUsage.md', 'Callbacks.md',
-          'DebuggingSHOT.md', 'SHOTpy_Tutorial.ipynb')
+          'UnderstandingOutput.md', 'Configuration.md', 'Modeling.md',
+          'DebuggingSHOT.md', 'DeveloperDebugging.md', 'MIPSolverCapabilities.md',
+          'SHOTpy_Tutorial.ipynb')
 
 
 def build_tutorial(notebook, source):
@@ -89,7 +91,8 @@ def main():
             'unless `Strategy.UseRecommendedSettings` is false, and the default MIP solver depends on the build.\n'
             + settings)
         doxy = work / 'Doxyfile'
-        headers = ['Solver.h', 'Settings.h', 'Results.h', 'Callback.h', 'Enums.h', 'Structs.h']
+        headers = ['Solver.h', 'Settings.h', 'Results.h', 'Callback.h', 'Enums.h', 'Structs.h',
+                   'MIPSolver/MIPSolverCapabilities.h']
         doxy.write_text('\n'.join([
             'PROJECT_NAME = SHOT', f'OUTPUT_DIRECTORY = "{work / "doxygen"}"',
             'INPUT = ' + ' '.join(f'"{ROOT / "src" / h}"' for h in headers),

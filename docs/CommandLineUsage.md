@@ -8,6 +8,10 @@ For the debug-output mechanism specifically (`--debug`, intermediate
 problem/solution files), see
 [docs/DebuggingSHOT.md](DebuggingSHOT.md).
 
+For an annotated solve, iteration-column definitions, row types, and final
+statuses, see [Understanding SHOT output](UnderstandingOutput.md). For settings
+precedence and common configurations, see [Configuring SHOT](Configuration.md).
+
 ## Basic usage
 
 ```bash

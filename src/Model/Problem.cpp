@@ -1173,6 +1173,18 @@ std::vector<VariablePtr> Problem::getVariablesAtArtificialBounds(const VectorDou
     return (variables);
 }
 
+void Problem::projectOntoVariableBounds(VectorDouble& point)
+{
+    for(auto& V : allVariables)
+    {
+        if(V->getIndex() >= (int)point.size())
+            continue;
+
+        double& value = point[V->getIndex()];
+        value = std::max(V->lowerBound, std::min(V->upperBound, value));
+    }
+}
+
 bool Problem::hasArtificialBounds()
 {
     return (std::any_of(allVariables.begin(), allVariables.end(),
@@ -1906,7 +1918,7 @@ void Problem::doFBBT()
     }
 
     // The bounds of the original variables tightened in the reformulated problem are also bounds in the original problem
-    if(anyBoundsUpdated && properties.isReformulated)
+    if(anyBoundsUpdated && properties.isReformulated && env->problem)
     {
         for(size_t k = 0; k < env->problem->allVariables.size(); k++)
         {
@@ -3144,6 +3156,17 @@ NumericConstraintPtr Problem::createConstraintSide(const NumericConstraintPtr& s
     return (constraint);
 }
 
+void Problem::updateAntiEpigraphObjectiveVariableValue(VectorDouble& point, double objectiveValue)
+{
+    if(!antiEpigraphObjectiveVariable)
+        return;
+
+    assert(point.size() >= allVariables.size());
+
+    point.at(antiEpigraphObjectiveVariable->getIndex())
+        = (objectiveValue - antiEpigraphObjectiveConstant) / antiEpigraphObjectiveCoefficient;
+}
+
 void Problem::augmentAuxiliaryVariableValues(VectorDouble& point)
 {
     if(!this->properties.isReformulated)
@@ -3167,8 +3190,8 @@ void Problem::augmentAuxiliaryVariableValues(VectorDouble& point)
         point.push_back(value);
     }
 
-    if(this->antiEpigraphObjectiveVariable)
-        point.at(this->antiEpigraphObjectiveVariable->getIndex()) = this->objectiveFunction->calculateValue(point);
+    if(antiEpigraphObjectiveVariable)
+        updateAntiEpigraphObjectiveVariableValue(point, objectiveFunction->calculateValue(point));
 
     assert(point.size() == static_cast<size_t>(this->properties.numberOfVariables));
 

@@ -269,6 +269,18 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
         env->timing->stopTimer("PrimalBoundStrategyNLP");
         env->timing->stopTimer("PrimalStrategy");
     }
+
+    // The frequency controls when a batch starts, not how many NLP problems it contains. Both formulations use
+    // the same selected starts; polishing has its own limit, Primal.PolishSolution.NumberOfPoints.
+    int maxStarts = env->settings->getSetting<int>("Primal.FixedInteger.MaxStartsPerCall");
+    auto& candidates = env->primalSolver->fixedPrimalNLPCandidates;
+
+    if(!isFinalPolish && maxStarts > 0 && candidates.size() > static_cast<size_t>(maxStarts))
+    {
+        env->output->outputDebug(
+            fmt::format("        Limiting fixed NLP batch to {} of {} starting points.", maxStarts, candidates.size()));
+        candidates.resize(maxStarts);
+    }
 }
 
 std::string TaskSelectPrimalFixedNLPPointsFromSolutionPool::getType()

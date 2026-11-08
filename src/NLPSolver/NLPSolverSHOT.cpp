@@ -20,6 +20,7 @@
 #include "../Solver.h"
 #include "../Timing.h"
 #include "../MIPSolver/IMIPSolver.h"
+#include "../MIPSolver/MIPSolverBase.h"
 #include "../Model/ObjectiveFunction.h"
 #include "../Model/Problem.h"
 
@@ -237,8 +238,15 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
 
     // Update the bounds to the MIP solver
     for(auto& VAR : relaxedProblem->allVariables)
+    {
+        PairDouble bounds { VAR->lowerBound, VAR->upperBound };
+        if(VAR->properties.isAuxiliary)
+            bounds = MIPSolverBase::getAuxiliaryVariableBoundsForSolver(bounds.first, bounds.second,
+                solver->getEnvironment()->dualSolver->MIPSolver->getUnboundedVariableBoundValue());
+
         solver->getEnvironment()->dualSolver->MIPSolver->updateVariableBound(
-            VAR->getIndex(), VAR->lowerBound, VAR->upperBound);
+            VAR->getIndex(), bounds.first, bounds.second);
+    }
 
     // Setting the cutoff value from currently best known solution
     if(useCutOff && env->dualSolver->cutOffToUse != SHOT_DBL_MAX)

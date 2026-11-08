@@ -126,7 +126,8 @@ void TaskPerformConvexBounding::run()
 
     env->output->outputDebug("  Creating convex bounding problem");
 
-    taskCreateMIPProblem = std::make_shared<TaskCreateMIPProblem>(env, MIPSolver, env->reformulatedProblem);
+    taskCreateMIPProblem = std::make_shared<TaskCreateMIPProblem>(
+        env, MIPSolver, env->reformulatedProblem, getMIPSolverCapabilities(env->results->usedMIPSolver).value());
     taskCreateMIPProblem->run();
 
     int numberHyperplanesAdded = 0;
@@ -259,10 +260,9 @@ void TaskPerformConvexBounding::run()
 
         if(env->reformulatedProblem->antiEpigraphObjectiveVariable)
         {
-            double objectiveValue = MIPSolver->getObjectiveValue();
 
             for(auto& SOL : solutionPoints)
-                SOL.point.at(env->reformulatedProblem->antiEpigraphObjectiveVariable->getIndex()) = objectiveValue;
+                env->reformulatedProblem->updateAntiEpigraphObjectiveVariableValue(SOL.point, SOL.objectiveValue);
         }
 
         env->primalSolver->addPrimalSolutionCandidates(solutionPoints, E_PrimalSolutionSource::ConvexBounding);

@@ -31,7 +31,7 @@ Download the respective pinned archives from `versions.json`, then run:
 
 ```sh
 python3 scripts/vendor-reader-dependencies.py ampl /path/to/mp-4.1.0.tar.gz
-python3 scripts/vendor-reader-dependencies.py mc++ /path/to/mcpp-5.0.4.tar.gz
+python3 scripts/vendor-reader-dependencies.py mc++ /path/to/mcpp-5.1.0.tar.gz
 ```
 
 The importer verifies the checksum before replacing either directory. MP
@@ -47,10 +47,15 @@ MC++ contains `interval.hpp`, `mcfunc.hpp`, and `mcop.hpp`. SHOT does not use
 MC++'s relaxation, polynomial, linear algebra, or automatic differentiation
 facilities. The old unused cpplapack/FADBAD++ trees were removed. Optional
 `MC__USE_FADBAD` is not supported by this subset. MC++ interval arithmetic
-remains non-verified (it does not account for rounding error). The importer
-patches the interval cosine (also used for the sine) and tangent, which
-overflow an `int` for bounds beyond about 1e9: the cosine of such an interval
-is [-1, 1], and the tangent throws as for an interval containing a pole.
+remains non-verified (it does not account for rounding error).
+The selected headers are unchanged between MC++ 5.0.4 and 5.1.0.
+
+The importer patches `interval.hpp` (`MCPP_PATCHES` in the script): `cos()`
+and `tan()` convert the number of periods to an `int`, which overflows for
+bounds larger than about 6.7e9, e.g. SHOT's artificial bounds, and gives
+wrong intervals. For bounds larger than 1e8 in magnitude, `cos()` (and so
+`sin()`) returns [-1, 1] and `tan()` throws, as for an interval with a pole.
+The patched lines are marked with `// SHOT`.
 
 ## Other vendored files
 

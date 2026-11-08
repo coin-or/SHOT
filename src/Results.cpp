@@ -68,6 +68,11 @@ void Results::addPrimalSolution(PrimalSolution solution)
     auto isBetter
         = [isMinimize](double first, double second) { return (isMinimize ? first < second : first > second); };
 
+    if((!accuratePrimalSolution || isBetter(solution.objValue, accuratePrimalSolution->objValue))
+        && getMaximumConstraintError(solution.point)
+            <= env->settings->getSetting<double>("Termination.ConstraintTolerance"))
+        accuratePrimalSolution = solution;
+
     auto maxError = [](const PrimalSolution& S)
     {
         return (std::max({ S.maxDeviatingConstraintLinear.value, S.maxDeviatingConstraintQuadratic.value,
@@ -220,6 +225,85 @@ bool Results::isAbsoluteObjectiveGapToleranceMet()
 }
 
 Results::Results(EnvironmentPtr envPtr) : env(envPtr) { }
+
+double Results::getMaximumConstraintError(const VectorDouble& point)
+{
+    if(env->problem->numericConstraints.empty())
+        return (0.0);
+
+    return (env->problem->getMaxNumericConstraintValue(point, env->problem->numericConstraints).error);
+}
+
+void Results::useAccuratePrimalSolution()
+{
+    if(!hasPrimalSolution() || !accuratePrimalSolution || primalSolutions.empty())
+        return;
+
+    // A point accepted with the primal tolerances, e.g. from a relaxation, can have a better objective value than any
+    // feasible solution when the objective is sensitive to the constraint violation. A solution that fulfils the
+    // constraints to Termination.ConstraintTolerance is then reported instead of an incumbent that does not, if its
+    // objective value is within the termination gap tolerances of the incumbent and an objective gap that has been
+    // closed stays closed.
+    auto constraintTolerance = env->settings->getSetting<double>("Termination.ConstraintTolerance");
+    auto absoluteGapTolerance = env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute");
+    auto relativeGapTolerance = env->settings->getSetting<double>("Termination.ObjectiveGap.Relative");
+
+    auto& incumbent = primalSolutions.front();
+    auto& solution = *accuratePrimalSolution;
+
+    auto isWithinGapTolerances = [&](double first, double second)
+    {
+        double difference = std::abs(first - second);
+        return (
+            difference <= absoluteGapTolerance || difference / ((1e-10) + std::abs(second)) <= relativeGapTolerance);
+    };
+
+    int poolSize = env->settings->getSetting<int>("Output.SaveNumberOfSolutions");
+
+    bool isInSolutionPool = std::any_of(primalSolutions.begin(), primalSolutions.end(),
+        [&solution](const PrimalSolution& S) { return (!Utilities::isDifferent(S.point, solution.point)); });
+
+    if(solution.objValue == incumbent.objValue || !isWithinGapTolerances(solution.objValue, incumbent.objValue)
+        || (isWithinGapTolerances(getGlobalDualBound(), incumbent.objValue)
+            && !isWithinGapTolerances(getGlobalDualBound(), solution.objValue))
+        || getMaximumConstraintError(incumbent.point) <= constraintTolerance)
+    {
+        // Otherwise, the solution is put back in the solution pool, from which better solutions that do not fulfil
+        // the constraints to the tolerance may have removed it, but it does not replace the incumbent
+        if(isInSolutionPool || poolSize < 2)
+            return;
+
+        if((int)primalSolutions.size() >= poolSize)
+            primalSolutions.pop_back();
+
+        bool isMinimize = env->problem->objectiveFunction->properties.isMinimize;
+
+        primalSolutions.insert(
+            std::upper_bound(primalSolutions.begin() + 1, primalSolutions.end(), solution,
+                [isMinimize](const PrimalSolution& first, const PrimalSolution& second)
+                { return (isMinimize ? first.objValue < second.objValue : first.objValue > second.objValue); }),
+            solution);
+
+        return;
+    }
+
+    env->output->outputDebug(fmt::format("        The primal solution {} from {} replaces the incumbent {}, which "
+                                         "violates the constraints by {}.",
+        solution.objValue, solution.sourceDescription, incumbent.objValue, getMaximumConstraintError(incumbent.point)));
+
+    // The solution may also be in the solution pool already
+    primalSolutions.erase(
+        std::remove_if(primalSolutions.begin(), primalSolutions.end(),
+            [&solution](const PrimalSolution& S) { return (!Utilities::isDifferent(S.point, solution.point)); }),
+        primalSolutions.end());
+
+    if((int)primalSolutions.size() >= poolSize)
+        primalSolutions.pop_back();
+
+    primalSolutions.insert(primalSolutions.begin(), solution);
+    primalSolution = solution.point;
+    setPrimalBound(solution.objValue, false);
+}
 
 Results::~Results()
 {
@@ -1138,7 +1222,8 @@ std::string Results::getResultsOSrL()
 
         auto objectiveSolutionNode = osrlDocument.NewElement("obj");
         objectiveSolutionNode->SetAttribute("idx", -1);
-        objectiveSolutionNode->SetText(std::to_string(primalSolutions.at(i).objValue).c_str());
+        // SetText writes a double with all significant digits, while std::to_string has six decimals
+        objectiveSolutionNode->SetText(primalSolutions.at(i).objValue);
         objectiveValueNode->InsertFirstChild(objectiveSolutionNode);
 
         objectivesNode->InsertFirstChild(objectiveValueNode);
@@ -1154,7 +1239,7 @@ std::string Results::getResultsOSrL()
             auto variableSolutionNode = osrlDocument.NewElement("var");
             variableSolutionNode->SetAttribute("idx", (int)j);
             variableSolutionNode->SetAttribute("name", env->problem->allVariables.at(j)->name.c_str());
-            variableSolutionNode->SetText(std::to_string(primalSolutions.at(i).point.at(j)).c_str());
+            variableSolutionNode->SetText(primalSolutions.at(i).point.at(j));
             variableValueNode->InsertEndChild(variableSolutionNode);
         }
 
@@ -1171,10 +1256,9 @@ std::string Results::getResultsOSrL()
             auto dualValueNode = osrlDocument.NewElement("con");
             dualValueNode->SetAttribute("idx", (int)j);
             dualValueNode->SetAttribute("name", env->problem->numericConstraints.at(j)->name.c_str());
-            dualValueNode->SetText(std::to_string(env->problem->numericConstraints.at(j)
-                                                      ->calculateNumericValue(primalSolutions.at(i).point)
-                                                      .normalizedValue)
-                                       .c_str());
+            dualValueNode->SetText(env->problem->numericConstraints.at(j)
+                    ->calculateNumericValue(primalSolutions.at(i).point)
+                    .normalizedValue);
             dualValuesNode->InsertEndChild(dualValueNode);
         }
 

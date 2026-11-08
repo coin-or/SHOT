@@ -145,11 +145,15 @@ bool MIPSolverCplex::addVariable(
         case E_VariableType::Semicontinuous:
         case E_VariableType::Semiinteger:
         {
-            isProblemDiscrete = true;
             if(semiBound < 0.0)
-                upperBound = semiBound;
-            else
-                lowerBound = semiBound;
+            {
+                env->output->outputError(
+                    " Negative semi-variable branches are not supported by SHOT's CPLEX interface.");
+                return false;
+            }
+
+            isProblemDiscrete = true;
+            lowerBound = semiBound;
             auto cplexVar = IloSemiContVar(cplexEnv, lowerBound, upperBound,
                 (type == E_VariableType::Semicontinuous) ? ILOFLOAT : ILOINT, name.c_str());
             cplexVars.add(cplexVar);
@@ -347,8 +351,8 @@ bool MIPSolverCplex::finalizeProblem()
 {
     try
     {
-        // TaskCreateMIPProblem may finalize the same model more than once. End the previous extractor before
-        // replacing its handle, so the environment does not retain an active CPLEX instance for the old model.
+        // A model can be rebuilt between iterations. End the previous extractor before replacing its handle,
+        // so the environment does not retain an active CPLEX instance for the old model.
         if(cplexInstance.getImpl())
             cplexInstance.end();
 
@@ -558,7 +562,9 @@ int MIPSolverCplex::addLinearConstraint(
         return (-1);
     }
 
-    return (cplexInstance.getNrows() - 1);
+    // The index is used for cplexConstrs, which also contains the quadratic constraints, while CPLEX only counts the
+    // linear rows
+    return (cplexConstrs.getSize() - 1);
 }
 
 bool MIPSolverCplex::addSpecialOrderedSet(E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights)
@@ -720,6 +726,13 @@ E_ProblemSolutionStatus MIPSolverCplex::getSolutionStatus()
         {
             MIPSolutionStatus = E_ProblemSolutionStatus::Abort;
         }
+        // CPLEX stopped because of a failure, e.g., numerical trouble, with or without an integer solution. The
+        // solutions are used, but the bound is not.
+        else if(status == IloCplex::CplexStatus::FailFeas || status == IloCplex::CplexStatus::FailInfeas
+            || status == IloCplex::CplexStatus::FailFeasNoTree || status == IloCplex::CplexStatus::FailInfeasNoTree)
+        {
+            MIPSolutionStatus = E_ProblemSolutionStatus::Numeric;
+        }
         else
         {
             env->output->outputError("        MIP solver return status " + std::to_string(status));
@@ -773,6 +786,8 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
             extractModel();
         }
 
+        auto solveStarted = cplexInstance.getCplexTime();
+
         if(objectiveFunctionReplacedWithZero || !getDiscreteVariableStatus())
         {
             objectiveFunctionReplacedWithZero = false;
@@ -795,6 +810,8 @@ E_ProblemSolutionStatus MIPSolverCplex::solveProblem()
             cplexInstance.solve();
             MIPSolutionStatus = getSolutionStatus();
         }
+
+        MIPSolutionStatus = resolveWithNumericalEmphasis(MIPSolutionStatus, solveStarted);
 
         // An unbounded exact dual problem means that the problem is unbounded, so no point is needed
         bool isUnboundedExactDualProblem = MIPSolutionStatus == E_ProblemSolutionStatus::Unbounded
@@ -885,6 +902,105 @@ E_ProblemSolutionStatus MIPSolverCplex::resolveInfeasibleOrUnbounded(E_ProblemSo
     {
         env->output->outputError(
             "        Error when solving MIP/LP problem without presolve reductions", e.getMessage());
+        status = E_ProblemSolutionStatus::Error;
+    }
+
+    return (status);
+}
+
+E_ProblemSolutionStatus MIPSolverCplex::resolveInfeasibleWithoutPresolve(E_ProblemSolutionStatus status)
+{
+    try
+    {
+        if(!cplexInstance.getParam(IloCplex::Param::Preprocessing::Presolve))
+            return (status);
+
+        env->output->outputDebug("        CPLEX reports the problem as infeasible, so it is solved again without "
+                                 "presolve.");
+
+        // Without turning off the advanced start, CPLEX reuses the infeasibility found in the previous solve
+        auto advance = cplexInstance.getParam(IloCplex::Param::Advance);
+
+        cplexInstance.setParam(IloCplex::Param::Preprocessing::Presolve, false);
+        cplexInstance.setParam(IloCplex::Param::Advance, 0);
+        cplexInstance.solve();
+        status = MIPSolverCplex::getSolutionStatus();
+        cplexInstance.setParam(IloCplex::Param::Preprocessing::Presolve, true);
+        cplexInstance.setParam(IloCplex::Param::Advance, advance);
+    }
+    catch(IloException& e)
+    {
+        env->output->outputError("        Error when solving MIP/LP problem without presolve", e.getMessage());
+        status = E_ProblemSolutionStatus::Error;
+    }
+
+    return (status);
+}
+
+E_ProblemSolutionStatus MIPSolverCplex::resolveWithNumericalEmphasis(
+    E_ProblemSolutionStatus status, double solveStarted)
+{
+    // A cutoff or another stopping condition must not trigger infeasibility recovery.
+    if(status != E_ProblemSolutionStatus::Numeric
+        && !(status == E_ProblemSolutionStatus::Infeasible
+            && cplexInstance.getCplexStatus() == IloCplex::CplexStatus::Infeasible))
+        return status;
+
+    try
+    {
+        auto numericalEmphasis = cplexInstance.getParam(IloCplex::Param::Emphasis::Numerical);
+        auto advance = cplexInstance.getParam(IloCplex::Param::Advance);
+        auto presolve = cplexInstance.getParam(IloCplex::Param::Preprocessing::Presolve);
+        auto timeLimit = cplexInstance.getParam(IloCplex::Param::TimeLimit);
+
+        auto solve = [&](bool withoutPresolve)
+        {
+            double remainingTime = timeLimit - (cplexInstance.getCplexTime() - solveStarted);
+            if(remainingTime <= 0.0)
+                return E_ProblemSolutionStatus::TimeLimit;
+
+            cplexInstance.setParam(IloCplex::Param::TimeLimit, remainingTime);
+            if(withoutPresolve)
+                return resolveInfeasibleWithoutPresolve(status);
+
+            cplexInstance.setParam(IloCplex::Param::Emphasis::Numerical, true);
+            // Discard the failed state rather than reusing its basis or search tree.
+            cplexInstance.setParam(IloCplex::Param::Advance, 0);
+            cplexInstance.solve();
+            return MIPSolverCplex::getSolutionStatus();
+        };
+
+        // Restore the original settings also if a retry throws.
+        try
+        {
+            if(!numericalEmphasis)
+            {
+                env->output->outputDebug("        Numerical trouble or infeasibility in CPLEX, so the problem is "
+                                         "solved again with numerical emphasis.");
+                status = solve(false);
+            }
+
+            if(status == E_ProblemSolutionStatus::Infeasible
+                && cplexInstance.getCplexStatus() == IloCplex::CplexStatus::Infeasible && presolve)
+                status = solve(true);
+        }
+        catch(...)
+        {
+            cplexInstance.setParam(IloCplex::Param::TimeLimit, timeLimit);
+            cplexInstance.setParam(IloCplex::Param::Emphasis::Numerical, numericalEmphasis);
+            cplexInstance.setParam(IloCplex::Param::Advance, advance);
+            cplexInstance.setParam(IloCplex::Param::Preprocessing::Presolve, presolve);
+            throw;
+        }
+
+        cplexInstance.setParam(IloCplex::Param::TimeLimit, timeLimit);
+        cplexInstance.setParam(IloCplex::Param::Emphasis::Numerical, numericalEmphasis);
+        cplexInstance.setParam(IloCplex::Param::Advance, advance);
+        cplexInstance.setParam(IloCplex::Param::Preprocessing::Presolve, presolve);
+    }
+    catch(IloException& e)
+    {
+        env->output->outputError("        Error when solving MIP/LP problem with numerical emphasis", e.getMessage());
         status = E_ProblemSolutionStatus::Error;
     }
 
@@ -1263,7 +1379,6 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
                     cplexConstrs[cutOffConstraintIndex].setUB(
                         cutOff - env->reformulatedProblem->objectiveFunction->constant);
 
-                cplexConstrs[cutOffConstraintIndex].setUB(cutOff);
                 env->output->outputDebug(
                     "        Setting cutoff constraint to " + Utilities::toString(cutOff) + " for minimization.");
             }
@@ -1584,10 +1699,7 @@ PairDouble MIPSolverCplex::getCurrentVariableBounds(int varIndex)
     return (tmpBounds);
 }
 
-bool MIPSolverCplex::supportsQuadraticObjective() { return (true); }
-bool MIPSolverCplex::supportsQuadraticConstraints() { return (true); }
-
-double MIPSolverCplex::getUnboundedVariableBoundValue() { return (1e+20); }
+double MIPSolverCplex::getUnboundedVariableBoundValue() { return capabilities.unboundedVariableBound; }
 
 double MIPSolverCplex::getDualObjectiveValue()
 {
@@ -1636,55 +1748,6 @@ double MIPSolverCplex::getDualObjectiveValue()
 }
 
 void MIPSolverCplex::checkParameters() { }
-
-bool MIPSolverCplex::createHyperplane(
-    HyperplanePtr hyperplane, std::function<IloConstraint(IloRange)> addConstraintFunction)
-{
-    auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
-
-    auto optional = createHyperplaneTerms(hyperplane);
-
-    if(!optional)
-    {
-        return (false);
-    }
-
-    auto tmpPair = optional.value();
-
-    for(auto& E : tmpPair.first)
-    {
-        if(E.second != E.second) // Check for NaN
-        {
-            env->output->outputError("     Warning: hyperplane not generated, NaN found in linear terms for variable "
-                + env->problem->getVariable(E.first)->name);
-            return (false);
-        }
-    }
-
-    try
-    {
-        IloExpr expr(cplexEnv);
-
-        for(auto& P : tmpPair.first)
-        {
-            expr += P.second * cplexVars[P.first];
-        }
-
-        IloRange tmpRange(cplexEnv, -IloInfinity, expr, -tmpPair.second);
-
-        addConstraintFunction(tmpRange);
-
-        tmpRange.end();
-        expr.end();
-    }
-    catch(IloException& e)
-    {
-        env->output->outputError("        Error when creating hyperplane in Cplex", e.getMessage());
-        return (false);
-    }
-
-    return (true);
-}
 
 bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
 {
