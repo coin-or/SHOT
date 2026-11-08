@@ -190,6 +190,8 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- Documentation navigation and tutorial links open the corresponding pages
+  on the documentation site instead of source files on GitHub.
 - Native MSVC builds with tests enabled link correctly with HiGHS and GAMS.
   Regression tests explicitly select the intended reformulations and Python
   backends, account for constraint scaling, and run GAMS optimization cases
