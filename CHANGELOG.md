@@ -139,7 +139,8 @@ Changes since SHOT 1.1.
 - The MIP start includes the values of the reformulation variables
   ([8c4a2bb8]).
 - Improved primal reduction cut heuristic ([#178]).
-- Updated bundled third-party libraries ([#213]).
+- Updated bundled third-party libraries ([#213]); MC++ is pinned to 5.1.0
+  and the optional Uno compatibility target is 2.9.3.
 - New repository layout, and the documentation is on the website ([#220],
   [#240]).
 - Settings of a MIP or NLP solver or of GAMS that SHOT is not compiled with
