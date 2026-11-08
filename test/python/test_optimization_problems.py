@@ -672,10 +672,7 @@ def solve_file_and_verify(filename, expected_obj, tolerance=0.01, mip_solver=Non
     if not filepath.exists():
         pytest.skip(f"Test file not found: {filepath}")
     
-    result = solver.setProblem(str(filepath))
-    assert result == True, f"Failed to load problem from {filename}"
-    
-    # Set MIP solver if specified (using type-safe enum)
+    # Configure backends before loading the model, which constructs the solver strategy.
     if mip_solver is not None:
         solver_enum = get_mip_solver_enum(mip_solver)
         if solver_enum is not None:
@@ -686,7 +683,14 @@ def solve_file_and_verify(filename, expected_obj, tolerance=0.01, mip_solver=Non
         solver_enum = get_nlp_solver_enum(nlp_solver)
         if solver_enum is not None:
             solver.updateSetting("Primal.FixedInteger.Solver", int(solver_enum))
+
+        if nlp_solver.lower() == "gams":
+            # Exercise the GAMS interface without requiring a commercial NLP solver licence.
+            solver.updateSetting("Subsolver.GAMS.NLP.Solver", "ipopt")
     
+    result = solver.setProblem(str(filepath))
+    assert result == True, f"Failed to load problem from {filename}"
+
     result = solver.solveProblem()
     assert result == True, f"Failed to solve problem {filename}"
     

@@ -7312,14 +7312,25 @@ bool ModelTestArtificialIntegerBounds()
 
             // The optimum may not be found, but a solution at the artificial bound may not be claimed optimal
             case Expected::NoClaim:
-                isCasePassed = (claimsOptimality ? std::abs(env->results->getPrimalBound() - C.optimum) < 1.0
-                                                 : reason != E_TerminationReason::InfeasibleProblem
-                            && reason != E_TerminationReason::UnboundedProblem);
+            {
+                // In exp(-x/1e9 - 4) <= 1, constraint feasibility permits x to differ from -4e9 by
+                // 1e9 * log(1 + tolerance). This is still far smaller than the artificial-bound error.
+                double objectiveTolerance = std::max(
+                    1.0, 1e9 * std::log1p(env->settings->getSetting<double>("Termination.ConstraintTolerance")));
+
+                if(claimsOptimality)
+                    isCasePassed = env->results->hasPrimalSolution()
+                        && std::abs(env->results->getPrimalBound() - C.optimum) <= objectiveTolerance;
+                else
+                    isCasePassed = reason != E_TerminationReason::InfeasibleProblem
+                        && reason != E_TerminationReason::UnboundedProblem;
+
                 break;
+            }
             }
 
             std::cout << "  " << C.name << " with " << solverName << ": termination reason " << static_cast<int>(reason)
-                      << ", primal bound " << env->results->getPrimalBound() << " "
+                      << ", primal bound " << fmt::format("{:.17g}", env->results->getPrimalBound()) << " "
                       << (isCasePassed ? "(as expected)" : "(FAILED)") << "\n";
 
             passed = passed && isCasePassed;
@@ -12560,6 +12571,8 @@ bool ModelTestBilinearInverseReformulation()
         auto env = solver->getEnvironment();
         solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
         solver->updateSetting("Model.Reformulation.Bilinear.InverseFormulation", static_cast<int>(strategy));
+        solver->updateSetting("Model.Reformulation.Quadratics.Strategy",
+            static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
 
         if(!solver->setProblem(buildProblem(env, false)))
         {
@@ -12627,6 +12640,8 @@ bool ModelTestBilinearInverseReformulation()
         auto solveEnv = solveSolver->getEnvironment();
         solveSolver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
         solveSolver->updateSetting("Model.Reformulation.Bilinear.InverseFormulation", static_cast<int>(strategy));
+        solveSolver->updateSetting("Model.Reformulation.Quadratics.Strategy",
+            static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
 
         if(!solveSolver->setProblem(buildProblem(solveEnv, true)) || !solveSolver->solveProblem())
         {

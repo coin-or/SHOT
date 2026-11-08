@@ -353,6 +353,16 @@ set(Boost_USE_STATIC_LIBS OFF)
 # Creates the test executable
 create_test_sourcelist(srclist test_runner.cpp ${cpptestsrc})
 add_executable(${TEST_EXE_NAME} ${srclist})
+
+if(MSVC AND HAS_GAMS)
+  # Import the GAMS API function-pointer data from the solver DLL.
+  file(READ "${GAMS_DIR}/apifiles/C/api/gmomcc.h" _gmo_import_header)
+  string(REPLACE "extern NAME##_t NAME"
+                 "extern __declspec(dllimport) NAME##_t NAME"
+                 _gmo_import_header "${_gmo_import_header}")
+  file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/gmomcc-import.h" "${_gmo_import_header}")
+  target_include_directories(${TEST_EXE_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+endif()
 target_link_libraries(${TEST_EXE_NAME} ${libs} SHOTBuildSettings)
 
 target_include_directories(${TEST_EXE_NAME} PRIVATE
@@ -522,12 +532,19 @@ if(TARGET SHOTpy)
 
       foreach(pytest_path ${PYTHON_TEST_PATHS})
         get_filename_component(pytest_file ${pytest_path} NAME_WE)
+        set(pytest_selection)
+
+        if(pytest_file STREQUAL "test_optimization_problems")
+          set(pytest_selection -k "not _gams")
+        endif()
+
         add_test(
           NAME Python_${pytest_file}
           COMMAND ${Python3_EXECUTABLE} -m pytest 
                   ${CMAKE_CURRENT_BINARY_DIR}/python/${pytest_file}.py
                   -v
                   --tb=short
+                  ${pytest_selection}
           WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
         )
         # pytest returns 5 when no test was collected, e.g., when a file is skipped since it only applies to an
@@ -540,8 +557,28 @@ if(TARGET SHOTpy)
         )
       endforeach()
 
-      # Solving with GAMS as the NLP solver takes several seconds per problem, since GAMS is started for every NLP
-      # problem, so these tests take about as long as all the others together
+      # GAMS starts an external process for each NLP solve. Give each MIP backend its own CTest entry and timeout,
+      # rather than making the entire backend matrix share one timeout.
+      if(HAS_GAMS)
+        foreach(mip_solver CBC CPLEX GUROBI HIGHS)
+          if(HAS_${mip_solver})
+            string(TOLOWER "${mip_solver}" mip_solver_name)
+            set(gams_test "Python_test_optimization_problems_GAMS_${mip_solver}")
+            add_test(
+              NAME ${gams_test}
+              COMMAND ${Python3_EXECUTABLE} -m pytest
+                      ${CMAKE_CURRENT_BINARY_DIR}/python/test_optimization_problems.py
+                      -v --tb=short -k "_${mip_solver_name}_gams"
+              WORKING_DIRECTORY ${CMAKE_BINARY_DIR})
+            set_tests_properties(${gams_test} PROPERTIES
+              ENVIRONMENT "PYTHONPATH=${CMAKE_BINARY_DIR};SHOT_TUTORIAL_NOTEBOOK=${PROJECT_SOURCE_DIR}/docs/SHOTpy_Tutorial.ipynb"
+              FAIL_REGULAR_EXPRESSION "FAILED;ERROR"
+              SKIP_RETURN_CODE 5
+              TIMEOUT 900)
+          endif()
+        endforeach()
+      endif()
+
       set_tests_properties(Python_test_optimization_problems PROPERTIES TIMEOUT 900)
       
     else()

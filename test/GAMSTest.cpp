@@ -8,6 +8,10 @@
    Please see the README and LICENSE files for more information.
 */
 
+#if defined(_MSC_VER)
+#include "gmomcc-import.h"
+#endif
+
 #include "../src/Callback.h"
 #include "../src/Environment.h"
 #include "../src/PrimalSolver.h"

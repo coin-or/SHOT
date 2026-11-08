@@ -190,6 +190,10 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- Native MSVC builds with tests enabled link correctly with HiGHS and GAMS.
+  Regression tests explicitly select the intended reformulations and Python
+  backends, account for constraint scaling, and run GAMS optimization cases
+  with Ipopt in separate CTest groups per MIP backend ([#309]).
 - Python wheels preserve external solver license notices on Linux and
   macOS as well as Windows ([#308]).
 - SHOT builds with `CMAKE_BUILD_TYPE=RelWithDebInfo`; configuring the bundled
@@ -578,6 +582,7 @@ Changes since SHOT 1.1.
 [#306]: https://github.com/coin-or/SHOT/pull/306
 [#307]: https://github.com/coin-or/SHOT/pull/307
 [#308]: https://github.com/coin-or/SHOT/pull/308
+[#309]: https://github.com/coin-or/SHOT/pull/309
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
