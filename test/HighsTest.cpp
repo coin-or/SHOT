@@ -31,7 +31,7 @@ using namespace SHOT;
 
 namespace SHOT
 {
-extern HighsCallbackFunctionType highsCallback;
+extern DllExport HighsCallbackFunctionType highsCallback;
 }
 
 bool HighsCallbackTimeLimitTest()

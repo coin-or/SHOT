@@ -1199,6 +1199,8 @@ bool EqualityConstraintTestBilinear(ES_MIPSolver mipSolver, ES_QuadraticProblemS
     solver->updateSetting("Model.Reformulation.Quadratics.Strategy", static_cast<int>(quadraticStrategy));
 
     // The bilinear terms are otherwise kept in the constraints
+    solver->updateSetting("Model.Reformulation.Constraint.PartitionQuadraticTerms",
+        static_cast<int>(ES_PartitionNonlinearSums::Always));
     solver->updateSetting("Model.Reformulation.Quadratics.ExtractStrategy",
         static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractToEqualityConstraintIfNonconvex));
 

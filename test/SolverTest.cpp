@@ -2967,6 +2967,8 @@ bool TestNoFixedIntegerNLPForReformulatedMILP()
     auto env = solver->getEnvironment();
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
     solver->updateSetting("Termination.TimeLimit", 60.0);
+    solver->updateSetting("Model.Reformulation.Quadratics.Strategy",
+        static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
 
     auto problem = std::make_shared<Problem>(env);
     problem->name = "binaryproducts";
