@@ -10,6 +10,9 @@ Changes since SHOT 1.1.
 
 ### Breaking changes
 
+- macOS ARM64 wheels and standalone packages require macOS 15 or newer.
+  The previous deployment target, macOS 14, did not match the bundled
+  Fortran runtimes ([#308]).
 - Gurobi builds require version 10.0 or newer ([#299]).
 - Settings are updated with `updateSetting("Category.Name", value)` instead
   of `updateSetting(name, category, value)`, and a priority decides which
@@ -44,6 +47,11 @@ Changes since SHOT 1.1.
 
 ### Added
 
+- Standalone executable archives for Linux x86_64 and ARM64, macOS ARM64,
+  and Windows x64, with HiGHS, Cbc, Ipopt, solver licenses and SHA-256
+  checksums. Python and pip are not required. The archives are extracted
+  from repaired wheels, tested on fresh runners, and attached to tagged
+  GitHub releases; manual builds provide them as Actions artifacts ([#308]).
 - `Primal.FixedInteger.MaxStartsPerCall` limits the number of dual-pool
   starting points used per NLP call to five by default; zero allows all starts
   ([#306]).
@@ -182,6 +190,8 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- Python wheels preserve external solver license notices on Linux and
+  macOS as well as Windows ([#308]).
 - SHOT builds with `CMAKE_BUILD_TYPE=RelWithDebInfo`; configuring the bundled
   CppAD failed for this build type ([#307]).
 - Floating-point checks explicitly use `std::abs`. Depending on the included
@@ -567,6 +577,7 @@ Changes since SHOT 1.1.
 [#303]: https://github.com/coin-or/SHOT/pull/303
 [#306]: https://github.com/coin-or/SHOT/pull/306
 [#307]: https://github.com/coin-or/SHOT/pull/307
+[#308]: https://github.com/coin-or/SHOT/pull/308
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
