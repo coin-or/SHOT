@@ -63,6 +63,15 @@ constraints. Convex objective support means convex minimization or concave
 maximization. Strategy selection consumes the existing model classifications
 and checks the complete reformulated model, including combinations of features.
 
+Supported quadratic parts are retained by default also when the same objective
+or constraint contains higher-degree terms. For example, Gurobi can keep
+nonconvex binary quadratic terms while cubic and quartic binary products are
+linearized. Explicit `Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms`
+and `Model.Reformulation.Constraint.PartitionQuadraticTerms` settings still
+control partitioning when these mixed functions are reformulated.
+An explicit request to reformulate integer bilinear terms also takes precedence
+over default native quadratic retention.
+
 CPLEX supports nonconvex quadratic objectives globally with linear constraints,
 and convex quadratic constraints with compatible objectives. The combination
 of a nonconvex objective and quadratic constraints is not generally supported.
@@ -130,3 +139,8 @@ semi-variable domains, construction failures, finalization, and unavailable
 backend fallback. `StrategySelection` freezes expected routes independently of
 the capability definitions. Set `SHOT_STRATEGY_SNAPSHOT=1` when running those
 tests to print routing and reformulated-model statistics for comparisons.
+
+The strategy matrix also covers explicit quadratic modes, partitioning choices,
+and forced integer-bilinear reformulation across all four backends. Mixed
+quadratic/cubic/quartic models are checked at every binary assignment, with
+direct-solve objective values and bounds compared against exhaustive enumeration.

@@ -177,6 +177,10 @@ Changes since SHOT 1.1.
 - Nonconvex quadratic constraints retain their quadratic terms when the MIP
   backend and quadratic strategy support them, including Gurobi's recommended
   strategy for binary quadratic models ([#301]).
+- Supported quadratic parts are retained by default in objectives and
+  constraints containing higher-degree terms when the MIP backend supports
+  them. Explicit partitioning and integer-bilinear reformulation settings
+  still take precedence ([#302]).
 - Complete MILP reformulations are solved directly by the MIP backend to its
   optimality tolerances, without SHOT's single-tree callbacks or initial LP
   relaxation. Models with a `HyperplaneSelection` callback retain the tree
@@ -532,6 +536,7 @@ Changes since SHOT 1.1.
 [#298]: https://github.com/coin-or/SHOT/pull/298
 [#299]: https://github.com/coin-or/SHOT/pull/299
 [#301]: https://github.com/coin-or/SHOT/pull/301
+[#302]: https://github.com/coin-or/SHOT/pull/302
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
