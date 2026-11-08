@@ -1225,6 +1225,9 @@ std::set<E_SettingCondition> Solver::getSettingConditions(ProblemPtr problem)
     if(problem->properties.convexity != E_ProblemConvexity::Convex)
         conditions.insert(E_SettingCondition::Nonconvex);
 
+    if(!problem->properties.isDiscrete)
+        conditions.insert(E_SettingCondition::Continuous);
+
     switch(static_cast<ES_MIPSolver>(env->settings->getSetting<int>("Dual.MIP.Solver")))
     {
     case ES_MIPSolver::Cplex:

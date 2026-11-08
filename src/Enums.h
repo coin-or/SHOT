@@ -224,7 +224,8 @@ enum class E_SettingCondition
     MIPSolverCplex,
     MIPSolverGurobi,
     MIPSolverCbc,
-    MIPSolverHighs
+    MIPSolverHighs,
+    Continuous
 };
 
 enum class E_SolutionStrategy
