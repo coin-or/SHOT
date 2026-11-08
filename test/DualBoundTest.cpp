@@ -1305,9 +1305,10 @@ bool testUpdatedObjectiveBounds(ES_MIPSolver mipSolver, const std::string& filen
 // variable is the denominator of a nonlinear constraint, the constraint is then fulfilled by a large margin, so the
 // point would be accepted as a primal solution and no cut would be generated. Projected onto the bounds, it violates
 // the constraint.
-bool testPointsAreProjectedOntoVariableBounds()
+bool testPointsAreProjectedOntoVariableBounds(ES_MIPSolver mipSolver)
 {
     auto solver = std::make_unique<Solver>();
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
 
     if(!solver->setProblem("data/instances/minlp_tests_jl/nlp-cvx_204_010.jl.nl"))
@@ -1320,10 +1321,11 @@ bool testPointsAreProjectedOntoVariableBounds()
 
     bool passed = true;
 
-    auto check = [&](bool condition, const std::string& description) {
+    auto check = [&](bool condition, const std::string& description)
+    {
         if(!condition)
         {
-            std::cout << description << '\n';
+            std::cout << name(mipSolver) << ": " << description << '\n';
             passed = false;
         }
     };
@@ -1331,9 +1333,13 @@ bool testPointsAreProjectedOntoVariableBounds()
     // The point of the relaxation where the variable in the denominator is below its lower bound of zero
     VectorDouble point { 0.707105225075729, 0.707108337327129, -7.9853901269189e-11 };
 
+    // Backends without quadratic constraint support introduce auxiliary variables for the square terms.
+    // Their defining constraints are fulfilled at equality after augmenting the point.
+    problem->augmentAuxiliaryVariableValues(point);
+
     auto unprojected = problem->getMaxNumericConstraintValue(point, problem->nonlinearConstraints);
 
-    check(unprojected.normalizedValue < 0.0,
+    check(unprojected.normalizedValue <= 0.0,
         "the nonlinear constraint is not fulfilled before the projection, so the test does not cover the case");
 
     problem->projectOntoVariableBounds(point);
@@ -1549,7 +1555,8 @@ int DualBoundTest(int argc, char* argv[])
         break;
     case 19:
         std::cout << "Starting test that points are projected onto the variable bounds:\n";
-        passed = testPointsAreProjectedOntoVariableBounds();
+        for(auto mipSolver : compiledSolvers())
+            passed = testPointsAreProjectedOntoVariableBounds(mipSolver) && passed;
         std::cout << "Finished test that points are projected onto the variable bounds.\n";
         break;
     case 20:
