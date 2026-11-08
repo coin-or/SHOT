@@ -316,10 +316,10 @@ bool MIPSolverBase::scaleHyperplaneTerms(std::pair<std::map<int, double>, double
     // Considers both the RHS and the linear term coefficients, since a cut gradient evaluated far out on a loosely
     // bounded nonlinear term (e.g. exp() of a large argument) can have large coefficients even when the RHS itself is
     // modest, and handing such a cut to the MIP solver as-is can crash or numerically break it.
-    double maxAbsCutValue = abs(terms.second);
+    double maxAbsCutValue = std::abs(terms.second);
 
     for(auto& E : terms.first)
-        maxAbsCutValue = std::max(maxAbsCutValue, abs(E.second));
+        maxAbsCutValue = std::max(maxAbsCutValue, std::abs(E.second));
 
     if(maxAbsCutValue <= 1e9)
         return (false);

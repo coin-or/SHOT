@@ -573,8 +573,14 @@ ExternalProject_Add(spdlog
 )
 
 # Adding CppAD using as an external project
+# CppAD rejects RelWithDebInfo (its check compares a lowercased build type with
+# a mixed-case name), and only distinguishes Debug from optimized builds anyway.
+set(CPPAD_BUILD_TYPE "${CMAKE_BUILD_TYPE}")
+if(CMAKE_BUILD_TYPE AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(CPPAD_BUILD_TYPE Release)
+endif()
 set(CPPAD_CMAKE_ARGS
-    -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    -DCMAKE_BUILD_TYPE=${CPPAD_BUILD_TYPE}
     -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
     -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
     -DCMAKE_POLICY_VERSION_MINIMUM=3.5

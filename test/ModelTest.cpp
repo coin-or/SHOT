@@ -711,6 +711,26 @@ bool ModelTestNonlinearExpressions()
     if(value != realValue)
         passed = false;
 
+    // Fractional powers sharing a variable must retain their values when terms are extracted during finalization.
+    auto fractionalPowers = std::make_shared<ExpressionSum>(
+        std::make_shared<ExpressionPower>(expressionVariable_x, std::make_shared<ExpressionConstant>(1.5)),
+        std::make_shared<ExpressionPower>(expressionVariable_x, std::make_shared<ExpressionConstant>(2.5)));
+    auto fractionalObjective = std::make_shared<NonlinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    fractionalObjective->add(fractionalPowers);
+    problem->add(fractionalObjective);
+    problem->finalize();
+
+    for(double x : { 4.0, 9.0 })
+    {
+        double expected = std::pow(x, 1.5) + std::pow(x, 2.5);
+
+        if(std::abs(problem->objectiveFunction->calculateValue(VectorDouble { x, 0.0 }) - expected) > 1e-10)
+        {
+            std::cout << "FAILED: finalization changed the value of fractional powers at x = " << x << '\n';
+            passed = false;
+        }
+    }
+
     return passed;
 }
 
@@ -1590,6 +1610,27 @@ bool ModelTestConvexity()
         break;
     default:
         break;
+    }
+
+    // Tangent convexity is unknown when a narrow interval contains a pole or its period cannot be resolved.
+    for(auto bounds : { Interval(1.5, 1.6), Interval(-1.6, -1.5), Interval(1e9, 1e9 + 0.1) })
+    {
+        auto variable = std::make_shared<Variable>("t", E_VariableType::Real, bounds.l(), bounds.u());
+        auto tangent = std::make_shared<ExpressionTan>(std::make_shared<ExpressionVariable>(variable));
+
+        try
+        {
+            if(tangent->getConvexity() != E_Convexity::Unknown)
+            {
+                std::cout << "FAILED: incorrect tangent convexity on [" << bounds.l() << ", " << bounds.u() << "]\n";
+                passed = false;
+            }
+        }
+        catch(const IntervalError&)
+        {
+            std::cout << "FAILED: tangent convexity threw on [" << bounds.l() << ", " << bounds.u() << "]\n";
+            passed = false;
+        }
     }
 
     return passed;
@@ -3544,7 +3585,7 @@ bool ModelTestSquareRootReformulation()
             }
 
             // Check bounds were squared correctly (5^2 = 25)
-            if(abs(linConstr->valueRHS - 25.0) > 1e-6)
+            if(std::abs(linConstr->valueRHS - 25.0) > 1e-6)
             {
                 std::cout << "FAILED: Expected RHS=25 after squaring in 'sqrtlinearconstr', got " << linConstr->valueRHS
                           << '\n';
@@ -3605,7 +3646,7 @@ bool ModelTestSquareRootReformulation()
         }
 
         // Check bounds were squared correctly (10^2 = 100)
-        if(abs(mainQuadConstraint->valueRHS - 100.0) > 1e-6)
+        if(std::abs(mainQuadConstraint->valueRHS - 100.0) > 1e-6)
         {
             std::cout << "FAILED: Expected RHS=100 after squaring, got " << mainQuadConstraint->valueRHS << '\n';
             passed = false;

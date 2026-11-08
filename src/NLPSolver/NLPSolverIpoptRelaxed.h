@@ -19,6 +19,7 @@ public:
     NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, ProblemPtr source);
     ~NLPSolverIpoptRelaxed() override = default;
 
+    using NLPSolverIpoptBase::getSolution;
     VectorDouble getSolution() override;
 
 protected:

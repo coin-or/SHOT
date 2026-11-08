@@ -1733,13 +1733,13 @@ bool Problem::areIntegralityConstraintsFulfilled(const VectorDouble& point, doub
 {
     for(auto& V : integerVariables)
     {
-        if(abs(point.at(V->getIndex()) - round(point.at(V->getIndex()))) > tolerance)
+        if(std::abs(point.at(V->getIndex()) - round(point.at(V->getIndex()))) > tolerance)
             return false;
     }
 
     for(auto& V : semiintegerVariables)
     {
-        if(abs(point.at(V->getIndex()) - round(point.at(V->getIndex()))) > tolerance)
+        if(std::abs(point.at(V->getIndex()) - round(point.at(V->getIndex()))) > tolerance)
             return false;
     }
 
@@ -1773,7 +1773,7 @@ bool Problem::areSpecialOrderedSetsFulfilled(const VectorDouble& point, double t
 
             for(auto& V : S->variables)
             {
-                if(abs(point.at(V->getIndex())) > tolerance)
+                if(std::abs(point.at(V->getIndex())) > tolerance)
                 {
                     if(found)
                         return false;
@@ -1789,7 +1789,7 @@ bool Problem::areSpecialOrderedSetsFulfilled(const VectorDouble& point, double t
 
             for(size_t i = 0; i < S->variables.size(); i++)
             {
-                if(abs(point.at(S->variables[i]->getIndex())) > tolerance)
+                if(std::abs(point.at(S->variables[i]->getIndex())) > tolerance)
                 {
                     if(numFound == 0)
                     {

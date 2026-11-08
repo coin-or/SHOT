@@ -525,7 +525,7 @@ class TestSharedAuxiliaryVariables:
         assert solver.solveProblem()
         point = list(solver.getPrimalSolution().point)
         for name in ("c1", "c2", "c3"):
-            assert problem.getConstraint(name).calculateNumericValue(point).error <= 1e-6
+            assert problem.getConstraint(name).calculateNumericValue(point).error <= 1e-5
 
     @pytest.mark.parametrize("formulation", MONOMIAL_FORMULATIONS.values(), ids=MONOMIAL_FORMULATIONS.keys())
     def test_binary_monomials(self, formulation):

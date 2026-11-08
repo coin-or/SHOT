@@ -182,6 +182,15 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- SHOT builds with `CMAKE_BUILD_TYPE=RelWithDebInfo`; configuring the bundled
+  CppAD failed for this build type ([#307]).
+- Floating-point checks explicitly use `std::abs`. Depending on the included
+  headers, GCC could use integer `abs` and treat, e.g., a power 1.5 as linear
+  and 2.5 as quadratic ([#307]).
+- The convexity of the tangent of an interval containing a pole is unknown;
+  the interval error was not caught ([#307]).
+- The Gurobi interface passes empty arrays without accessing their first
+  element when adding special ordered sets or repairing infeasibility ([#307]).
 - HiGHS model-loading messages no longer bypass SHOT's console output settings,
   including when creating internal feasibility and repair models ([#303]).
 - HiGHS distinguishes unbounded from infeasible MILPs by checking integer
@@ -557,6 +566,7 @@ Changes since SHOT 1.1.
 [#304]: https://github.com/coin-or/SHOT/pull/304
 [#303]: https://github.com/coin-or/SHOT/pull/303
 [#306]: https://github.com/coin-or/SHOT/pull/306
+[#307]: https://github.com/coin-or/SHOT/pull/307
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e

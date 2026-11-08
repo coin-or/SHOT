@@ -505,7 +505,7 @@ bool MIPSolverGurobi::addSpecialOrderedSet(E_SOSType type, VectorInteger variabl
 
         assert(variableWeights.size() == variableIndexes.size());
 
-        gurobiModel->addSOS(&variables[0], &variableWeights[0], variables.size(),
+        gurobiModel->addSOS(variables.data(), variableWeights.data(), variables.size(),
             (type == E_SOSType::One) ? GRB_SOS_TYPE1 : GRB_SOS_TYPE2);
     }
     catch(GRBException& e)
@@ -1124,7 +1124,7 @@ bool MIPSolverGurobi::repairInfeasibility()
         int numConstraintsToRepairOrig = numConstraintsToRepair;
 
         if(feasModel.feasRelax(GRB_FEASRELAX_LINEAR, false, 0, nullptr, nullptr, nullptr, numConstraintsToRepair,
-               &repairConstraints[0], &relaxParameters[0])
+               repairConstraints.data(), relaxParameters.data())
             < 0)
         {
             env->output->outputDebug("        Could not repair the infeasible dual problem.");
