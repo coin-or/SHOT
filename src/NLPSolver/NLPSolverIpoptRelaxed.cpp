@@ -29,9 +29,11 @@ NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, ProblemPtr s
     ipoptProblem = new IpoptProblem(env, sourceProblem);
     ipoptApplication = new Ipopt::IpoptApplication(false);
 
-    Ipopt::SmartPtr<Ipopt::Journal> jrnl = new IpoptJournal(envPtr, "console", Ipopt::J_ALL);
+    // Holding the journal by its own type keeps GCC from warning about reading outside the object in an inlined
+    // destructor of another journal class, which it assumes as a possible type of an Ipopt::Journal
+    Ipopt::SmartPtr<IpoptJournal> jrnl = new IpoptJournal(envPtr, "console", Ipopt::J_ALL);
     jrnl->SetPrintLevel(Ipopt::J_DBG, Ipopt::J_NONE);
-    if(!ipoptApplication->Jnlst()->AddJournal(jrnl))
+    if(!ipoptApplication->Jnlst()->AddJournal(Ipopt::GetRawPtr(jrnl)))
         envPtr->output->outputError("        Failed to register IpoptJournal for IPOPT output.");
 
     setInitialSettings();

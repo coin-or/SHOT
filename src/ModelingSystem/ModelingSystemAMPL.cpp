@@ -768,7 +768,7 @@ ModelingSystemAMPL::ModelingSystemAMPL(EnvironmentPtr envPtr) : IModelingSystem(
 
 ModelingSystemAMPL::~ModelingSystemAMPL() = default;
 
-void ModelingSystemAMPL::augmentSettings(SettingsPtr settings)
+void ModelingSystemAMPL::augmentPrivateSettings(SettingsPtr settings)
 {
     settings->createSetting(
         "ModelingSystem.AMPL.OptionsHeader", std::string("0\n"), "The AMPL options header for the solution file", true);
@@ -792,7 +792,7 @@ E_ProblemCreationStatus ModelingSystemAMPL::createProblem(ProblemPtr& problem, c
 
     fs::filesystem::path problemFile(filename);
 
-    VectorDouble initialValues;
+    startingPoint.clear();
 
     try
     {
@@ -820,7 +820,7 @@ E_ProblemCreationStatus ModelingSystemAMPL::createProblem(ProblemPtr& problem, c
                 hasAny = true;
         }
         if(hasAny)
-            initialValues = std::move(handler.initialValues);
+            startingPoint = std::move(handler.initialValues);
     }
     catch(const std::exception& e)
     {
@@ -872,8 +872,6 @@ E_ProblemCreationStatus ModelingSystemAMPL::createProblem(ProblemPtr& problem, c
     problem->finalize();
 
     env->problem = problem;
-    if(!initialValues.empty())
-        env->primalSolver->addPrimalSolutionCandidate(initialValues, E_PrimalSolutionSource::ExternalPrimalSolution, 0);
 
     env->timing->stopTimer("ProblemInitialization");
     return (E_ProblemCreationStatus::NormalCompletion);

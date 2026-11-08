@@ -157,6 +157,9 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
 #endif
     }
 
+    // A new MIP solver has no cutoff yet
+    env->dualSolver->cutOffInMIPSolver.reset();
+
     if(!env->dualSolver->MIPSolver->initializeProblem())
         throw Exception(" Cannot initialize selected MIP solver.");
 

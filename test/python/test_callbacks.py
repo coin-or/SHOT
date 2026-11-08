@@ -11,6 +11,7 @@ class for the location, which has the state of the solver and the actions availa
   - CallbackLocation.TerminationCheck       TerminationCheckContext
   - CallbackLocation.HyperplaneSelection    HyperplaneSelectionContext
   - CallbackLocation.BoundsUpdated          BoundsUpdatedContext
+  - CallbackLocation.BoundTightening        BoundTighteningContext
 """
 
 import pytest
@@ -209,6 +210,7 @@ class TestCallbackLocationEnum:
         "TerminationCheck",
         "HyperplaneSelection",
         "BoundsUpdated",
+        "BoundTightening",
     ]
 
     def test_location_values(self):
@@ -268,6 +270,9 @@ class TestContextClasses:
             "TerminationCheckContext": [],
             "BoundsUpdatedContext": ["previousPrimalBound", "previousDualBound", "previousGlobalDualBound",
                                      "primalBoundChanged", "dualBoundChanged", "globalDualBoundChanged"],
+            "BoundTighteningContext": ["problem", "isReformulatedProblem", "variableLowerBounds",
+                                       "variableUpperBounds", "setVariableBounds", "proposedVariableLowerBounds",
+                                       "proposedVariableUpperBounds"],
         }
         for name, attrs in expected.items():
             cls = getattr(SHOTpy, name)
@@ -1774,6 +1779,98 @@ class TestCallbackFailure:
         assert solver.getTerminationReason() == SHOTpy.TerminationReason.Error
 
 
+class TestBoundTighteningCallback:
+    """The BoundTightening callback is called in setProblem(), for the original and then the reformulated problem.
+
+    Bound tightening gives x1 <= 1.2 in the test problem, whose model bounds are [0, 10], and its optimum 4.5796 is at
+    x = (0.2, 0.8, 1.908) and b = (1, 1, 0, 1).
+    """
+
+    def test_called_for_original_and_reformulated_problem(self, solver, env):
+        import SHOTpy
+
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        calls = []
+
+        def callback(ctx):
+            assert isinstance(ctx, SHOTpy.BoundTighteningContext)
+            calls.append((ctx.isReformulatedProblem, ctx.reformulatedProblem is None,
+                          len(ctx.variableLowerBounds), ctx.variableUpperBounds[0]))
+
+        solver.registerCallback(SHOTpy.CallbackLocation.BoundTightening, callback)
+        solver.setProblem(build_ex1223b(env))
+
+        assert len(calls) == 2
+        assert calls[0][:3] == (False, True, 7)
+        assert calls[1][0] is True and calls[1][1] is False and calls[1][2] >= 7
+        assert calls[0][3] == pytest.approx(1.2) and calls[1][3] == pytest.approx(1.2)
+
+    def test_only_bounds_from_callback_without_bound_tightening(self, solver, env):
+        import SHOTpy
+
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        solver.updateSetting("Model.BoundTightening.FeasibilityBased.Use", False)
+        seen = {}
+
+        def callback(ctx):
+            if ctx.isReformulatedProblem:
+                seen["reformulated"] = (ctx.variableLowerBounds, ctx.variableUpperBounds)
+                ctx.setVariableBounds(1, 0.0, 0.5)  # also a bound in the original problem
+                return
+            seen["model"] = ctx.variableUpperBounds[0]
+            # x1, x2 and x3 share constraints, and the bounds cut off the optimum
+            ctx.setVariableBounds(0, -math.inf, 0.5)
+            ctx.setVariableBounds(2, 0.2, 1.4)
+            ctx.setVariableBounds(3, 0.3, 1.0)  # rounded to [1, 1]
+            assert ctx.proposedVariableLowerBounds[3] == 1.0
+
+        solver.registerCallback(SHOTpy.CallbackLocation.BoundTightening, callback)
+        solver.setProblem(build_ex1223b(env))
+
+        assert seen["model"] == 10.0
+        lower, upper = seen["reformulated"]
+        assert (lower[0], upper[0], lower[2], upper[2], lower[3]) == (0.0, 0.5, 0.2, 1.4, 1.0)
+
+        variables = solver.getOriginalProblem().allVariables
+        assert variables[1].upperBound == 0.5
+
+        solver.solveProblem()
+        point = solver.getPrimalSolution().point
+        assert point[0] <= 0.5 + 1e-6 and point[1] <= 0.5 + 1e-6 and 0.2 - 1e-6 <= point[2] <= 1.4 + 1e-6
+        assert point[3] == pytest.approx(1.0)
+        assert solver.getPrimalBound() > 4.58
+
+    def test_invalid_bounds(self, solver, env):
+        import SHOTpy
+
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        rejected = []
+
+        def callback(ctx):
+            for args in [(0, 1.0, 0.5), (0, math.nan, 0.5), (-1, 0.0, 1.0), ([0.0] * 6, [0.0] * 6),
+                         (3, 0.2, 0.8), (0, 2.0, 3.0)]:
+                with pytest.raises(ValueError):
+                    ctx.setVariableBounds(*args)
+                rejected.append(args)
+
+        solver.registerCallback(SHOTpy.CallbackLocation.BoundTightening, callback)
+        solver.setProblem(build_ex1223b(env))
+        assert len(rejected) == 12  # six for each problem
+
+    def test_exception_is_raised_by_set_problem(self, solver, env):
+        import SHOTpy
+
+        solver.updateSetting("Output.Console.LogLevel", 6)
+
+        def callback(ctx):
+            ctx.setVariableBounds(0, 2.0, 3.0)  # does not intersect x1 <= 1.2
+
+        solver.registerCallback(SHOTpy.CallbackLocation.BoundTightening, callback)
+
+        with pytest.raises(ValueError, match="do not intersect"):
+            solver.setProblem(build_ex1223b(env))
+
+
 class TestThreads:
     """Python callbacks called from the threads of a multithreaded MIP solver do not deadlock."""
 
@@ -1949,6 +2046,30 @@ class TestCallbackESHInteriorPoint:
         assert points_received[0] > 0, (
             "Callback fired but received no interior points from the internal strategy"
         )
+
+    @pytest.mark.parametrize("backend,available", [
+        (0, "HAS_CPLEX"), (1, "HAS_GUROBI"), (2, "HAS_CBC"), (3, "HAS_HIGHS"),
+    ])
+    def test_internal_strategy_finds_point_with_each_mip_solver(self, backend, available):
+        """The minimax problem of shot_ex_jogo, which Gurobi's presolve reports as infeasible or unbounded since its
+        objective variable has a lower bound of -1e12, gives an interior point with every MIP solver."""
+        import SHOTpy
+
+        if not getattr(SHOTpy, available):
+            pytest.skip(f"SHOT was not built with {available[4:]}")
+
+        solver = SHOTpy.Solver()
+        solver.updateSetting("Output.Console.LogLevel", 6)
+        solver.updateSetting("Dual.MIP.Solver", backend)
+        solver.setProblem(build_shot_ex_jogo(solver.getEnvironment()))
+
+        points_received = []
+        solver.registerCallback(SHOTpy.CallbackLocation.InteriorPointSearch,
+                                lambda ctx: points_received.append(len(ctx.interiorPoints)))
+        assert solver.solveProblem()
+
+        assert points_received and points_received[0] > 0, "The internal strategy found no interior point"
+        assert abs(solver.getPrimalBound() - JOGO_KNOWN_OBJ) < 1e-3
 
     def test_callback_only_external_strategy(self):
         """Two-phase test: extract interior point, then inject via OnlyExternal strategy.

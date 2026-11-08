@@ -340,18 +340,18 @@
         },
         {
             "file": "nlp-cvx_501_010.jl.nl",
-            "objective": -1.0,
-            "description": "nD convex NLP mathematical property test; only one NL file available for parametric family"
+            "objective": -4.47213595499958,
+            "description": "nD convex NLP mathematical property test; only one NL file available for parametric family (n = 20)"
         },
         {
             "file": "nlp-cvx_501_011.jl.nl",
-            "objective": -1.0,
-            "description": "nD convex NLP mathematical property test (variant); only one NL file available for parametric family"
+            "objective": -4.47213595499958,
+            "description": "nD convex NLP mathematical property test (variant); only one NL file available for parametric family (n = 20)"
         },
         {
             "file": "nlp-mi_001_010.jl.nl",
-            "objective": -1.35787195018718,
-            "description": "Nonconvex MINLP with integer variables and partial starting values"
+            "objective": -1.3678794411714423,
+            "description": "Nonconvex MINLP with integer variables and partial starting values. The objective is the infimum -1/e - 1, which cos(i) approaches over the integers; MINLPTests.jl gives the local optimum -1.35787195018718 at i = 3"
         },
         {
             "file": "nlp-mi_002_010.jl.nl",

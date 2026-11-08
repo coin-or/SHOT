@@ -23,14 +23,11 @@
 namespace SHOT
 {
 
-void PrimalSolver::addPrimalSolutionCandidate(VectorDouble pt, E_PrimalSolutionSource source, int iter)
+bool PrimalSolver::addPrimalSolutionCandidate(VectorDouble pt, E_PrimalSolutionSource source, int iter)
 {
     // Only keep variables from the original problem (remove auxiliary variables from reformulated problem)
     if((int)pt.size() > env->problem->properties.numberOfVariables)
         pt.resize(env->problem->properties.numberOfVariables);
-
-    if(source == E_PrimalSolutionSource::ExternalPrimalSolution)
-        startingPointsForNLP.push_back(pt);
 
     PrimalSolution sol;
 
@@ -55,7 +52,7 @@ void PrimalSolver::addPrimalSolutionCandidate(VectorDouble pt, E_PrimalSolutionS
 
     env->primalSolver->primalSolutionCandidates.push_back(sol);
 
-    this->checkPrimalSolutionCandidates();
+    return this->checkPrimalSolutionCandidates();
 }
 
 void PrimalSolver::addPrimalSolutionCandidates(std::vector<VectorDouble> pts, E_PrimalSolutionSource source, int iter)
@@ -66,7 +63,7 @@ void PrimalSolver::addPrimalSolutionCandidates(std::vector<VectorDouble> pts, E_
     }
 }
 
-void PrimalSolver::addPrimalSolutionCandidate(SolutionPoint pt, E_PrimalSolutionSource source)
+bool PrimalSolver::addPrimalSolutionCandidate(SolutionPoint pt, E_PrimalSolutionSource source)
 {
     // Only keep variables from the original problem (remove auxiliary variables from reformulated problem)
     if((int)pt.point.size() > env->problem->properties.numberOfVariables)
@@ -81,7 +78,7 @@ void PrimalSolver::addPrimalSolutionCandidate(SolutionPoint pt, E_PrimalSolution
 
     env->primalSolver->primalSolutionCandidates.push_back(sol);
 
-    this->checkPrimalSolutionCandidates();
+    return this->checkPrimalSolutionCandidates();
 }
 
 void PrimalSolver::addPrimalSolutionCandidates(std::vector<SolutionPoint> pts, E_PrimalSolutionSource source)
@@ -92,9 +89,11 @@ void PrimalSolver::addPrimalSolutionCandidates(std::vector<SolutionPoint> pts, E
     }
 }
 
-void PrimalSolver::checkPrimalSolutionCandidates()
+bool PrimalSolver::checkPrimalSolutionCandidates()
 {
     env->timing->startTimer("PrimalStrategy");
+
+    bool isAccepted = false;
 
     for(auto& cand : env->primalSolver->primalSolutionCandidates)
     {
@@ -116,13 +115,19 @@ void PrimalSolver::checkPrimalSolutionCandidates()
             context->invalidate();
         }
 
-        if(checkCandidate)
-            this->checkPrimalSolutionPoint(cand);
+        isAccepted = checkCandidate && this->checkPrimalSolutionPoint(cand);
+
+        // An external point, e.g., the starting point of the model, is a starting point for the NLP solver only if it
+        // is not a primal solution itself, so that the NLP problem can repair a point that is almost feasible
+        if(!isAccepted && cand.sourceType == E_PrimalSolutionSource::ExternalPrimalSolution)
+            startingPointsForNLP.push_back(cand.point);
     }
 
     env->primalSolver->primalSolutionCandidates.clear();
 
     env->timing->stopTimer("PrimalStrategy");
+
+    return isAccepted;
 }
 
 bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
@@ -452,10 +457,10 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     // For example rootsearches may violate linear constraints
     // An interior point is not trusted, since it can be a point moved toward the center of the variable bounds when
     // the minimax problem gave no usable one (TaskFindInteriorPoint), which need not fulfill any linear constraint
-    bool acceptableType = (primalSol.sourceType == E_PrimalSolutionSource::MIPSolutionPool
-        || primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers
-        || primalSol.sourceType == E_PrimalSolutionSource::LPFixedIntegers
-        || primalSol.sourceType == E_PrimalSolutionSource::MIPCallback);
+    // MIP solutions can violate the original linear constraints after numerical recovery. Callbacks may run before
+    // the iteration is marked repaired, so these points must always be checked, regardless of the repair flag.
+    bool acceptableType = (primalSol.sourceType == E_PrimalSolutionSource::NLPFixedIntegers
+        || primalSol.sourceType == E_PrimalSolutionSource::LPFixedIntegers);
 
     if(!primalSol.integerRoundingPerformed && !primalSol.boundProjectionPerformed && acceptableType
         && env->settings->getSetting<bool>("Primal.Tolerance.TrustLinearConstraintValues"))
@@ -465,7 +470,8 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     }
     else
     {
-        PairIndexValue mostDevLinearConstraints;
+        // Without linear constraints, the default value of the solution is kept
+        PairIndexValue mostDevLinearConstraints = primalSol.maxDeviatingConstraintLinear;
 
         if(env->problem->properties.numberOfLinearConstraints > 0)
         {
@@ -596,14 +602,16 @@ PrimalFixedNLPCandidate PrimalSolver::createFixedNLPCandidate(
 
     assert((int)candidate.size() == env->reformulatedProblem->properties.numberOfVariables);
 
-    VectorInteger discreteVariableValues;
+    // The values are rounded rather than truncated, so that values on either side of an integer within the tolerance
+    // give the same combination; they are kept as doubles since they may be outside the range of an int
+    VectorDouble discreteVariableValues;
     discreteVariableValues.reserve(env->reformulatedProblem->properties.numberOfDiscreteVariables);
 
     for(auto& VAR : env->reformulatedProblem->allVariables)
     {
         if(VAR->properties.type == E_VariableType::Binary || VAR->properties.type == E_VariableType::Integer
             || VAR->properties.type == E_VariableType::Semiinteger)
-            discreteVariableValues.push_back(candidate[VAR->getIndex()]);
+            discreteVariableValues.push_back(std::round(candidate[VAR->getIndex()]));
     }
 
     PairDouble pointHashes;

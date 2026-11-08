@@ -201,6 +201,8 @@ void Problem::updateConstraints()
 
             C->quadraticTerms.invalidateProperties();
 
+            C->properties.userFunctionConvexity = Utilities::negateConvexity(C->properties.userFunctionConvexity);
+
             C->constant *= -1.0;
         }
     }
@@ -237,6 +239,8 @@ void Problem::updateConstraints()
 
             C->signomialTerms.invalidateProperties();
 
+            C->properties.userFunctionConvexity = Utilities::negateConvexity(C->properties.userFunctionConvexity);
+
             if(C->nonlinearExpression)
                 // finalize() simplifies the expression when it extracts its terms. Avoid walking a large
                 // expression tree here as well just to standardize the constraint's bounds.
@@ -264,10 +268,20 @@ void Problem::updateConvexity()
         objectiveFunction->properties.convexity
             = (objectiveFunction->properties.isMinimize) ? E_Convexity::Convex : E_Convexity::Concave;
 
+    properties.isObjectiveConvexityUserSpecified
+        = objectiveFunction->properties.userFunctionConvexity != E_Convexity::NotSet
+        && objectiveFunction->properties.convexity
+            == (objectiveFunction->properties.isMinimize ? E_Convexity::Convex : E_Convexity::Concave);
+
+    properties.numberOfUserSpecifiedConvexConstraints = 0;
+
     for(auto& C : numericConstraints)
     {
         if(assumeConvex && C->properties.convexity != E_Convexity::Linear)
             C->properties.convexity = E_Convexity::Convex;
+
+        if(C->properties.userFunctionConvexity != E_Convexity::NotSet && C->properties.convexity == E_Convexity::Convex)
+            properties.numberOfUserSpecifiedConvexConstraints++;
     }
 
     if(assumeConvex)
@@ -1159,6 +1173,18 @@ std::vector<VariablePtr> Problem::getVariablesAtArtificialBounds(const VectorDou
     return (variables);
 }
 
+void Problem::projectOntoVariableBounds(VectorDouble& point)
+{
+    for(auto& V : allVariables)
+    {
+        if(V->getIndex() >= (int)point.size())
+            continue;
+
+        double& value = point[V->getIndex()];
+        value = std::max(V->lowerBound, std::min(V->upperBound, value));
+    }
+}
+
 bool Problem::hasArtificialBounds()
 {
     return (std::any_of(allVariables.begin(), allVariables.end(),
@@ -1707,13 +1733,13 @@ bool Problem::areIntegralityConstraintsFulfilled(const VectorDouble& point, doub
 {
     for(auto& V : integerVariables)
     {
-        if(abs(point.at(V->getIndex()) - round(point.at(V->getIndex()))) > tolerance)
+        if(std::abs(point.at(V->getIndex()) - round(point.at(V->getIndex()))) > tolerance)
             return false;
     }
 
     for(auto& V : semiintegerVariables)
     {
-        if(abs(point.at(V->getIndex()) - round(point.at(V->getIndex()))) > tolerance)
+        if(std::abs(point.at(V->getIndex()) - round(point.at(V->getIndex()))) > tolerance)
             return false;
     }
 
@@ -1747,7 +1773,7 @@ bool Problem::areSpecialOrderedSetsFulfilled(const VectorDouble& point, double t
 
             for(auto& V : S->variables)
             {
-                if(abs(point.at(V->getIndex())) > tolerance)
+                if(std::abs(point.at(V->getIndex())) > tolerance)
                 {
                     if(found)
                         return false;
@@ -1763,7 +1789,7 @@ bool Problem::areSpecialOrderedSetsFulfilled(const VectorDouble& point, double t
 
             for(size_t i = 0; i < S->variables.size(); i++)
             {
-                if(abs(point.at(S->variables[i]->getIndex())) > tolerance)
+                if(std::abs(point.at(S->variables[i]->getIndex())) > tolerance)
                 {
                     if(numFound == 0)
                     {
@@ -1821,7 +1847,10 @@ void Problem::doFBBT()
 
     bool stopTightening = false;
 
-    double timeEnd = startTime + timeLimit;
+    // The bound tightening is also stopped by the time limit of the solver, since it is performed when the problem is
+    // set, and the solution time would otherwise run over the limit before the solution has even started
+    double timeLeft = env->settings->getSetting<double>("Termination.TimeLimit") - env->timing->getElapsedTime("Total");
+    double timeEnd = startTime + std::min(timeLimit, std::max(timeLeft, 0.0));
 
     int numberOfTightenedVariablesBefore = std::count_if(allVariables.begin(), allVariables.end(),
         [](auto V) { return (V->properties.hasLowerBoundBeenTightened || V->properties.hasUpperBoundBeenTightened); });
@@ -1889,7 +1918,7 @@ void Problem::doFBBT()
     }
 
     // The bounds of the original variables tightened in the reformulated problem are also bounds in the original problem
-    if(anyBoundsUpdated && properties.isReformulated)
+    if(anyBoundsUpdated && properties.isReformulated && env->problem)
     {
         for(size_t k = 0; k < env->problem->allVariables.size(); k++)
         {
@@ -2859,6 +2888,11 @@ ProblemPtr Problem::createCopy(
         std::dynamic_pointer_cast<NonlinearObjectiveFunction>(destinationObjective)
             ->add(copyNonlinearExpression(NE.get(), destinationProblem));
 
+    // A relaxed objective function has other terms, whose convexity is detected
+    if(auto destinationQuadratic = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(destinationObjective);
+        destinationQuadratic && !isObjectiveRelaxed)
+        destinationQuadratic->setFunctionConvexity(this->objectiveFunction->properties.userFunctionConvexity);
+
     destinationProblem->add(std::move(destinationObjective));
 
     // Copying constraints
@@ -2991,6 +3025,9 @@ ProblemPtr Problem::createCopy(
                     ->add(copyNonlinearExpression(
                         std::dynamic_pointer_cast<NonlinearConstraint>(C)->nonlinearExpression.get(),
                         destinationProblem));
+
+            if(auto destinationQuadratic = std::dynamic_pointer_cast<QuadraticConstraint>(destinationConstraint))
+                destinationQuadratic->setFunctionConvexity(C->properties.userFunctionConvexity);
         }
 
         destinationProblem->add(std::move(destinationConstraint));
@@ -3105,10 +3142,29 @@ NumericConstraintPtr Problem::createConstraintSide(const NumericConstraintPtr& s
         }
     }
 
+    if(sourceQuadratic)
+    {
+        auto userConvexity = source->properties.userFunctionConvexity;
+
+        std::dynamic_pointer_cast<QuadraticConstraint>(constraint)
+            ->setFunctionConvexity(isUpper ? userConvexity : Utilities::negateConvexity(userConvexity));
+    }
+
     constraint->takeOwnership(shared_from_this());
     constraint->updateProperties();
 
     return (constraint);
+}
+
+void Problem::updateAntiEpigraphObjectiveVariableValue(VectorDouble& point, double objectiveValue)
+{
+    if(!antiEpigraphObjectiveVariable)
+        return;
+
+    assert(point.size() >= allVariables.size());
+
+    point.at(antiEpigraphObjectiveVariable->getIndex())
+        = (objectiveValue - antiEpigraphObjectiveConstant) / antiEpigraphObjectiveCoefficient;
 }
 
 void Problem::augmentAuxiliaryVariableValues(VectorDouble& point)
@@ -3134,8 +3190,8 @@ void Problem::augmentAuxiliaryVariableValues(VectorDouble& point)
         point.push_back(value);
     }
 
-    if(this->antiEpigraphObjectiveVariable)
-        point.at(this->antiEpigraphObjectiveVariable->getIndex()) = this->objectiveFunction->calculateValue(point);
+    if(antiEpigraphObjectiveVariable)
+        updateAntiEpigraphObjectiveVariableValue(point, objectiveFunction->calculateValue(point));
 
     assert(point.size() == static_cast<size_t>(this->properties.numberOfVariables));
 

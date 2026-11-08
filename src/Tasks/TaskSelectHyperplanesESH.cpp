@@ -307,18 +307,19 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
             auto externalConstraintValue
                 = env->reformulatedProblem->getMaxNumericConstraintValue(externalPoint, convexConstraints);
 
-            // Interpolation at a root can round both bracket points into the
-            // feasible region. The dual point still violates a selected convex
-            // constraint, so generate its cutting plane instead of dropping the
-            // cut and eventually terminating with NoDualCutsAdded.
-            if(externalConstraintValue.normalizedValue < 0.0)
+            // When the interior point is on the boundary, e.g., a primal solution, the rootsearch can return a point on
+            // the boundary where the constraint value is rounded to slightly below zero, and nothing would be added.
+            // The solution point, where the constraints are violated, is used instead.
+            if(externalConstraintValue.normalizedValue < 0)
             {
-                externalPoint = solPoints.at(solutionPtIndex).point;
-                std::vector<NumericConstraint*> activeConstraints;
-                externalConstraintValue = env->reformulatedProblem->getMaxNumericConstraintValue(
-                    externalPoint, currentConstraints, activeConstraints);
-                env->output->outputDebug("         Rootsearch point rounded inside the feasible region, "
-                                         "using the solution point instead.");
+                auto solutionConstraintValue = env->reformulatedProblem->getMaxNumericConstraintValue(
+                    solPoints.at(solutionPtIndex).point, convexConstraints);
+
+                if(solutionConstraintValue.normalizedValue > 0)
+                {
+                    externalPoint = solPoints.at(solutionPtIndex).point;
+                    externalConstraintValue = solutionConstraintValue;
+                }
             }
 
             if(externalConstraintValue.normalizedValue >= 0)
@@ -430,14 +431,13 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                 auto externalConstraintValue = NCV.constraint->calculateNumericValue(externalPoint);
 
-                // As for the maximum-function search, a rounded boundary point
-                // must not suppress the cut for a violated convex constraint.
-                if(externalConstraintValue.normalizedValue < 0.0)
+                // When the interior point is on the boundary, e.g., a primal solution, the rootsearch can return a
+                // point on the boundary where the constraint value is rounded to slightly below zero, and nothing
+                // would be added. The solution point, where the constraint is violated, is used instead.
+                if(externalConstraintValue.normalizedValue < 0)
                 {
                     externalPoint = solPoints.at(solutionPtIndex).point;
                     externalConstraintValue = NCV.constraint->calculateNumericValue(externalPoint);
-                    env->output->outputDebug("         Rootsearch point rounded inside the feasible region, "
-                                             "using the solution point instead.");
                 }
 
                 if(externalConstraintValue.normalizedValue >= 0)
@@ -529,6 +529,13 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
                         "constraints.",
                 nonconvexSelectedNumericValues.size()));
 
+        // The primal solutions are points of the original problem, while the terms of the hyperplanes use the variable
+        // indices of the MIP solver, which also has the auxiliary variables of the reformulated problem
+        std::vector<VectorDouble> primalSolutionPoints;
+
+        for(auto& P : env->results->primalSolutions)
+            primalSolutionPoints.push_back(env->dualSolver->getAugmentedPrimalSolutionPoint(P));
+
         for(auto& values : nonconvexSelectedNumericValues)
         {
             int solutionPtIndex = std::get<0>(values);
@@ -612,7 +619,7 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                     bool cutsAwayPrimalSolution = false;
 
-                    for(auto& P : env->results->primalSolutions)
+                    for(auto& point : primalSolutionPoints)
                     {
                         if(auto terms = env->dualSolver->MIPSolver->createHyperplaneTerms(hyperplane))
                         {
@@ -620,7 +627,7 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                             for(auto& T : terms->first)
                             {
-                                constraintValue += T.second * P.point[T.first];
+                                constraintValue += T.second * point.at(T.first);
                             }
 
                             if(constraintValue > 0)
@@ -731,7 +738,7 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                         bool cutsAwayPrimalSolution = false;
 
-                        for(auto& P : env->results->primalSolutions)
+                        for(auto& point : primalSolutionPoints)
                         {
                             if(auto terms = env->dualSolver->MIPSolver->createHyperplaneTerms(hyperplane))
                             {
@@ -739,7 +746,7 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                                 for(auto& T : terms->first)
                                 {
-                                    constraintValue += T.second * P.point[T.first];
+                                    constraintValue += T.second * point.at(T.first);
                                 }
 
                                 if(constraintValue > 0)

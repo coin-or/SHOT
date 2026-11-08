@@ -22,6 +22,7 @@
 
 #include "../src/Model/Problem.h"
 #include "../src/Model/ObjectiveFunction.h"
+#include "IntegerCutTestCommon.h"
 
 #include <iostream>
 
@@ -83,7 +84,7 @@ bool CbcTest1(std::string filename, double correctObjectiveValue)
     if(solver->getOriginalProblem()->objectiveFunction->properties.isMinimize)
     {
         if(correctObjectiveValue <= solver->getPrimalBound() + 1e-5
-            && correctObjectiveValue >= solver->getCurrentDualBound() - 1e-5)
+            && correctObjectiveValue >= solver->getGlobalDualBound() - 1e-5)
         {
             std::cout << std::endl
                       << "Global objective value is within dual and primal bounds for minimization problem."
@@ -100,7 +101,7 @@ bool CbcTest1(std::string filename, double correctObjectiveValue)
     else
     {
         if(correctObjectiveValue >= solver->getPrimalBound() - 1e-5
-            && correctObjectiveValue <= solver->getCurrentDualBound() + 1e-5)
+            && correctObjectiveValue <= solver->getGlobalDualBound() + 1e-5)
         {
             std::cout << std::endl
                       << "Global objective value " << correctObjectiveValue
@@ -116,34 +117,6 @@ bool CbcTest1(std::string filename, double correctObjectiveValue)
     }
 
     return passed;
-}
-
-// For nonconvex problems where finding a primal solution is not guaranteed;
-// only verifies the solver terminates without crashing.
-bool CbcTestNocrash(std::string filename)
-{
-    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
-    auto env = solver->getEnvironment();
-
-    // A time limit so that a test that does not converge cannot stop the test suite
-    solver->updateSetting("Termination.TimeLimit", 60.0);
-
-    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cbc));
-
-    try
-    {
-        if(!solver->setProblem(filename))
-            return false;
-    }
-    catch(Exception& e)
-    {
-        std::cout << "Error: " << e.what() << std::endl;
-        return false;
-    }
-
-    solver->solveProblem();
-
-    return true;
 }
 
 bool CbcTerminationCallbackTest(std::string filename)
@@ -434,17 +407,17 @@ int CbcTest(int argc, char* argv[])
         break;
     case 9:
         std::cout << "Starting test to solve gear.osil with Cbc." << std::endl;
-        passed = CbcTestNocrash("data/gear.osil");
+        passed = solveWithIntegerCuts(ES_MIPSolver::Cbc, "data/gear.osil", 0.0);
         std::cout << "Finished test to solve gear.osil with Cbc." << std::endl;
         break;
     case 10:
         std::cout << "Starting test to solve windfac.osil with Cbc." << std::endl;
-        passed = CbcTestNocrash("data/windfac.osil");
+        passed = solveWithIntegerCuts(ES_MIPSolver::Cbc, "data/windfac.osil", 0.254487);
         std::cout << "Finished test to solve windfac.osil with Cbc." << std::endl;
         break;
     case 11:
         std::cout << "Starting test to solve ex1252a.osil with Cbc." << std::endl;
-        passed = CbcTestNocrash("data/ex1252a.osil");
+        passed = solveWithIntegerCuts(ES_MIPSolver::Cbc, "data/ex1252a.osil", 128893.741);
         std::cout << "Finished test to solve ex1252a.osil with Cbc." << std::endl;
         break;
     case 12:

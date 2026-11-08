@@ -10,6 +10,7 @@
 
 #pragma once
 #include "MIPSolverBase.h"
+#include "MIPSolverCapabilities.h"
 
 #include <optional>
 
@@ -49,6 +50,24 @@ public:
 class MIPSolverCbc : public IMIPSolver, public MIPSolverBase
 {
 public:
+    inline static constexpr MIPSolverCapabilities capabilities = []
+    {
+        MIPSolverCapabilities result;
+        result.convexQuadraticObjective = false;
+        result.nonconvexQuadraticObjective = false;
+        result.convexQuadraticConstraints = false;
+        result.nonconvexQuadraticConstraints = false;
+        result.nonconvexObjectiveExcludesQuadraticConstraints = false;
+        result.SOS1 = true;
+        result.SOS2 = true;
+        result.singleTree = false;
+        result.semicontinuous = E_SemiVariableSupport::SignedInterval;
+        result.semiinteger = E_SemiVariableSupport::SignedInterval;
+        result.unboundedVariableBound = 1e50;
+
+        return result;
+    }();
+
     MIPSolverCbc(EnvironmentPtr envPtr);
     ~MIPSolverCbc() override;
 
@@ -160,10 +179,8 @@ public:
     void setCutOff(double cutOff) override;
     void setCutOffAsConstraint(double cutOff) override;
     void addMIPStart(VectorDouble point) override;
+    void addPartialMIPStart(VectorInteger variableIndexes, VectorDouble variableValues) override;
     void deleteMIPStarts() override;
-
-    bool supportsQuadraticObjective() override;
-    bool supportsQuadraticConstraints() override;
 
     double getUnboundedVariableBoundValue() override;
 
@@ -220,6 +237,9 @@ private:
     double objectiveConstant = 0.0;
 
     std::vector<std::pair<std::string, double>> MIPStart;
+
+    // Cbc only keeps one start, so a partial start replaces the start from addMIPStart in the next solve
+    bool partialMIPStartAdded = false;
 
     std::vector<E_VariableType> variableTypes;
     std::vector<std::pair<int, std::array<double, 4>>> lotsizes;

@@ -30,7 +30,8 @@ enum class E_AuxiliaryVariableType
     AbsoluteValueSign, // The binary that tells the sign of the argument of an absolute value (one if nonnegative)
     AntiEpigraph, // For rewriting an epigraph formulation as objective
     EigenvalueDecomposition, // From performing an eigenvalue decomposition on quadratic sums
-    LDLDecomposition // From performing an LDL decomposition on quadratic sums
+    LDLDecomposition, // From performing an LDL decomposition on quadratic sums
+    IntegerDiscretization // One-hot binary for an integer value; constant + linearTerms gives the offset from it
 };
 
 enum class E_Convexity
@@ -214,6 +215,19 @@ enum class E_SettingPriority : int
     SolverCompatibility = 50 // Highest: hard override due to subsolver capability or compile-time limitations
 };
 
+// Conditions under which a setting has another default value, see Settings::addConditionalValue
+enum class E_SettingCondition
+{
+    // The problem is not convex. The settings in Model.Reformulation use the original problem, since they decide the
+    // reformulation, and the other settings use the reformulated problem
+    Nonconvex,
+    MIPSolverCplex,
+    MIPSolverGurobi,
+    MIPSolverCbc,
+    MIPSolverHighs,
+    Continuous
+};
+
 enum class E_SolutionStrategy
 {
     SingleTree,
@@ -221,6 +235,7 @@ enum class E_SolutionStrategy
     NLP,
     MIQP,
     MIQCQP,
+    MILP,
     None
 };
 

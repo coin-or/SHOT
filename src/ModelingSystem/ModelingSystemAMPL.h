@@ -26,8 +26,8 @@ public:
     ModelingSystemAMPL(EnvironmentPtr envPtr);
     ~ModelingSystemAMPL() override;
 
-    // Adds modeling system specific settings
-    static void augmentSettings(SettingsPtr settings);
+    // Adds modeling system specific private settings
+    static void augmentPrivateSettings(SettingsPtr settings);
 
     // Get specific settings from modeling system
     void updateSettings(SettingsPtr settings) override;
@@ -38,7 +38,11 @@ public:
     // Move the solution and statistics from SHOT to the modeling system
     void finalizeSolution() override;
 
+    VectorDouble getStartingPoint() override { return (startingPoint); }
+
 protected:
 private:
+    // The initial values in the .nl file, or empty if it has none
+    VectorDouble startingPoint;
 };
 } // namespace SHOT

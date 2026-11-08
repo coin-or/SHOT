@@ -300,9 +300,10 @@ class TestAddVariable:
 
         solver = SHOTpy.Solver()
         solver.updateSetting("Output.Console.LogLevel", 6)
-        # The objective assertion below is tighter than the default 1e-3 gaps.
-        solver.updateSetting("Termination.ObjectiveGap.Absolute", 1e-7)
-        solver.updateSetting("Termination.ObjectiveGap.Relative", 1e-7)
+        # The default objective gap tolerances are larger than the accuracy checked when the quadratic constraint is
+        # linearized, e.g., with Cbc or HiGHS
+        solver.updateSetting("Termination.ObjectiveGap.Absolute", 1e-6)
+        solver.updateSetting("Termination.ObjectiveGap.Relative", 1e-6)
         problem = SHOTpy.Problem(solver.getEnvironment())
 
         x = problem.addVariable("x", lowerBound=-10, upperBound=10)

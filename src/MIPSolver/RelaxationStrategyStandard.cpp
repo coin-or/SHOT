@@ -77,6 +77,10 @@ void RelaxationStrategyStandard::executeStrategy()
     {
         this->setInactive();
     }
+    else if(hasNumericalTrouble())
+    {
+        this->setInactive();
+    }
     else
     {
         this->setActive();
@@ -87,8 +91,7 @@ void RelaxationStrategyStandard::setActive()
 {
     if(env->dualSolver->MIPSolver->getDiscreteVariableStatus() && env->results->getNumberOfIterations() > 0)
     {
-        env->timing->stopTimer("DualProblemsDiscrete");
-        env->timing->startTimer("DualProblemsRelaxed");
+        LPStepTimer.start();
         env->dualSolver->MIPSolver->activateDiscreteVariables(false);
 
         env->results->getCurrentIteration()->isDualProblemDiscrete = false;
@@ -100,8 +103,7 @@ void RelaxationStrategyStandard::setInactive()
 {
     if(!env->dualSolver->MIPSolver->getDiscreteVariableStatus())
     {
-        env->timing->stopTimer("DualProblemsRelaxed");
-        env->timing->startTimer("DualProblemsDiscrete");
+        LPStepTimer.stop();
         env->dualSolver->MIPSolver->activateDiscreteVariables(true);
 
         env->results->getCurrentIteration()->isDualProblemDiscrete = true;
@@ -130,8 +132,7 @@ bool RelaxationStrategyStandard::isIterationLimitReached()
 
 bool RelaxationStrategyStandard::isTimeLimitReached()
 {
-    if(env->timing->getElapsedTime("DualProblemsRelaxed")
-        < env->settings->getSetting<double>("Dual.Relaxation.TimeLimit"))
+    if(LPStepTimer.elapsed() < env->settings->getSetting<double>("Dual.Relaxation.TimeLimit"))
     {
         return (false);
     }
@@ -162,5 +163,17 @@ bool RelaxationStrategyStandard::isObjectiveStagnant()
         return (true);
 
     return (false);
+}
+
+// The relaxation can get numerically difficult, e.g., after cuts with large coefficients have been added, while the
+// problem with the discrete variables can still be solved, so the relaxation then ends
+bool RelaxationStrategyStandard::hasNumericalTrouble()
+{
+    if(env->results->getNumberOfIterations() < 2)
+        return (false);
+
+    auto prevIter = env->results->getPreviousIteration();
+
+    return (prevIter->solutionStatus == E_ProblemSolutionStatus::Numeric && prevIter->solutionPoints.empty());
 }
 } // namespace SHOT

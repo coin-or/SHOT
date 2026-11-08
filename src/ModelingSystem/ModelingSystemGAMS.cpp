@@ -60,6 +60,7 @@ ModelingSystemGAMS::ModelingSystemGAMS(EnvironmentPtr envPtr)
 
 void ModelingSystemGAMS::setModelingObject(gmoHandle_t gmo)
 {
+    nlpLicenseState.reset();
     modelingObject = gmo;
     modelingEnvironment = (gevHandle_t)gmoEnvironment(gmo);
 
@@ -76,42 +77,6 @@ ModelingSystemGAMS::~ModelingSystemGAMS()
         gevLibraryUnload();
         palLibraryUnload();
     }
-}
-
-void ModelingSystemGAMS::augmentSettings([[maybe_unused]] SettingsPtr settings)
-{
-    // Subsolver settings: GAMS NLP
-
-    settings->createSettingGroup("Subsolver", "GAMS", "GAMS", "Settings for the GAMS NLP solvers.");
-
-    std::string optfile = "";
-    settings->createSetting(
-        "Subsolver.GAMS.NLP.OptionsFilename", optfile, "Options file for the NLP solver in GAMS");
-
-    std::string solver = "auto";
-    settings->createSetting("Subsolver.GAMS.NLP.Solver", solver, "NLP solver to use in GAMS (auto: SHOT chooses)");
-
-#if GMOAPIVERSION >= 21
-    settings->createSettingGroup(
-        "ModelingSystem", "GAMS", "GAMS interface", "These settings control functionality used in the GAMS interface.");
-
-    VectorString enumQExtractAlg;
-    enumQExtractAlg.push_back("automatic");
-    enumQExtractAlg.push_back("threepass");
-    enumQExtractAlg.push_back("doubleforward");
-#if GMOAPIVERSION >= 25
-    enumQExtractAlg.push_back("concurrent");
-#endif
-    settings->createSetting("ModelingSystem.GAMS.QExtractAlg", 0,
-        "Extraction algorithm for quadratic equations in GAMS interface", enumQExtractAlg);
-
-#if GMOAPIVERSION >= 28
-    settings->createSetting("ModelingSystem.GAMS.QExtractDenseSwitchFactor", 0.008,
-        "Sparse/dense factor for quadratic extraction algorithm in GAMS interface.", 0.0);
-    settings->createSetting("ModelingSystem.GAMS.QExtractDenseSwitchLog", false,
-        "Whether to print additional information about sparse/dense factor choice in quadratic extraction algorithm in GAMS interface.");
-#endif
-#endif
 }
 
 void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
@@ -301,6 +266,15 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
 
 #if GMOAPIVERSION >= 21
     int qextractalg = env->settings->getSetting<int>("ModelingSystem.GAMS.QExtractAlg");
+#if GMOAPIVERSION < 25
+    // The concurrent extraction algorithm is only available in newer GAMS versions
+    if(qextractalg == 3)
+    {
+        env->output->outputWarning(" The concurrent quadratic extraction algorithm requires a newer GAMS version. "
+                                   "Using the automatic choice instead.");
+        qextractalg = 0;
+    }
+#endif
     gmoQExtractAlgSet(modelingObject, qextractalg);
 #endif
 #if GMOAPIVERSION >= 28
@@ -630,6 +604,17 @@ void ModelingSystemGAMS::createAuditLicensing()
 
     palLicenseCheck(auditLicensing, gmoM(modelingObject), gmoN(modelingObject), gmoNZ(modelingObject),
         gmoNLNZ(modelingObject), gmoNDisc(modelingObject));
+}
+
+VectorDouble ModelingSystemGAMS::getStartingPoint()
+{
+    if(modelingObject == nullptr)
+        return {};
+
+    // The levels of the variables
+    VectorDouble point(gmoN(modelingObject));
+    gmoGetVarL(modelingObject, point.data());
+    return (point);
 }
 
 void ModelingSystemGAMS::finalizeSolution()

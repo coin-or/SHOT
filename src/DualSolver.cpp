@@ -194,8 +194,11 @@ void DualSolver::addHyperplane(HyperplanePtr hyperplane)
 {
     // The point the hyperplane is generated in is kept, so that the distance the points move between iterations
     // can be calculated. Only the first point of an iteration is kept, since that is the one the distance is
-    // calculated from, and keeping every point would grow with the number of hyperplanes generated.
-    if(auto numericHP = std::dynamic_pointer_cast<NumericHyperplane>(hyperplane))
+    // calculated from, and keeping every point would grow with the number of hyperplanes generated. Hyperplanes
+    // reused from the interior point search are added before the first iteration, and then there is no iteration
+    // to keep the point in.
+    if(auto numericHP = std::dynamic_pointer_cast<NumericHyperplane>(hyperplane);
+        numericHP && env->results->getNumberOfIterations() > 0)
     {
         auto currentIteration = env->results->getCurrentIteration();
 
@@ -555,7 +558,11 @@ void DualSolver::addIntegerCut(IntegerCut integerCut)
 
     integerCut.pointHashes = Utilities::calculateHashes(integerCut.variableValues);
 
-    if(!hasIntegerCutBeenAdded(integerCut))
+    // Several fixed NLP problems can have the same integer combination, e.g., with different continuous starting points
+    bool isWaiting = std::any_of(integerCutWaitingList.begin(), integerCutWaitingList.end(),
+        [&](const IntegerCut& IC) { return (IC.variableValues == integerCut.variableValues); });
+
+    if(!isWaiting && !hasIntegerCutBeenAdded(integerCut))
         this->integerCutWaitingList.push_back(integerCut);
     else
         env->output->outputDebug(
@@ -661,6 +668,28 @@ bool DualSolver::hasObjectiveVariableOnlyInMIPSolver()
     return (MIPSolver->hasDualAuxiliaryObjectiveVariable() && !env->reformulatedProblem->auxiliaryObjectiveVariable);
 }
 
+VectorDouble DualSolver::getAugmentedPrimalSolutionPoint(const PrimalSolution& solution)
+{
+    VectorDouble point = solution.point;
+
+    if((int)point.size() < env->reformulatedProblem->properties.numberOfVariables)
+        env->reformulatedProblem->augmentAuxiliaryVariableValues(point);
+
+    // The objective variable of the MIP solver has the value of the reformulated objective function, whose direction
+    // may differ from that of the original problem
+    if(hasObjectiveVariableOnlyInMIPSolver())
+    {
+        double objectiveSignFactor
+            = (env->reformulatedProblem->objectiveFunction->direction == env->problem->objectiveFunction->direction)
+            ? 1.0
+            : -1.0;
+
+        point.push_back(objectiveSignFactor * solution.objValue);
+    }
+
+    return (point);
+}
+
 bool DualSolver::isDualProblemExact()
 {
     // Nonlinear constraints and nonlinear objectives are only represented by cuts in the dual problem
@@ -675,10 +704,6 @@ int DualSolver::relaxCutsViolatedByPrimalSolutions()
         return (0);
 
     size_t numberOfCuts = MIPSolver->getNumberOfRepairableCuts();
-
-    double objectiveSignFactor
-        = (env->reformulatedProblem->objectiveFunction->direction == env->problem->objectiveFunction->direction) ? 1.0
-                                                                                                                 : -1.0;
 
     // Not all solutions are in the pool any longer, so only those that are are kept
     std::vector<double> primalSolutionHashes;
@@ -697,15 +722,7 @@ int DualSolver::relaxCutsViolatedByPrimalSolutions()
         if(firstCut >= numberOfCuts)
             continue;
 
-        VectorDouble point = S.point;
-
-        if((int)point.size() < env->reformulatedProblem->properties.numberOfVariables)
-            env->reformulatedProblem->augmentAuxiliaryVariableValues(point);
-
-        // The objective variable of the MIP solver has the value of the reformulated objective function, whose
-        // direction may differ from that of the original problem
-        if(hasObjectiveVariableOnlyInMIPSolver())
-            point.push_back(objectiveSignFactor * S.objValue);
+        VectorDouble point = getAugmentedPrimalSolutionPoint(S);
 
         numberOfRelaxedCuts += MIPSolver->relaxRepairableCutsViolatedByPoint(point, firstCut);
     }

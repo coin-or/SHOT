@@ -10,6 +10,7 @@
 
 #pragma once
 #include "MIPSolverBase.h"
+#include "MIPSolverCapabilities.h"
 #include "MIPSolverCallbackBase.h"
 
 #ifdef __GNUC__
@@ -20,8 +21,6 @@
 #ifdef __GNUC__
 #pragma GCC diagnostic warning "-Wignored-attributes"
 #endif
-
-#include <functional>
 
 namespace SHOT
 {
@@ -41,6 +40,24 @@ public:
 class MIPSolverCplex : public IMIPSolver, public MIPSolverBase
 {
 public:
+    inline static constexpr MIPSolverCapabilities capabilities = []
+    {
+        MIPSolverCapabilities result;
+        result.convexQuadraticObjective = true;
+        result.nonconvexQuadraticObjective = true;
+        result.convexQuadraticConstraints = true;
+        result.nonconvexQuadraticConstraints = false;
+        result.nonconvexObjectiveExcludesQuadraticConstraints = true;
+        result.SOS1 = true;
+        result.SOS2 = true;
+        result.singleTree = true;
+        result.semicontinuous = E_SemiVariableSupport::NonnegativeInterval;
+        result.semiinteger = E_SemiVariableSupport::NonnegativeInterval;
+        result.unboundedVariableBound = 1e20;
+
+        return result;
+    }();
+
     MIPSolverCplex();
     MIPSolverCplex(EnvironmentPtr envPtr);
     ~MIPSolverCplex() override;
@@ -106,9 +123,6 @@ public:
     double getConstraintUpperBound(int constraintIndex) override;
     bool setConstraintUpperBound(int constraintIndex, double upperBound) override;
 
-    virtual bool createHyperplane(
-        HyperplanePtr hyperplane, std::function<IloConstraint(IloRange)> addConstraintFunction);
-
     std::optional<std::pair<std::map<int, double>, double>> createHyperplaneTerms(HyperplanePtr hyperplane) override
     {
         return (MIPSolverBase::createHyperplaneTerms(hyperplane));
@@ -158,10 +172,8 @@ public:
     void setCutOffAsConstraint(double cutOff) override;
 
     void addMIPStart(VectorDouble point) override;
+    void addPartialMIPStart(VectorInteger variableIndexes, VectorDouble variableValues) override;
     void deleteMIPStarts() override;
-
-    bool supportsQuadraticObjective() override;
-    bool supportsQuadraticConstraints() override;
 
     double getUnboundedVariableBoundValue() override;
 
@@ -209,8 +221,20 @@ protected:
 
     bool objectiveFunctionReplacedWithZero = false;
 
+    // Extracts the model again after it has been updated, keeping the MIP starts that the extraction removes
+    void extractModel();
+
+    void deleteMIPStartsWithName(const char* name);
+
     // CPLEX can only tell whether a problem is infeasible or unbounded if presolve reductions are not used, so such a
     // problem is solved again without them
     E_ProblemSolutionStatus resolveInfeasibleOrUnbounded(E_ProblemSolutionStatus status);
+
+    // Retry numerical trouble or apparent infeasibility with numerical emphasis and, if still infeasible, without
+    // presolve. Keep the retries within the time limit measured from solveStarted and restore user parameters.
+    E_ProblemSolutionStatus resolveWithNumericalEmphasis(E_ProblemSolutionStatus status, double solveStarted);
+
+    // CPLEX's presolve can report a feasible problem as infeasible, so such a problem is solved again without it
+    E_ProblemSolutionStatus resolveInfeasibleWithoutPresolve(E_ProblemSolutionStatus status);
 };
 } // namespace SHOT

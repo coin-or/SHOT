@@ -39,6 +39,15 @@ public:
     std::map<E_AuxiliaryVariableType, int> auxiliaryVariablesIntroduced;
 
     void addPrimalSolution(PrimalSolution solution);
+
+    // The best primal solution that fulfils the constraints to Termination.ConstraintTolerance, see
+    // useAccuratePrimalSolution()
+    std::optional<PrimalSolution> accuratePrimalSolution;
+
+    // Replaces an incumbent that does not fulfil the constraints to Termination.ConstraintTolerance with
+    // accuratePrimalSolution, if its objective value is within the termination gap tolerances of the incumbent, and
+    // otherwise puts it in the solution pool if that has room for more than the incumbent
+    void useAccuratePrimalSolution();
     double getPrimalBound();
     void setPrimalBound(double value, bool resetStagnationCounters = true);
 
@@ -83,11 +92,17 @@ public:
     E_ModelReturnStatus getModelReturnStatus();
     bool hasPrimalSolution();
 
+    // A message that the convexity of the problem, or of its objective function or some of its constraints, has been
+    // specified by the user instead of detected, in which case the global optimality of a solution depends on it. Empty
+    // otherwise.
+    std::string getUserSpecifiedConvexityDescription();
+
     E_SolutionStrategy usedSolutionStrategy = E_SolutionStrategy::None;
 
     ES_MIPSolver usedMIPSolver = ES_MIPSolver::NotUsed;
     ES_PrimalNLPSolver usedPrimalNLPSolver = ES_PrimalNLPSolver::NotUsed;
     std::string usedPrimalNLPSolverDescription = "";
+    std::string usedPrimalGAMSNLPSolver = "";
 
     bool solutionIsGlobal = true;
 
@@ -113,6 +128,9 @@ public:
 
 private:
     void notifyBoundsUpdated(double previousPrimalBound, double previousDualBound, double previousGlobalDualBound);
+
+    // The largest violation of the constraints of the original problem in the point
+    double getMaximumConstraintError(const VectorDouble& point);
 
     EnvironmentPtr env;
 };

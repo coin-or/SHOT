@@ -85,7 +85,6 @@ SolutionStrategyNLP::SolutionStrategyNLP(EnvironmentPtr envPtr)
 
     env->timing->createTimer("DualStrategy", "- dual strategy");
     env->timing->createTimer("DualProblemsRelaxed", "  - solving relaxed problems");
-    env->timing->createTimer("DualProblemsDiscrete", "  - solving MIP problems");
     env->timing->createTimer("DualCutGenerationRootSearch", "  - root search for constraint cuts");
     env->timing->createTimer("DualObjectiveRootSearch", "  - root search for objective cut");
 

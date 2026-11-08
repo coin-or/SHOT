@@ -46,6 +46,12 @@ workflow — including how to use the automated test suite (`test_runner`,
 
 ## Code and tests
 
+- Match the surrounding spacing between logical blocks as well as
+  `.clang-format` and `.cmake-format`. Add a blank line before an `if`
+  statement when other code precedes it in the same block; no extra blank
+  line is needed when it starts the block. Keep `else if` and `else` attached
+  to the preceding branch. Separate a completed control-flow block from a
+  following `return` with a blank line.
 - Do not name test instances (MINLPLib, QPLIB, ...) in code comments;
   describe the case in general terms, e.g., "a square of a variable with a
   negative lower bound". Instance names belong in commit messages, PRs,
@@ -54,6 +60,11 @@ workflow — including how to use the automated test suite (`test_runner`,
   in the C++ and Python API, an error that stops SHOT in an options file,
   and a warning on the command line. Keep this rather than matching names
   case-insensitively or having the API return a status.
+- Define public settings in `src/SolverSettings.cpp`, in every build, also
+  for backends that are not compiled in; `verifySettings()` warns when these
+  are set to another value than the default. Register recommended values,
+  e.g., for nonconvex problems, with `Settings::addConditionalValue()` beside
+  the setting.
 - When testing a reformulation, use at least two terms of the reformulated
   kind that share variables, so that merging terms and sharing auxiliary
   variables are tested too.

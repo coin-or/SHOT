@@ -34,14 +34,18 @@ public:
     IModelingSystem(EnvironmentPtr envPtr) : env(envPtr) {};
     virtual ~IModelingSystem() = default;
 
-    // Adds modeling system specific settings
-    static void augmentSettings([[maybe_unused]] SettingsPtr settings) {};
+    // Adds modeling system specific private settings; public settings are defined in SolverSettings.cpp
+    static void augmentPrivateSettings([[maybe_unused]] SettingsPtr settings) { };
 
     // Get specific settings from modeling system
     virtual void updateSettings(SettingsPtr settings) = 0;
 
     // Move the solution and statistics from SHOT to the modeling system
     virtual void finalizeSolution() = 0;
+
+    // The starting point given in the model, e.g., the levels of the variables in GAMS, or an empty vector if there
+    // is none. Solver::setProblem() passes it to Solver::setStartingPoint()
+    virtual VectorDouble getStartingPoint() { return {}; }
 
 protected:
     EnvironmentPtr env;

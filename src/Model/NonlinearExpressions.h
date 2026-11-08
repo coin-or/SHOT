@@ -1194,7 +1194,7 @@ public:
         if(2.0 * (childBounds.u() - childBounds.l()) > M_PI)
             return E_Convexity::Unknown;
 
-        auto tanBounds = tan(childBounds);
+        auto tanBounds = intervalTan(childBounds);
 
         if(tanBounds.l() * tanBounds.u() < 0)
             return E_Convexity::Unknown;

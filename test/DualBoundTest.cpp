@@ -34,6 +34,7 @@
 #include "../src/Tasks/TaskInitializeRootsearch.h"
 #include "../src/Tasks/TaskAddPrimalReductionCut.h"
 #include "../src/Tasks/TaskPerformConvexBounding.h"
+#include "../src/Tasks/TaskCheckIterationError.h"
 #include "../src/Tasks/TaskSelectHyperplanesECP.h"
 #include "../src/Tasks/TaskSelectHyperplanesESH.h"
 #include "../src/TaskHandler.h"
@@ -186,7 +187,7 @@ bool testUnsuccessfulSolveGivesNoBound(ES_MIPSolver mipSolver, ModelKind kind)
             return false;
         }
 
-        TaskCreateMIPProblem(env, backend, env->reformulatedProblem).run();
+        TaskCreateMIPProblem(env, backend, env->reformulatedProblem, getMIPSolverCapabilities(mipSolver).value()).run();
 
         auto status = backend->solveProblem();
         double bound = backend->getDualObjectiveValue();
@@ -782,6 +783,50 @@ bool testIntegerCutsDifferingInSmallVariables(ES_MIPSolver mipSolver)
     return passed;
 }
 
+bool testFixedNLPCandidatesRoundDiscreteValues(ES_MIPSolver mipSolver)
+{
+    auto solver = makeSolver(mipSolver, ModelKind::Bounded, true);
+
+    if(!solver)
+    {
+        std::cout << "Could not create problem for " << name(mipSolver) << '\n';
+        return false;
+    }
+
+    auto env = solver->getEnvironment();
+    env->results->createIteration();
+
+    bool passed = true;
+
+    auto check = [&](bool condition, const std::string& description) {
+        if(!condition)
+        {
+            std::cout << name(mipSolver) << ": " << description << '\n';
+            passed = false;
+        }
+    };
+
+    // The binary variable is just below one, within the integer tolerance of a MIP solver
+    auto used = env->primalSolver->createFixedNLPCandidate(
+        { 0.5, 0.9999999 }, E_PrimalNLPSource::FirstSolution, 0.0, 0, PairIndexValue { -1, 0.0 });
+
+    env->primalSolver->usedPrimalNLPCandidates.push_back(used);
+
+    auto same = env->primalSolver->createFixedNLPCandidate(
+        { 0.5, 1.0 }, E_PrimalNLPSource::FirstSolution, 0.0, 0, PairIndexValue { -1, 0.0 });
+
+    check(env->primalSolver->hasFixedNLPCandidateBeenTested(same.discreteVariablePointHashes),
+        "a candidate with a binary value just below one was not taken for the same integer combination as one");
+
+    auto other = env->primalSolver->createFixedNLPCandidate(
+        { 0.5, 0.0 }, E_PrimalNLPSource::FirstSolution, 0.0, 0, PairIndexValue { -1, 0.0 });
+
+    check(!env->primalSolver->hasFixedNLPCandidateBeenTested(other.discreteVariablePointHashes),
+        "a candidate with a binary value of zero was taken for the same integer combination as one");
+
+    return passed;
+}
+
 std::vector<ES_MIPSolver> compiledSolvers()
 {
     std::vector<ES_MIPSolver> solvers;
@@ -1004,7 +1049,7 @@ bool testIntegerCutVariablesSurviveRelaxation(ES_MIPSolver mipSolver)
         return false;
     }
 
-    TaskCreateMIPProblem(env, backend, env->reformulatedProblem).run();
+    TaskCreateMIPProblem(env, backend, env->reformulatedProblem, getMIPSolverCapabilities(mipSolver).value()).run();
 
     int zIndex = -1;
 
@@ -1192,6 +1237,190 @@ bool testCutsAreGlobalOnlyForConvexConstraints(CutStrategy strategy, bool violat
     return passed;
 }
 
+// Without bound tightening, the initial polyhedral outer approximation of x^2/y <= z generates cuts close to y = 0,
+// where their coefficients are very large. Unless they are scaled, the MIP solver can return a solution of the first
+// dual problem that is not optimal, and the solution is then taken as globally optimal.
+bool testInitialPOACutsWithLargeCoefficients(ES_MIPSolver mipSolver)
+{
+    const double expectedObjective = -1.2071067837918394;
+
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Termination.TimeLimit", 30.0);
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+    solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+    solver->updateSetting("Model.BoundTightening.InitialPOA.Use", true);
+
+    if(!solver->setProblem("data/instances/minlp_tests_jl/nlp-cvx_204_010.jl.nl") || !solver->solveProblem())
+    {
+        std::cout << name(mipSolver) << ": could not solve the problem\n";
+        return false;
+    }
+
+    double primalBound = solver->getPrimalBound();
+    double dualBound = solver->getGlobalDualBound();
+
+    if(dualBound > expectedObjective + 1e-3 || std::abs(primalBound - expectedObjective) > 1e-2)
+    {
+        std::cout << name(mipSolver) << ": the bounds [" << dualBound << ", " << primalBound
+                  << "] do not agree with the optimum " << expectedObjective << '\n';
+        return false;
+    }
+
+    return true;
+}
+
+// With Dual.MIP.UpdateObjectiveBounds, the bounds of the objective variable in the dual problem, which is minimized,
+// are updated with the dual and primal bounds, which for a maximization problem are those of the maximized objective
+bool testUpdatedObjectiveBounds(ES_MIPSolver mipSolver, const std::string& filename, double expectedObjective)
+{
+    auto solver = std::make_unique<Solver>();
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Termination.TimeLimit", 30.0);
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+    solver->updateSetting("Dual.MIP.UpdateObjectiveBounds", true);
+
+    if(!solver->setProblem(filename) || !solver->solveProblem())
+    {
+        std::cout << name(mipSolver) << ", " << filename << ": could not solve the problem\n";
+        return false;
+    }
+
+    double primalBound = solver->getPrimalBound();
+
+    if(std::abs(primalBound - expectedObjective) > 1e-2)
+    {
+        std::cout << name(mipSolver) << ", " << filename << ": the primal bound " << primalBound
+                  << " is not the optimum " << expectedObjective << '\n';
+        return false;
+    }
+
+    return true;
+}
+
+// A MIP solver may return a value slightly below a lower bound of zero, within its feasibility tolerance. When the
+// variable is the denominator of a nonlinear constraint, the constraint is then fulfilled by a large margin, so the
+// point would be accepted as a primal solution and no cut would be generated. Projected onto the bounds, it violates
+// the constraint.
+bool testPointsAreProjectedOntoVariableBounds(ES_MIPSolver mipSolver)
+{
+    auto solver = std::make_unique<Solver>();
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+    if(!solver->setProblem("data/instances/minlp_tests_jl/nlp-cvx_204_010.jl.nl"))
+    {
+        std::cout << "Could not read the problem\n";
+        return false;
+    }
+
+    auto problem = solver->getEnvironment()->reformulatedProblem;
+
+    bool passed = true;
+
+    auto check = [&](bool condition, const std::string& description)
+    {
+        if(!condition)
+        {
+            std::cout << name(mipSolver) << ": " << description << '\n';
+            passed = false;
+        }
+    };
+
+    // The point of the relaxation where the variable in the denominator is below its lower bound of zero
+    VectorDouble point { 0.707105225075729, 0.707108337327129, -7.9853901269189e-11 };
+
+    // Backends without quadratic constraint support introduce auxiliary variables for the square terms.
+    // Their defining constraints are fulfilled at equality after augmenting the point.
+    problem->augmentAuxiliaryVariableValues(point);
+
+    auto unprojected = problem->getMaxNumericConstraintValue(point, problem->nonlinearConstraints);
+
+    check(unprojected.normalizedValue <= 0.0,
+        "the nonlinear constraint is not fulfilled before the projection, so the test does not cover the case");
+
+    problem->projectOntoVariableBounds(point);
+
+    check(point[0] == 0.707105225075729 && point[1] == 0.707108337327129,
+        "values within the variable bounds were changed by the projection");
+    check(point[2] == 0.0, "the value below the lower bound was not projected onto the bound");
+
+    auto projected = problem->getMaxNumericConstraintValue(point, problem->nonlinearConstraints);
+
+    // The constraint is infinite at the bound, which also fails a test for fulfillment if it is NaN
+    check(!(projected.normalizedValue <= 0.0), "the projected point fulfills the nonlinear constraint");
+
+    return passed;
+}
+
+bool testInfeasibilityWithArtificialBounds(ES_MIPSolver mipSolver)
+{
+    for(bool upperBound : { false, true })
+    {
+        auto solver = std::make_shared<Solver>();
+        auto env = solver->getEnvironment();
+        solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+        solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+        solver->updateSetting("Model.BoundTightening.InitialPOA.Use", false);
+        solver->updateSetting("Termination.TimeLimit", 5.0);
+
+        // The feasible point is beyond an artificial integer bound, and no incumbent or cutoff is available.
+        auto problem = std::make_shared<Problem>(env);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Integer, -1.0, 1.0);
+        x->properties.hasArtificialLowerBound = !upperBound;
+        x->properties.hasArtificialUpperBound = upperBound;
+        problem->add(x);
+        double sign = upperBound ? 1.0 : -1.0;
+        auto constraint = std::make_shared<LinearConstraint>("outside_artificial_bound", 2.0, SHOT_DBL_MAX);
+        constraint->add(std::make_shared<LinearTerm>(sign, x));
+        problem->add(constraint);
+        auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+        objective->add(std::make_shared<LinearTerm>(sign, x));
+        problem->add(objective);
+        problem->finalize();
+
+        if(!solver->setProblem(problem) || !solver->solveProblem() || !solver->hasPrimalSolution()
+            || std::abs(solver->getPrimalBound() - 2.0) > 1e-6 || std::abs(solver->getGlobalDualBound() - 2.0) > 1e-6
+            || env->problem->hasArtificialBounds()
+            || solver->getModelReturnStatus() != E_ModelReturnStatus::OptimalGlobal)
+        {
+            std::cout << name(mipSolver) << ": an artificial bound prevented finding the optimum beyond it\n";
+            return false;
+        }
+    }
+
+    // If artificial bounds remain at termination, infeasibility of the restricted dual problem proves nothing.
+    for(bool artificialBound : { false, true })
+    {
+        auto solver = makeSolver(mipSolver, ModelKind::Infeasible, true);
+        if(!solver)
+            return false;
+        auto env = solver->getEnvironment();
+        env->problem->allVariables.at(0)->properties.hasArtificialUpperBound = artificialBound;
+        env->results->createIteration();
+        env->results->getCurrentIteration()->solutionStatus = E_ProblemSolutionStatus::Infeasible;
+        auto finalize = std::make_shared<TaskAddPrimalReductionCut>(env, "Finalize", "Finalize");
+        env->tasks->clearTasks();
+        env->tasks->addTask(finalize, "Finalize");
+        TaskCheckIterationError(env, "Finalize", "").run();
+
+        auto expected = artificialBound ? E_TerminationReason::NumericIssues : E_TerminationReason::InfeasibleProblem;
+        if(solver->getTerminationReason() != expected)
+        {
+            std::cout << name(mipSolver) << ": incorrect infeasibility conclusion with artificial bound "
+                      << artificialBound << '\n';
+            return false;
+        }
+    }
+
+    return true;
+}
+
 int DualBoundTest(int argc, char* argv[])
 {
     int choice = 1;
@@ -1298,6 +1527,43 @@ int DualBoundTest(int argc, char* argv[])
                 passed = testCutsAreGlobalOnlyForConvexConstraints(strategy, violateConvexConstraint) && passed;
         }
         std::cout << "Finished test that cuts are global only for convex constraints.\n";
+        break;
+    case 16:
+        std::cout << "Starting test that initial outer approximation cuts with large coefficients are scaled:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testInitialPOACutsWithLargeCoefficients(mipSolver) && passed;
+        std::cout << "Finished test that initial outer approximation cuts with large coefficients are scaled.\n";
+        break;
+    case 17:
+        std::cout << "Starting test that the objective bounds are updated in the sense of the dual problem:\n";
+        for(auto mipSolver : compiledSolvers())
+        {
+            passed = testUpdatedObjectiveBounds(
+                         mipSolver, "data/instances/minlp_tests_jl/nlp-cvx_109_010.jl.nl", 0.6931471805599453)
+                && passed;
+            passed = testUpdatedObjectiveBounds(
+                         mipSolver, "data/instances/minlp_tests_jl/nlp-cvx_204_010.jl.nl", -1.2071067837918394)
+                && passed;
+        }
+        std::cout << "Finished test that the objective bounds are updated in the sense of the dual problem.\n";
+        break;
+    case 18:
+        std::cout << "Starting test that fixed integer candidates round the values of discrete variables:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testFixedNLPCandidatesRoundDiscreteValues(mipSolver) && passed;
+        std::cout << "Finished test that fixed integer candidates round the values of discrete variables.\n";
+        break;
+    case 19:
+        std::cout << "Starting test that points are projected onto the variable bounds:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testPointsAreProjectedOntoVariableBounds(mipSolver) && passed;
+        std::cout << "Finished test that points are projected onto the variable bounds.\n";
+        break;
+    case 20:
+        std::cout << "Starting test for infeasibility with artificial bounds:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testInfeasibilityWithArtificialBounds(mipSolver) && passed;
+        std::cout << "Finished test for infeasibility with artificial bounds.\n";
         break;
     default:
         passed = false;

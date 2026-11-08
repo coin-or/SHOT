@@ -68,6 +68,13 @@ struct ProblemProperties
     int numberOfNonconvexNonlinearConstraints = 0;
     int numberOfNonlinearExpressions = 0; // This includes a possible nonlinear objective
 
+    // The constraints that are convex since the convexity of their functions has been specified by the user
+    int numberOfUserSpecifiedConvexConstraints = 0;
+
+    // Whether the objective function is convex when minimized, or concave when maximized, since its convexity has been
+    // specified by the user
+    bool isObjectiveConvexityUserSpecified = false;
+
     int numberOfSpecialOrderedSets = 0;
 
     int numberOfAddedLinearizations = 0; // In the initial POA step
@@ -153,6 +160,9 @@ public:
     AuxiliaryVariablePtr auxiliaryObjectiveVariable; // This is not the same as one created in the dual problem
 
     VariablePtr antiEpigraphObjectiveVariable; // This is the objective variable used before anti epigraph formulation
+    // The antiepigraph objective is coefficient * variable + constant, in the reformulated objective direction.
+    double antiEpigraphObjectiveCoefficient = 1.0;
+    double antiEpigraphObjectiveConstant = 0.0;
 
     VectorDouble variableLowerBounds;
     VectorDouble variableUpperBounds;
@@ -207,6 +217,12 @@ public:
     // The variables at a bound that has replaced a missing bound when the problem was read, see
     // VariableProperties::hasArtificialLowerBound, in a point whose first values are the values of the variables
     std::vector<VariablePtr> getVariablesAtArtificialBounds(const VectorDouble& point);
+
+    // Projects the values of the variables in a point, whose first values are the values of the variables, onto the
+    // variable bounds. A MIP solver may return values slightly outside the bounds, within its feasibility tolerance,
+    // and the bounds can be the domain of a nonlinear function, e.g., x >= 0 in x^(-1), outside of which the
+    // constraints are evaluated wrongly
+    void projectOntoVariableBounds(VectorDouble& point);
 
     // Whether a variable still has a bound that has replaced a missing bound when the problem was read
     bool hasArtificialBounds();
@@ -301,6 +317,10 @@ public:
     bool doFBBTOnConstraint(NumericConstraintPtr constraint, double timeEnd);
 
     void augmentAuxiliaryVariableValues(VectorDouble& point);
+
+    // Updates the original objective variable's value in point.
+    // objectiveValue uses the reformulated objective direction.
+    void updateAntiEpigraphObjectiveVariableValue(VectorDouble& point, double objectiveValue);
 
     friend std::ostream& operator<<(std::ostream& stream, const Problem& problem);
 

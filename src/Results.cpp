@@ -68,6 +68,11 @@ void Results::addPrimalSolution(PrimalSolution solution)
     auto isBetter
         = [isMinimize](double first, double second) { return (isMinimize ? first < second : first > second); };
 
+    if((!accuratePrimalSolution || isBetter(solution.objValue, accuratePrimalSolution->objValue))
+        && getMaximumConstraintError(solution.point)
+            <= env->settings->getSetting<double>("Termination.ConstraintTolerance"))
+        accuratePrimalSolution = solution;
+
     auto maxError = [](const PrimalSolution& S)
     {
         return (std::max({ S.maxDeviatingConstraintLinear.value, S.maxDeviatingConstraintQuadratic.value,
@@ -221,6 +226,85 @@ bool Results::isAbsoluteObjectiveGapToleranceMet()
 
 Results::Results(EnvironmentPtr envPtr) : env(envPtr) { }
 
+double Results::getMaximumConstraintError(const VectorDouble& point)
+{
+    if(env->problem->numericConstraints.empty())
+        return (0.0);
+
+    return (env->problem->getMaxNumericConstraintValue(point, env->problem->numericConstraints).error);
+}
+
+void Results::useAccuratePrimalSolution()
+{
+    if(!hasPrimalSolution() || !accuratePrimalSolution || primalSolutions.empty())
+        return;
+
+    // A point accepted with the primal tolerances, e.g. from a relaxation, can have a better objective value than any
+    // feasible solution when the objective is sensitive to the constraint violation. A solution that fulfils the
+    // constraints to Termination.ConstraintTolerance is then reported instead of an incumbent that does not, if its
+    // objective value is within the termination gap tolerances of the incumbent and an objective gap that has been
+    // closed stays closed.
+    auto constraintTolerance = env->settings->getSetting<double>("Termination.ConstraintTolerance");
+    auto absoluteGapTolerance = env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute");
+    auto relativeGapTolerance = env->settings->getSetting<double>("Termination.ObjectiveGap.Relative");
+
+    auto& incumbent = primalSolutions.front();
+    auto& solution = *accuratePrimalSolution;
+
+    auto isWithinGapTolerances = [&](double first, double second)
+    {
+        double difference = std::abs(first - second);
+        return (
+            difference <= absoluteGapTolerance || difference / ((1e-10) + std::abs(second)) <= relativeGapTolerance);
+    };
+
+    int poolSize = env->settings->getSetting<int>("Output.SaveNumberOfSolutions");
+
+    bool isInSolutionPool = std::any_of(primalSolutions.begin(), primalSolutions.end(),
+        [&solution](const PrimalSolution& S) { return (!Utilities::isDifferent(S.point, solution.point)); });
+
+    if(solution.objValue == incumbent.objValue || !isWithinGapTolerances(solution.objValue, incumbent.objValue)
+        || (isWithinGapTolerances(getGlobalDualBound(), incumbent.objValue)
+            && !isWithinGapTolerances(getGlobalDualBound(), solution.objValue))
+        || getMaximumConstraintError(incumbent.point) <= constraintTolerance)
+    {
+        // Otherwise, the solution is put back in the solution pool, from which better solutions that do not fulfil
+        // the constraints to the tolerance may have removed it, but it does not replace the incumbent
+        if(isInSolutionPool || poolSize < 2)
+            return;
+
+        if((int)primalSolutions.size() >= poolSize)
+            primalSolutions.pop_back();
+
+        bool isMinimize = env->problem->objectiveFunction->properties.isMinimize;
+
+        primalSolutions.insert(
+            std::upper_bound(primalSolutions.begin() + 1, primalSolutions.end(), solution,
+                [isMinimize](const PrimalSolution& first, const PrimalSolution& second)
+                { return (isMinimize ? first.objValue < second.objValue : first.objValue > second.objValue); }),
+            solution);
+
+        return;
+    }
+
+    env->output->outputDebug(fmt::format("        The primal solution {} from {} replaces the incumbent {}, which "
+                                         "violates the constraints by {}.",
+        solution.objValue, solution.sourceDescription, incumbent.objValue, getMaximumConstraintError(incumbent.point)));
+
+    // The solution may also be in the solution pool already
+    primalSolutions.erase(
+        std::remove_if(primalSolutions.begin(), primalSolutions.end(),
+            [&solution](const PrimalSolution& S) { return (!Utilities::isDifferent(S.point, solution.point)); }),
+        primalSolutions.end());
+
+    if((int)primalSolutions.size() >= poolSize)
+        primalSolutions.pop_back();
+
+    primalSolutions.insert(primalSolutions.begin(), solution);
+    primalSolution = solution.point;
+    setPrimalBound(solution.objValue, false);
+}
+
 Results::~Results()
 {
     iterations.clear();
@@ -307,6 +391,15 @@ std::string Results::getResultsOSrL()
         otherNode->SetAttribute("name", "OriginalProblemConvexity");
         otherNode->SetAttribute("value", "nonconvex");
         otherNode->SetAttribute("description", "Convexity of the original problem");
+        otherResultsNode->InsertEndChild(otherNode);
+    }
+
+    if(auto convexityDescription = getUserSpecifiedConvexityDescription(); convexityDescription != "")
+    {
+        otherNode = osrlDocument.NewElement("other");
+        otherNode->SetAttribute("name", "UserSpecifiedConvexity");
+        otherNode->SetAttribute("value", convexityDescription.c_str());
+        otherNode->SetAttribute("description", "Convexity specified by the user instead of detected");
         otherResultsNode->InsertEndChild(otherNode);
     }
 
@@ -645,6 +738,13 @@ std::string Results::getResultsOSrL()
     }
 #endif
 
+#ifdef HAS_HIGHS
+    if(dualSolver == ES_MIPSolver::Highs)
+    {
+        dualSolverName = "HiGHS";
+    }
+#endif
+
     otherNode = osrlDocument.NewElement("other");
     otherNode->SetAttribute("name", "DualSolver");
     otherNode->SetAttribute("value", (dualSolverName + " " + env->dualSolver->MIPSolver->getSolverVersion()).c_str());
@@ -653,8 +753,12 @@ std::string Results::getResultsOSrL()
 
     otherNode = osrlDocument.NewElement("other");
     otherNode->SetAttribute("name", "FixedNLPSolver");
-    otherNode->SetAttribute("value", (dualSolverName + " " + env->dualSolver->MIPSolver->getSolverVersion()).c_str());
-    otherNode->SetAttribute("description", "The dual solver used");
+    otherNode->SetAttribute("value",
+        (this->usedPrimalNLPSolver == ES_PrimalNLPSolver::NotUsed || this->usedPrimalNLPSolverDescription.empty()
+            || env->solutionStatistics.numberOfProblemsFixedNLP == 0)
+            ? "none"
+            : this->usedPrimalNLPSolverDescription.c_str());
+    otherNode->SetAttribute("description", "The NLP solver used for the fixed-integer NLP problems");
     otherResultsNode->InsertEndChild(otherNode);
 
     for(auto& S : this->primalSolutionSourceStatistics)
@@ -1091,6 +1195,13 @@ std::string Results::getResultsOSrL()
             fmt::format(" Unknown return code {} obtained from solver.", static_cast<int>(this->terminationReason)));
     }
 
+    if(auto convexityDescription = getUserSpecifiedConvexityDescription(); convexityDescription != "")
+    {
+        std::string description = statusNode->Attribute("description") ? statusNode->Attribute("description") : "";
+        description += (description == "") ? convexityDescription : ". " + convexityDescription;
+        statusNode->SetAttribute("description", description.c_str());
+    }
+
     solutionNode->InsertFirstChild(statusNode);
 
     for(int i = 0; i < numSaveSolutions; i++)
@@ -1111,7 +1222,8 @@ std::string Results::getResultsOSrL()
 
         auto objectiveSolutionNode = osrlDocument.NewElement("obj");
         objectiveSolutionNode->SetAttribute("idx", -1);
-        objectiveSolutionNode->SetText(std::to_string(primalSolutions.at(i).objValue).c_str());
+        // SetText writes a double with all significant digits, while std::to_string has six decimals
+        objectiveSolutionNode->SetText(primalSolutions.at(i).objValue);
         objectiveValueNode->InsertFirstChild(objectiveSolutionNode);
 
         objectivesNode->InsertFirstChild(objectiveValueNode);
@@ -1127,7 +1239,7 @@ std::string Results::getResultsOSrL()
             auto variableSolutionNode = osrlDocument.NewElement("var");
             variableSolutionNode->SetAttribute("idx", (int)j);
             variableSolutionNode->SetAttribute("name", env->problem->allVariables.at(j)->name.c_str());
-            variableSolutionNode->SetText(std::to_string(primalSolutions.at(i).point.at(j)).c_str());
+            variableSolutionNode->SetText(primalSolutions.at(i).point.at(j));
             variableValueNode->InsertEndChild(variableSolutionNode);
         }
 
@@ -1144,10 +1256,9 @@ std::string Results::getResultsOSrL()
             auto dualValueNode = osrlDocument.NewElement("con");
             dualValueNode->SetAttribute("idx", (int)j);
             dualValueNode->SetAttribute("name", env->problem->numericConstraints.at(j)->name.c_str());
-            dualValueNode->SetText(std::to_string(env->problem->numericConstraints.at(j)
-                                                      ->calculateNumericValue(primalSolutions.at(i).point)
-                                                      .normalizedValue)
-                                       .c_str());
+            dualValueNode->SetText(env->problem->numericConstraints.at(j)
+                    ->calculateNumericValue(primalSolutions.at(i).point)
+                    .normalizedValue);
             dualValuesNode->InsertEndChild(dualValueNode);
         }
 
@@ -1193,13 +1304,15 @@ std::string Results::getResultsTrace()
     ss << "SHOT"
        << ",";
 
-    switch(static_cast<ES_PrimalNLPSolver>(this->usedPrimalNLPSolver))
+    // The NLP solver is created when the primal strategy is set up, so it is only stated if an NLP problem was solved
+    switch(
+        env->solutionStatistics.numberOfProblemsFixedNLP == 0 ? ES_PrimalNLPSolver::NotUsed : this->usedPrimalNLPSolver)
     {
     case(ES_PrimalNLPSolver::NotUsed):
         ss << "NONE";
         break;
     case(ES_PrimalNLPSolver::GAMS):
-        ss << env->settings->getSetting<std::string>("Subsolver.GAMS.NLP.Solver");
+        ss << this->usedPrimalGAMSNLPSolver;
         break;
     case ES_PrimalNLPSolver::Conopt:
         ss << "CONOPT";
@@ -1757,6 +1870,34 @@ E_ModelReturnStatus Results::getModelReturnStatus()
         return (hasPrimalSolution() ? E_ModelReturnStatus::FeasibleSolution : E_ModelReturnStatus::ErrorNoSolution);
 
     return (E_ModelReturnStatus::NoSolutionReturned);
+}
+
+std::string Results::getUserSpecifiedConvexityDescription()
+{
+    if(env->settings->getSetting<bool>("Model.Convexity.AssumeConvex"))
+        return ("The whole problem has been assumed to be convex by the user (Model.Convexity.AssumeConvex)");
+
+    if(!env->problem)
+        return ("");
+
+    // The parts of the problem that are convex only since their convexity has been specified
+    std::vector<std::string> parts;
+
+    if(env->problem->properties.isObjectiveConvexityUserSpecified)
+        parts.push_back("the objective function");
+
+    int numberOfConstraints = env->problem->properties.numberOfUserSpecifiedConvexConstraints;
+
+    if(numberOfConstraints == 1)
+        parts.push_back("one constraint");
+    else if(numberOfConstraints > 1)
+        parts.push_back(fmt::format("{} constraints", numberOfConstraints));
+
+    if(parts.empty())
+        return ("");
+
+    return (fmt::format("The convexity of {} has been specified by the user instead of detected",
+        (parts.size() == 2) ? parts[0] + " and " + parts[1] : parts[0]));
 }
 
 bool Results::hasPrimalSolution() { return (primalSolutions.size() > 0); }

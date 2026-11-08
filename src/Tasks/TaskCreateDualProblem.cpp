@@ -40,8 +40,8 @@ TaskCreateDualProblem::TaskCreateDualProblem(EnvironmentPtr envPtr) : TaskBase(e
 
     env->output->outputDebug(" Creating dual problem");
 
-    taskCreateMIPProblem
-        = std::make_shared<TaskCreateMIPProblem>(env, env->dualSolver->MIPSolver, env->reformulatedProblem);
+    taskCreateMIPProblem = std::make_shared<TaskCreateMIPProblem>(env, env->dualSolver->MIPSolver,
+        env->reformulatedProblem, getMIPSolverCapabilities(env->results->usedMIPSolver).value());
 
     taskCreateMIPProblem->run();
     env->dualSolver->MIPSolver->initializeSolverSettings();

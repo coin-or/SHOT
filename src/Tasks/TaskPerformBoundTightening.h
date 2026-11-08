@@ -37,8 +37,18 @@ public:
 private:
     virtual void createPOA();
 
+    // Calls the callbacks at the BoundTightening location and applies the bounds they propose; returns whether a
+    // bound was tightened
+    bool applyBoundsFromCallbacks();
+
+    // Uses the bounds of the objective function over the variable bounds as a dual bound and a cutoff
+    void updateObjectiveBounds();
+
     // Creates a solver for a convex relaxation of the source problem, whose cuts are used in the outer approximation
     std::shared_ptr<NLPSolverSHOT> createPOASolver(ProblemPtr problem);
+
+    // The time left of the time limit of the outer approximation, and of the time limit of the solver
+    double getPOATimeLeft();
 
     // Solves the problem of the solver within the remaining time of the outer approximation
     void solvePOAProblem(std::shared_ptr<NLPSolverSHOT> solver);

@@ -29,3 +29,20 @@ Callbacks
 ---------
 
 .. doxygenfile:: Callback.h
+
+.. _cpp-mip-solver-capabilities:
+
+MIP solver capabilities
+-----------------------
+
+The lookup returns the capabilities of a compiled MIP backend without
+constructing or licensing a solver. See :doc:`../MIPSolverCapabilities` for
+field meanings and :doc:`../concepts` for usage examples.
+
+.. doxygenstruct:: SHOT::MIPSolverCapabilities
+   :members:
+   :undoc-members:
+
+.. doxygenenum:: SHOT::E_SemiVariableSupport
+
+.. doxygenfunction:: SHOT::getMIPSolverCapabilities

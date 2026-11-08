@@ -11,12 +11,15 @@
 #include "NLPSolverGAMS.h"
 
 #include "../Output.h"
+#include "../ModelingSystem/ModelingSystemGAMS.h"
+#include "../Results.h"
 #include "../Settings.h"
 #include "../Timing.h"
 
 #include <cstdio>
 #include <cstring>
 #include <algorithm>
+#include <chrono>
 
 namespace SHOT
 {
@@ -30,6 +33,17 @@ NLPSolverGAMS::NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject, 
     , showlog(false)
 {
     modelingEnvironment = (gevHandle_t)gmoEnvironment(modelingObject);
+
+    auto modelingSystem = std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem);
+
+    if(modelingSystem && modelingSystem->modelingObject == modelingObject)
+    {
+        if(!modelingSystem->nlpLicenseState)
+            modelingSystem->nlpLicenseState = std::make_shared<GAMSNLPLicenseState>();
+        licenseState = modelingSystem->nlpLicenseState;
+    }
+    else
+        licenseState = std::make_shared<GAMSNLPLicenseState>();
 
     nlpsolver = env->settings->getSetting<std::string>("Subsolver.GAMS.NLP.Solver");
     nlpsolveropt = env->settings->getSetting<std::string>("Subsolver.GAMS.NLP.OptionsFilename");
@@ -193,7 +207,26 @@ double NLPSolverGAMS::getObjectiveValue() { return gmoGetHeadnTail(modelingObjec
 
 E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
 {
-    char msg[GMS_SSSIZE];
+    auto callStarted = std::chrono::steady_clock::now();
+
+    if(timeLimit <= 0.0
+        || env->timing->getElapsedTime("Total") >= env->settings->getSetting<double>("Termination.TimeLimit"))
+        return E_NLPSolutionStatus::TimeLimit;
+
+    auto& unavailable = licenseState->unavailableSolvers;
+
+    if(unavailable.count(getSelectedSolverName()))
+    {
+        if(getSelectedSolverName() == "IPOPT")
+            return E_NLPSolutionStatus::Error;
+
+        useLicenseFallback();
+
+        if(unavailable.count(getSelectedSolverName()))
+            return E_NLPSolutionStatus::Error;
+    }
+
+    char msg[GMS_SSSIZE] = { };
 
     /* set which options file to use */
     if(!nlpsolveropt.empty())
@@ -207,6 +240,8 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
         gmoOptFileSet(modelingObject, 0);
     }
 
+    int originalAltBounds = gmoAltBounds(modelingObject);
+    int originalForceCont = gmoForceCont(modelingObject);
     gmoAltBoundsSet(modelingObject, 1); /* use alternative bounds */
     gmoForceContSet(modelingObject, 1);
 
@@ -231,14 +266,13 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
         = env->settings->getSetting<double>("Termination.TimeLimit") - env->timing->getElapsedTime("Total");
     const double solveTimeLimit = std::max(std::min({ timelimit, timeLimit, timeLeft }), 1e-5);
 
-    if(gevCallSolver(modelingEnvironment, modelingObject, "", nlpsolver.c_str(), solvelink,
-           showlog ? gevSolverSameStreams : gevSolverQuiet, nullptr, nullptr, solveTimeLimit, iterlimit,
-           0, 0.0, 0.0, nullptr, msg)
-        != 0)
-    {
-        gmoModelStatSet(modelingObject, gmoModelStat_ErrorNoSolution);
-        throw std::logic_error(std::string("Calling GAMS NLP solver failed: ") + msg);
-    }
+    // Do not mistake a status left by the previous solver for the result of a failed invocation.
+    gmoModelStatSet(modelingObject, gmoModelStat_ErrorNoSolution);
+
+    gmoSolveStatSet(modelingObject, gmoSolveStat_Solver);
+    int callStatus = callSolver(solveTimeLimit, msg);
+    bool licenseError = gmoModelStat(modelingObject) == gmoModelStat_LicenseError
+        || gmoSolveStat(modelingObject) == gmoSolveStat_License;
 
     if(showlog)
         gevRestoreLogStat(modelingEnvironment, &cbdata.orighandle);
@@ -248,8 +282,49 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
     if(!fromGAMS)
         gevTerminateUninstall(modelingEnvironment);
 
-    gmoAltBoundsSet(modelingObject, 0);
-    gmoForceContSet(modelingObject, 0);
+    gmoAltBoundsSet(modelingObject, originalAltBounds);
+    gmoForceContSet(modelingObject, originalForceCont);
+
+    if(licenseError)
+    {
+        auto name = getSelectedSolverName();
+
+        if(unavailable.insert(name).second)
+            env->output->outputWarning(name == "IPOPT"
+                    ? " GAMS IPOPT licence error; further GAMS NLP calls skipped."
+                    : fmt::format(" GAMS {} licence error; switching to IPOPT.", name));
+
+        if(name == "IPOPT")
+            return E_NLPSolutionStatus::Error;
+
+        useLicenseFallback();
+        double remainingTime = std::min(timelimit, timeLimit)
+            - std::chrono::duration<double>(std::chrono::steady_clock::now() - callStarted).count();
+
+        if(remainingTime <= 0.0)
+            return E_NLPSolutionStatus::TimeLimit;
+
+        double originalTimeLimit = timeLimit;
+        timeLimit = remainingTime;
+
+        try
+        {
+            auto status = solveProblemInstance();
+            timeLimit = originalTimeLimit;
+            return status;
+        }
+        catch(...)
+        {
+            timeLimit = originalTimeLimit;
+            throw;
+        }
+    }
+
+    if(callStatus != 0)
+    {
+        gmoModelStatSet(modelingObject, gmoModelStat_ErrorNoSolution);
+        throw std::logic_error(std::string("Calling GAMS NLP solver failed: ") + msg);
+    }
 
     switch(gmoModelStat(modelingObject))
     {
@@ -295,6 +370,27 @@ E_NLPSolutionStatus NLPSolverGAMS::solveProblemInstance()
     }
 }
 
+int NLPSolverGAMS::callSolver(double solveTimeLimit, char* message)
+{
+    return gevCallSolver(modelingEnvironment, modelingObject, "", nlpsolver.c_str(), solvelink,
+        showlog ? gevSolverSameStreams : gevSolverQuiet, nullptr, nullptr, solveTimeLimit, iterlimit, 0, 0.0, 0.0,
+        nullptr, message);
+}
+
+void NLPSolverGAMS::useLicenseFallback()
+{
+    nlpsolver = "ipopt";
+    selectedNLPSolver = "IPOPT (licence fallback)";
+    // Options for the unavailable solver need not be valid Ipopt options.
+    nlpsolveropt.clear();
+    solvelink = gevSolveLinkLoadLibrary;
+#if !defined(GAMS_BUILD) && defined(HAS_IPOPT)
+    solvelink = gevSolveLinkCallModule;
+#endif
+    env->results->usedPrimalGAMSNLPSolver = getSelectedSolverName();
+    env->results->usedPrimalNLPSolverDescription = getSolverDescription();
+}
+
 VectorDouble NLPSolverGAMS::getVariableLowerBounds()
 {
     assert(modelingObject != nullptr);
@@ -332,5 +428,13 @@ std::string NLPSolverGAMS::getSolverDescription()
     std::string description = fmt::format("{} in GAMS", selectedNLPSolver);
 
     return (description);
+};
+
+std::string NLPSolverGAMS::getSelectedSolverName()
+{
+    std::string name = nlpsolver;
+    std::transform(name.begin(), name.end(), name.begin(), ::toupper);
+
+    return (name);
 };
 } // namespace SHOT

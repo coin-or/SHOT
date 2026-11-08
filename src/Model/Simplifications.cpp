@@ -64,6 +64,7 @@ void checkAndConvertObjectivesAndConstraints(
                     if(tmpConstant != 0.0)
                         newObjective->constant += tmpConstant;
 
+                    newObjective->setFunctionConvexity(nonlinearObjective->properties.userFunctionConvexity);
                     newObjective->updateProperties();
                     problem->objectiveFunction = newObjective;
                 }
@@ -168,6 +169,8 @@ void checkAndConvertObjectivesAndConstraints(
 
                 if(tmpConstant != 0.0)
                     newConstraint->constant += tmpConstant;
+
+                newConstraint->setFunctionConvexity(nonlinearConstraint->properties.userFunctionConvexity);
 
                 changedConstraints.push_back({ C, newConstraint });
                 C = newConstraint;

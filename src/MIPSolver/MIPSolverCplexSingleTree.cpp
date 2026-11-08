@@ -215,6 +215,8 @@ bool CplexCallback::handleRelaxation(const IloCplex::Callback::Context& context)
 
     tmpVals.end();
 
+    env->reformulatedProblem->projectOntoVariableBounds(solution);
+
     SolutionPoint solutionRelaxed;
 
     if(env->reformulatedProblem->properties.numberOfNonlinearConstraints > 0)
@@ -382,6 +384,8 @@ bool CplexCallback::handleCandidate(const IloCplex::Callback::Context& context)
         VectorDouble primalSolution(
             candidatePoint.begin(), candidatePoint.begin() + env->problem->properties.numberOfVariables);
 
+        env->problem->projectOntoVariableBounds(primalSolution);
+
         SolutionPoint tmpPt;
 
         if(env->problem->properties.numberOfNonlinearConstraints > 0)
@@ -415,10 +419,14 @@ bool CplexCallback::handleCandidate(const IloCplex::Callback::Context& context)
         currIter->dualProblemClass = env->dualSolver->MIPSolver->getProblemClass();
     }
 
+    // The MIP problem can have more variables than the reformulated problem: the objective variable that is only in
+    // the MIP solver, and the variables added by integer cuts of nonbinary variables after it
     int numberOfVariables
-        = (env->dualSolver->hasObjectiveVariableOnlyInMIPSolver()) ? candidatePoint.size() - 1 : candidatePoint.size();
+        = std::min((int)candidatePoint.size(), env->reformulatedProblem->properties.numberOfVariables);
 
     VectorDouble solution(candidatePoint.begin(), candidatePoint.begin() + numberOfVariables);
+
+    env->reformulatedProblem->projectOntoVariableBounds(solution);
 
     // The bounds cannot be changed in the callback, so the MIP solver is interrupted and the artificial
     // bounds are removed before it solves again
@@ -555,7 +563,7 @@ std::optional<std::pair<VectorDouble, double>> CplexCallback::getPrimalSolutionT
     if(env->dualSolver->hasObjectiveVariableOnlyInMIPSolver())
         primalSol.push_back(env->reformulatedProblem->objectiveFunction->calculateValue(primalSol));
 
-    assert(static_cast<size_t>(cplexVars.getSize()) == primalSol.size());
+    assert(static_cast<size_t>(cplexVars.getSize()) >= primalSol.size());
 
     // Updated here, so that only one thread posts the solution
     lastUpdatedPrimal = primalBound;
@@ -567,14 +575,23 @@ void CplexCallback::postPrimalSolution(
     const IloCplex::Callback::Context& context, const VectorDouble& solution, double objectiveValue)
 {
     IloNumArray tmpVals(context.getEnv());
+    IloNumVarArray tmpVars(context.getEnv());
 
-    for(double S : solution)
-        tmpVals.add(S);
+    // Integer cuts of nonbinary variables add variables to the MIP problem after the variables of the solution, so the
+    // solution only gives values for some of the variables. CPLEX then completes it by solving for the others.
+    for(size_t i = 0; i < solution.size() && i < static_cast<size_t>(cplexVars.getSize()); i++)
+    {
+        tmpVals.add(solution[i]);
+        tmpVars.add(cplexVars[i]);
+    }
+
+    auto strategy = (tmpVars.getSize() < cplexVars.getSize())
+        ? IloCplex::Callback::Context::SolutionStrategy::Solve
+        : IloCplex::Callback::Context::SolutionStrategy::CheckFeasible;
 
     try
     {
-        context.postHeuristicSolution(
-            cplexVars, tmpVals, objectiveValue, IloCplex::Callback::Context::SolutionStrategy::CheckFeasible);
+        context.postHeuristicSolution(tmpVars, tmpVals, objectiveValue, strategy);
     }
     catch(IloException& e)
     {
@@ -582,6 +599,7 @@ void CplexCallback::postPrimalSolution(
             "        Error when setting primal solution as starting point in heuristic callback:", e.getMessage());
     }
 
+    tmpVars.end();
     tmpVals.end();
 }
 
@@ -681,24 +699,13 @@ bool CplexCallback::createHyperplane(HyperplanePtr hyperplane, bool isNodeCandid
         }
     }
 
-    // Small fix to fix badly scaled cuts.
-    // TODO: this should be made so it also takes into account small/large coefficients of the linear terms
-    if(abs(tmpPair.second) > 1e15)
+    // The lazy cuts are scaled as the cuts added to the dual problem between the solves
+    if(MIPSolverBase::scaleHyperplaneTerms(tmpPair) && !warningMessageShownLargeRHS)
     {
-        double scalingFactor = abs(tmpPair.second) - 1e15;
-
-        for(auto& E : tmpPair.first)
-            E.second /= scalingFactor;
-
-        tmpPair.second /= scalingFactor;
-
-        if(!warningMessageShownLargeRHS)
-        {
-            env->output->outputWarning(
-                "        Large values found in RHS of cut, you might want to consider reducing the "
-                "bounds of the nonlinear variables.");
-            warningMessageShownLargeRHS = true;
-        }
+        env->output->outputWarning(
+            "        Large values found in RHS or coefficients of cut, you might want to consider reducing the "
+            "bounds of the nonlinear variables.");
+        warningMessageShownLargeRHS = true;
     }
 
     try
@@ -934,9 +941,10 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTree::solveProblem()
         if(modelUpdated)
         {
             // Extract the model if we have updated the constraints
-            cplexInstance.extract(cplexModel);
-            modelUpdated = false;
+            extractModel();
         }
+
+        auto solveStarted = cplexInstance.getCplexTime();
 
         if(objectiveFunctionReplacedWithZero || !getDiscreteVariableStatus())
         {
@@ -947,6 +955,7 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTree::solveProblem()
 
             cplexInstance.solve();
             MIPSolutionStatus = MIPSolverCplex::getSolutionStatus();
+            MIPSolutionStatus = resolveWithNumericalEmphasis(MIPSolutionStatus, solveStarted);
         }
         else
         {
@@ -968,6 +977,8 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTree::solveProblem()
 
             MIPSolutionStatus = MIPSolverCplex::getSolutionStatus();
 
+            // Keep the lazy-constraint callback registered throughout recovery, so retries solve the same problem.
+            MIPSolutionStatus = resolveWithNumericalEmphasis(MIPSolutionStatus, solveStarted);
             cCallback.outputStatistics();
         }
 
@@ -988,7 +999,7 @@ E_ProblemSolutionStatus MIPSolverCplexSingleTree::solveProblem()
             else
                 cplexModel.add(IloMaximize(cplexEnv, SHOT_DBL_MAX));
 
-            cplexInstance.extract(cplexModel);
+            extractModel();
 
             cplexInstance.solve();
             MIPSolutionStatus = getSolutionStatus();

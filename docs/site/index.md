@@ -23,6 +23,11 @@ specific setting or API detail.
 <strong>Solve a problem file</strong>
 <span>Choose input formats, pass options, and run the standalone solver.</span>
 </a>
+<a class="docs-start-card" href="UnderstandingOutput.html">
+<span class="label shot-eyebrow">Results</span>
+<strong>Understand solver output</strong>
+<span>Read the solve stages, iteration rows, bounds, and final status.</span>
+</a>
 <a class="docs-start-card" href="cpp.html">
 <span class="label shot-eyebrow">C++</span>
 <strong>Integrate SHOT</strong>
@@ -52,6 +57,7 @@ For the complete interfaces, see the [SHOTpy API](reference/python.rst) and
 getting-started
 Installation <CompilationInstructions>
 Command line <CommandLineUsage>
+Solver output <UnderstandingOutput>
 ```
 
 ```{toctree}
@@ -63,6 +69,9 @@ SHOTpy tutorial <SHOTpy_Tutorial>
 C++ integration <cpp>
 Callbacks
 Solver concepts <concepts>
+MIP solver capabilities <MIPSolverCapabilities>
+Configuration
+Modeling and reformulation <Modeling>
 Debugging <DebuggingSHOT>
 ```
 
@@ -74,4 +83,12 @@ Debugging <DebuggingSHOT>
 reference/settings
 reference/python
 reference/cpp
+```
+
+```{toctree}
+:hidden:
+:maxdepth: 1
+:caption: Development
+
+Developer debugging <DeveloperDebugging>
 ```

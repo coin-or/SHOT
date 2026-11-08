@@ -19,6 +19,8 @@ The project website [shotsolver.dev](https://shotsolver.dev) contains:
 - [Documentation](https://shotsolver.dev/docs/): the guides and references below
   - [SHOTpy tutorial](https://shotsolver.dev/docs/dev/SHOTpy_Tutorial.html): modeling, settings, file input and callbacks in Python
   - [Command-line usage](https://shotsolver.dev/docs/dev/CommandLineUsage.html): problem formats, options and use as an AMPL solver
+  - [Understanding output](https://shotsolver.dev/docs/dev/UnderstandingOutput.html): solve stages, iteration rows, bounds and final status
+  - [Configuration](https://shotsolver.dev/docs/dev/Configuration.html) and [modeling](https://shotsolver.dev/docs/dev/Modeling.html): settings precedence, tolerances, bounds and reformulation
   - [C++ integration](https://shotsolver.dev/docs/dev/cpp.html) and [callbacks](https://shotsolver.dev/docs/dev/Callbacks.html)
   - [Solver settings](https://shotsolver.dev/docs/dev/reference/settings.html): all settings with their defaults
   - [Installation](https://shotsolver.dev/docs/dev/CompilationInstructions.html): building from source and with proprietary solvers
@@ -48,7 +50,9 @@ problem.finalize()
 
 solver.setProblem(problem)
 solver.solveProblem()
-print(solver.getModelReturnStatus(), solver.getPrimalSolution().point)
+print(solver.getModelReturnStatus())
+if solver.hasPrimalSolution():
+    print(solver.getPrimalSolution().point)
 ```
 
 The package also installs the SHOT executable as the command `SHOT`, which

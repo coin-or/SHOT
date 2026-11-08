@@ -60,23 +60,44 @@ callback receives the context class of the location, and its return value is ign
 | Location | Context class | Where it is called | Strategies | Points | Actions |
 |---|---|---|---|---|---|
 | `InteriorPointSearch` | `InteriorPointSearchContext` | `TaskFindInteriorPoint`, after checking existing points or completing the internal search (including failure to find a point), or instead of it with `Dual.ESH.InteriorPoint.Strategy` = OnlyExternal | Multi-tree, single-tree, NLP; ESH cut strategy and nonlinear constraints only | `getInteriorPoints()`: reformulated | `setInteriorPoints(points)` |
-| `DualBoundUpdate` | `DualBoundUpdateContext` | `TaskUpdateExternalDualBound`, before the first dual problem and once per iteration; before and after the direct MIQCQP solve; the CPLEX and Gurobi single-tree callbacks | Multi-tree, single-tree, NLP, direct MIQCQP | – | `setDualBound(value)` |
-| `PrimalCandidateSearch` | `PrimalCandidateSearchContext` | `TaskSelectPrimalCandidatesFromExternalSource`, before the first dual solve, once per iteration and when the solution is finalized; before and after the direct MIQCQP solve; the CPLEX and Gurobi single-tree callbacks | Multi-tree, single-tree, NLP, direct MIQCQP | – | `addPrimalSolution(point)` |
+| `DualBoundUpdate` | `DualBoundUpdateContext` | `TaskUpdateExternalDualBound`, before the first dual problem and once per iteration; before and after the direct MILP/MIQCQP solve; the CPLEX and Gurobi single-tree callbacks | Multi-tree, single-tree, NLP, direct MILP/MIQCQP | – | `setDualBound(value)` |
+| `PrimalCandidateSearch` | `PrimalCandidateSearchContext` | `TaskSelectPrimalCandidatesFromExternalSource`, before the first dual solve, once per iteration and when the solution is finalized; before and after the direct MILP/MIQCQP solve; the CPLEX and Gurobi single-tree callbacks | Multi-tree, single-tree, NLP, direct MILP/MIQCQP | – | `addPrimalSolution(point)` |
 | `PrimalCandidateCheck` | `PrimalCandidateCheckContext` | `PrimalSolver::checkPrimalSolutionCandidates`, for each candidate before it is checked | All | `getPoint()`: original | `rejectCandidate()` |
 | `NewPrimalSolution` | `NewPrimalSolutionContext` | `Results::addPrimalSolution`, after a solution has been stored | All | `getPoint()`: original | – |
 | `BoundsUpdated` | `BoundsUpdatedContext` | After a primal, current dual, or global dual bound changes during the solve | All | – | – |
 | `TerminationCheck` | `TerminationCheckContext` | `TaskCheckUserTermination`, once per iteration; the termination checks inside the MIP solvers (Cbc, CPLEX, Gurobi, HiGHS) and the single-tree callbacks | All | – | – |
 | `HyperplaneSelection` | `HyperplaneSelectionContext` | `TaskSelectHyperplanesExternal`, before the first dual solve and before gap checks for multi-tree MILPs; after SHOT selects its own hyperplanes for other iterative models; the single-tree callbacks | Multi-tree, single-tree, NLP | `getSolutionPoints()`: reformulated | `addHyperplane(hyperplane)` |
+| `BoundTightening` | `BoundTighteningContext` | `TaskPerformBoundTightening` in `setProblem()`, after the bound tightening of the original problem and again after that of the reformulated problem | All | – | `setVariableBounds(index, lower, upper)`, `setVariableBounds(lowers, uppers)` |
+
+`BoundTightening` is called twice in `setProblem()`, so the callback must be registered before it: first for the
+original problem, then for the reformulated problem, which is created from the bounds of the original problem. For
+each problem, SHOT first performs its own bound tightening, if `Model.BoundTightening.FeasibilityBased.Use` (and, for
+the reformulated problem, `Model.BoundTightening.InitialPOA.Use`) is on. `getProblem()` is the problem whose bounds can
+be tightened and `isReformulatedProblem()` tells which it is; `getReformulatedProblem()` is empty (`None` in Python) in
+the call for the original problem. `getVariableLowerBounds()` and `getVariableUpperBounds()` are SHOT's bounds of the
+variables of the problem at that point, i.e., those of the model if bound tightening is disabled, with infinite values
+for missing bounds. Bounds from another technique can thus be used together with or instead of SHOT's.
+
+The proposed bounds are intersected with SHOT's bounds, so a bound is never loosened, and an infinite value keeps a
+bound. The bounds of binary and integer variables are rounded inward. A bound of an original variable given for the
+reformulated problem is also a bound in the original problem, as for SHOT's own bound tightening. After the callbacks,
+the objective bounds over the new variable bounds give a dual bound and a MIP cutoff. With
+`Model.BoundTightening.FeasibilityBased.UseAfterCallback` (off by default), SHOT's bound tightening is performed again
+to propagate the new bounds. The user is responsible for the validity of the bounds: bounds that cut off the optimal
+solution give a wrong solution and wrong dual bounds. A failing callback makes `setProblem()` throw the exception;
+`terminate()` stops `solveProblem()` at its first termination check.
 
 `InteriorPointSearch` receives an empty `getInteriorPoints()` when neither the existing points nor the internal search
 produced a usable point. A callback can supply replacement points at that stage; SHOT validates them before deciding
 whether the interior-point search failed.
 
-Linear mixed-integer problems use `Dual.TreeStrategy`: multi-tree for Cbc and HiGHS, and the requested
-multi-tree or single-tree strategy for CPLEX and Gurobi. This also applies to linear reformulations of nonlinear
-models. Continuous linear problems use the continuous (NLP) strategy. The direct MIQCQP strategy is reserved for
-quadratic problems supported by CPLEX or Gurobi and enabled by `Model.Reformulation.Quadratics.Strategy`;
-`HyperplaneSelection` is unavailable in that direct strategy.
+Linear mixed-integer problems, including linear reformulations of nonlinear models, are solved directly by the
+MIP backend. Registering a `HyperplaneSelection` callback, even after `setProblem()`, instead selects
+`Dual.TreeStrategy`: multi-tree for Cbc and HiGHS, and the requested multi-tree or single-tree strategy for
+CPLEX and Gurobi. Continuous linear problems use the continuous (NLP) strategy. The direct MIQCQP strategy is
+reserved for quadratic problems supported by CPLEX or Gurobi and enabled by
+`Model.Reformulation.Quadratics.Strategy`; `HyperplaneSelection` is unavailable in that direct strategy.
+Removing the last `HyperplaneSelection` callback before `solveProblem()` restores direct MILP solving.
 
 For reformulated MILPs, multi-tree invokes `HyperplaneSelection` after the initial `PrimalCandidateSearch`, with
 an empty solution-point list, and after each iteration's primal reviews, using that iteration's solution points.
@@ -84,8 +105,8 @@ SHOT adds the returned cuts before checking the objective gap, so a rejected see
 solve and a closed gap does not skip the callback. Nonlinear multi-tree models retain cut selection after SHOT's
 own hyperplane generation. The initial call is specific to multi-tree MILPs.
 
-For direct MIQCQP, `DualBoundUpdate` changes SHOT's bound and gap calculations. It does not pass the bound to
-CPLEX or Gurobi as a bound for their internal search.
+For direct MILP/MIQCQP, `DualBoundUpdate` changes SHOT's bound and gap calculations. It does not pass the bound
+to the MIP backend as a bound for its internal search.
 
 `DualBoundUpdate` always uses the **original problem's objective direction and objective values**, even when SHOT
 reformulates a maximization objective as a minimization problem internally. For minimization, supply a valid lower
@@ -154,6 +175,7 @@ callback never sees what another callback did through the state of the solver, e
 | `addPrimalSolution(point)` | the original or reformulated number of variables, all values finite | appended |
 | `addHyperplane(hyperplane)` | as many indexes as coefficients, at least one; indexes of variables in the reformulated problem, or of the auxiliary objective variable of the dual problem; finite coefficients and right-hand side | appended |
 | `setInteriorPoints(points)` | at least one point, each with the original or reformulated number of variables and finite values | the last call is used; not calling it keeps the current points |
+| `setVariableBounds(index, lower, upper)`, `setVariableBounds(lowers, uppers)` | an index of a variable in `getProblem()`, or a bound for each of its variables; no NaN, `lower <= upper`, and the bounds must intersect SHOT's bounds and those proposed before, also after rounding | intersected |
 
 An action with invalid input throws `std::invalid_argument` (`ValueError` in Python). If the callback does not catch
 it, it is a callback failure (see below).
@@ -191,7 +213,8 @@ If a callback throws, SHOT does the following:
 3. It calls no callback again during the solve.
 4. It terminates with reason `Error`.
 
-`Solver::solveProblem()` then rethrows the exception after the solution has been finalized. In Python, the original
+`Solver::solveProblem()` then rethrows the exception after the solution has been finalized. A failure at
+`BoundTightening` is rethrown by `Solver::setProblem()` instead, which then does not complete. In Python, the original
 exception is raised by `solveProblem()`, with its traceback. The GAMS interface reports it as a solver error.
 
 ## Context lifetime

@@ -21,8 +21,15 @@
 
 #include "../src/Model/Problem.h"
 #include "../src/Model/ObjectiveFunction.h"
+#include "IntegerCutTestCommon.h"
 
+#include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <fstream>
+#include <functional>
 #include <iostream>
+#include <sstream>
 
 using namespace SHOT;
 
@@ -82,18 +89,18 @@ bool GurobiTest1(std::string filename, double correctObjectiveValue)
     if(solver->getOriginalProblem()->objectiveFunction->properties.isMinimize)
     {
         if(correctObjectiveValue <= solver->getPrimalBound() + 1e-5
-            && correctObjectiveValue >= solver->getCurrentDualBound() - 1e-5)
+            && correctObjectiveValue >= solver->getGlobalDualBound() - 1e-5)
         {
             std::cout << std::endl
                       << "Given objective value (" << correctObjectiveValue << ") is within dual ("
-                      << solver->getCurrentDualBound() << ") and primal (" << solver->getPrimalBound()
+                      << solver->getGlobalDualBound() << ") and primal (" << solver->getPrimalBound()
                       << ") for minimization problem." << std::endl;
         }
         else
         {
             std::cout << std::endl
                       << "Given objective value (" << correctObjectiveValue << ") is not within dual ("
-                      << solver->getCurrentDualBound() << ") and primal (" << solver->getPrimalBound()
+                      << solver->getGlobalDualBound() << ") and primal (" << solver->getPrimalBound()
                       << ") for minimization problem." << std::endl;
             passed = false;
         }
@@ -101,18 +108,18 @@ bool GurobiTest1(std::string filename, double correctObjectiveValue)
     else
     {
         if(correctObjectiveValue >= solver->getPrimalBound() - 1e-5
-            && correctObjectiveValue <= solver->getCurrentDualBound() + 1e-5)
+            && correctObjectiveValue <= solver->getGlobalDualBound() + 1e-5)
         {
             std::cout << std::endl
                       << "Given objective value (" << correctObjectiveValue << ") is within primal ("
-                      << solver->getPrimalBound() << ") and dual (" << solver->getCurrentDualBound()
+                      << solver->getPrimalBound() << ") and dual (" << solver->getGlobalDualBound()
                       << ") for maximization problem." << std::endl;
         }
         else
         {
             std::cout << std::endl
                       << "Given objective value (" << correctObjectiveValue << ") is not within primal ("
-                      << solver->getPrimalBound() << ") and dual (" << solver->getCurrentDualBound()
+                      << solver->getPrimalBound() << ") and dual (" << solver->getGlobalDualBound()
                       << ") for maximization problem." << std::endl;
             passed = false;
         }
@@ -121,30 +128,141 @@ bool GurobiTest1(std::string filename, double correctObjectiveValue)
     return passed;
 }
 
-// For nonconvex problems where finding a primal solution is not guaranteed;
-// only verifies the solver terminates without crashing.
-bool GurobiTestNocrash(std::string filename)
+// A cut of x^2/y generated where y is close to zero has coefficients of the order 1/y^2, and the lazy cuts in the
+// single-tree strategy are scaled as the other cuts so that the largest value is 1e9. The lazy cuts are read from the
+// file they are written to in debug mode.
+bool GurobiLazyCutScalingTest()
 {
     std::unique_ptr<Solver> solver = std::make_unique<Solver>();
     auto env = solver->getEnvironment();
 
-    // A time limit so that a test that does not converge cannot stop the test suite
+    std::string debugPath = "debug_gurobi_lazy_cut_scaling";
+    std::remove((debugPath + "/lazycuts.txt").c_str());
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Output.Debug.Enable", true);
+    solver->updateSetting("Output.Debug.Path", debugPath);
     solver->updateSetting("Termination.TimeLimit", 60.0);
-
     solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Gurobi));
+    solver->updateSetting("Dual.TreeStrategy", static_cast<int>(ES_TreeStrategy::SingleTree));
+    // The cutting planes are generated in the solution points of the MIP problem, where y is at first at its lower
+    // bound, and without the relaxation first solved without integer variables, the first cuts are lazy cuts
+    solver->updateSetting("Dual.CutStrategy", static_cast<int>(ES_HyperplaneCutStrategy::ECP));
+    solver->updateSetting("Dual.Relaxation.Use", false);
+    solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
 
-    try
+    // min t + y + b s.t. x^2/y <= t, which has the optimum 2 in x = y = 1, b = 0
+    auto problem = std::make_shared<Problem>(env);
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, 1.0, 2.0);
+    auto y = std::make_shared<Variable>("y", E_VariableType::Real, 1e-10, 10.0);
+    auto t = std::make_shared<Variable>("t", E_VariableType::Real, 0.0, 1e3);
+    auto b = std::make_shared<Variable>("b", E_VariableType::Binary, 0.0, 1.0);
+    problem->add(Variables { x, y, t, b });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, t));
+    objective->add(std::make_shared<LinearTerm>(1.0, y));
+    objective->add(std::make_shared<LinearTerm>(1.0, b));
+    problem->add(objective);
+
+    auto constraint = std::make_shared<NonlinearConstraint>("quotient", SHOT_DBL_MIN, 0.0);
+    constraint->add(std::make_shared<LinearTerm>(-1.0, t));
+    constraint->add(
+        std::make_shared<ExpressionDivide>(std::make_shared<ExpressionSquare>(std::make_shared<ExpressionVariable>(x)),
+            std::make_shared<ExpressionVariable>(y)));
+    problem->add(constraint);
+    problem->finalize();
+
+    if(!solver->setProblem(problem))
+        return false;
+
+    solver->solveProblem();
+
+    std::ifstream file(debugPath + "/lazycuts.txt");
+    std::string line;
+    int numberOfCuts = 0;
+    double largestValue = 0.0;
+
+    while(std::getline(file, line))
     {
-        if(!solver->setProblem(filename))
-            return false;
+        if(line.find("_HP:") == std::string::npos)
+            continue;
+
+        numberOfCuts++;
+
+        // The line is name: coefficient variable ... sense rhs, and the values are the tokens that are numbers
+        std::istringstream tokens(line.substr(line.find(':') + 1));
+        std::string token;
+
+        while(tokens >> token)
+        {
+            char* end;
+            double value = std::strtod(token.c_str(), &end);
+
+            if(*end == '\0')
+                largestValue = std::max(largestValue, std::abs(value));
+        }
     }
-    catch(Exception& e)
+
+    std::cout << "  " << numberOfCuts << " lazy cuts with the largest value " << largestValue << std::endl;
+
+    if(numberOfCuts == 0)
     {
-        std::cout << "Error: " << e.what() << std::endl;
+        std::cout << "No lazy cuts were added." << std::endl;
         return false;
     }
 
+    if(largestValue > 1e9 * (1 + 1e-6))
+    {
+        std::cout << "A lazy cut has a value larger than 1e9." << std::endl;
+        return false;
+    }
+
+    if(std::abs(solver->getPrimalBound() - 2.0) > 1e-3)
+    {
+        std::cout << "The primal bound " << solver->getPrimalBound() << " is not the optimum 2." << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+// Solves a problem with Gurobi and checks that a primal solution is found, and if requested, that the objective gap is
+// closed
+bool GurobiDualProblemTest(
+    std::string filename, bool gapClosed, const std::function<void(Solver&)>& configure = nullptr)
+{
+    std::unique_ptr<Solver> solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Gurobi));
+    solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+
+    if(configure)
+        configure(*solver);
+
+    if(!solver->setProblem(filename))
+        return false;
+
     solver->solveProblem();
+
+    std::cout << "  " << env->results->terminationReasonDescription << " Dual bound " << solver->getGlobalDualBound()
+              << ", primal bound " << solver->getPrimalBound() << "." << std::endl;
+
+    if(!env->results->hasPrimalSolution())
+    {
+        std::cout << "No primal solution was found." << std::endl;
+        return false;
+    }
+
+    if(gapClosed && !env->results->isAbsoluteObjectiveGapToleranceMet()
+        && !env->results->isRelativeObjectiveGapToleranceMet())
+    {
+        std::cout << "The objective gap is not closed." << std::endl;
+        return false;
+    }
 
     return true;
 }
@@ -533,6 +651,107 @@ bool GurobiExternalDualBoundCallbackTest(std::string filename, double dualBoundT
     return (true);
 }
 
+// Bounding a free auxiliary objective after an unbounded LP can give a numerically infeasible point. It must not
+// become the incumbent and close the objective gap at an infeasible objective value.
+bool GurobiPrimalValidationAfterUnboundedLPTest(const std::string& filename)
+{
+    bool passed = true;
+
+    for(auto treeStrategy : { ES_TreeStrategy::MultiTree, ES_TreeStrategy::SingleTree })
+    {
+        auto solver = std::make_unique<Solver>();
+        auto env = solver->getEnvironment();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Termination.TimeLimit", 30.0);
+        solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Gurobi));
+        solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+        solver->updateSetting("Dual.TreeStrategy", static_cast<int>(treeStrategy));
+        solver->updateSetting("Dual.CutStrategy", static_cast<int>(ES_HyperplaneCutStrategy::ECP));
+        solver->updateSetting(
+            "Model.Reformulation.Quadratics.Strategy", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
+        solver->updateSetting("Model.Reformulation.ObjectiveFunction.EpigraphStrategy", 2);
+        solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+        solver->updateSetting("Primal.Tolerance.TrustLinearConstraintValues", true);
+
+        if(!solver->setProblem(filename) || !solver->solveProblem())
+            return false;
+
+        bool hasCorrectBounds = std::abs(solver->getPrimalBound() - 2.925) <= 1e-3
+            && std::abs(solver->getGlobalDualBound() - 2.925) <= 1e-3;
+
+        if(!solver->hasPrimalSolution() || !hasCorrectBounds
+            || solver->getModelReturnStatus() != E_ModelReturnStatus::OptimalGlobal)
+        {
+            std::cout << "Tree strategy " << static_cast<int>(treeStrategy)
+                      << ": expected optimal bounds of 2.925, got [" << solver->getGlobalDualBound() << ", "
+                      << solver->getPrimalBound() << "]\n";
+            passed = false;
+        }
+
+        for(auto& solution : solver->getPrimalSolutions())
+        {
+            auto deviation
+                = env->problem->getMaxNumericConstraintValue(solution.point, env->problem->linearConstraints);
+            if(deviation.error > 1e-6)
+            {
+                std::cout << "Accepted a solution violating " << deviation.constraint->name << " by " << deviation.error
+                          << '\n';
+                passed = false;
+            }
+        }
+    }
+
+    return passed;
+}
+
+bool GurobiQuadraticObjectiveWithoutRecommendedSettingsTest()
+{
+    bool passed = true;
+
+    for(auto strategy :
+        { ES_QuadraticProblemStrategy::QuadraticObjective, ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained,
+            ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained })
+    {
+        auto solver = std::make_unique<Solver>();
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Strategy.UseRecommendedSettings", false);
+        solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Gurobi));
+        solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+        solver->updateSetting("Termination.TimeLimit", 10.0);
+        solver->updateSetting("Model.Reformulation.Quadratics.Strategy", static_cast<int>(strategy));
+
+        if(!solver->setProblem("data/instances/minlp_tests_jl/nlp-mi_003_014.jl.nl") || !solver->solveProblem())
+            return false;
+
+        // The fixed-integer fallback can find the optimum even after a MIP error. Require an error-free solve and
+        // valid bounds, without requiring a global proof for this nonconvex cutting-plane problem.
+        if(solver->getTerminationReason() == E_TerminationReason::Error || !solver->hasPrimalSolution()
+            || std::abs(solver->getPrimalBound() - 11.0) > 1e-5 || !std::isfinite(solver->getGlobalDualBound())
+            || solver->getGlobalDualBound() < 11.0 - 1e-5)
+        {
+            std::cout << "Quadratic strategy " << static_cast<int>(strategy)
+                      << ": expected an error-free solve with primal value 11 and a valid dual bound, got ["
+                      << solver->getPrimalBound() << ", " << solver->getGlobalDualBound() << "], termination reason "
+                      << static_cast<int>(solver->getTerminationReason()) << '\n';
+            passed = false;
+        }
+
+        if(solver->hasPrimalSolution())
+        {
+            auto problem = solver->getOriginalProblem();
+            auto deviation
+                = problem->getMaxNumericConstraintValue(solver->getPrimalSolution().point, problem->numericConstraints);
+            if(!std::isfinite(deviation.error) || deviation.error > 1e-5)
+            {
+                std::cout << "Returned point violates the original constraints by " << deviation.error << '\n';
+                passed = false;
+            }
+        }
+    }
+
+    return passed;
+}
+
 int GurobiTest(int argc, char* argv[])
 {
 
@@ -621,18 +840,64 @@ int GurobiTest(int argc, char* argv[])
         break;
     case 13:
         std::cout << "Starting test to solve gear.osil with Gurobi." << std::endl;
-        passed = GurobiTestNocrash("data/gear.osil");
+        passed = solveWithIntegerCuts(ES_MIPSolver::Gurobi, "data/gear.osil", 0.0);
         std::cout << "Finished test to solve gear.osil with Gurobi." << std::endl;
         break;
     case 14:
         std::cout << "Starting test to solve windfac.osil with Gurobi." << std::endl;
-        passed = GurobiTestNocrash("data/windfac.osil");
+        passed = solveWithIntegerCuts(ES_MIPSolver::Gurobi, "data/windfac.osil", 0.254487);
         std::cout << "Finished test to solve windfac.osil with Gurobi." << std::endl;
         break;
     case 15:
         std::cout << "Starting test to solve ex1252a.osil with Gurobi." << std::endl;
-        passed = GurobiTestNocrash("data/ex1252a.osil");
+        passed = solveWithIntegerCuts(ES_MIPSolver::Gurobi, "data/ex1252a.osil", 128893.741);
         std::cout << "Finished test to solve ex1252a.osil with Gurobi." << std::endl;
+        break;
+    case 16:
+        std::cout << "Starting test for integer cuts of nonbinary variables in single-tree strategy" << std::endl;
+        passed = integerCutsBetweenSingleTreeSolves(ES_MIPSolver::Gurobi);
+        std::cout << "Finished test for integer cuts of nonbinary variables in single-tree strategy." << std::endl;
+        break;
+    case 17:
+        std::cout << "Starting test for scaling the lazy cuts in single-tree strategy" << std::endl;
+        passed = GurobiLazyCutScalingTest();
+        std::cout << "Finished test for scaling the lazy cuts in single-tree strategy." << std::endl;
+        break;
+    case 18:
+        // Gurobi solves the convex problem with quadratic constraints directly, and its objective value is the bound
+        std::cout << "Starting test for the dual bound of a continuous convex problem with quadratic constraints"
+                  << std::endl;
+        passed = GurobiDualProblemTest("data/instances/minlp_tests_jl/nlp-cvx_202_010.jl.nl", true);
+        std::cout << "Finished test for the dual bound of a continuous convex problem with quadratic constraints."
+                  << std::endl;
+        break;
+    case 19:
+        // The barrier method has numerical trouble on the degenerate convex problem with quadratic constraints
+        std::cout << "Starting test for solving the dual problem again after numerical trouble" << std::endl;
+        passed = GurobiDualProblemTest("data/instances/minlp_tests_jl/nlp-cvx_202_011.jl.nl", true);
+        std::cout << "Finished test for solving the dual problem again after numerical trouble." << std::endl;
+        break;
+    case 20:
+        // The relaxation gets numerical trouble after a repair, also when Gurobi uses its most careful numerics, and
+        // the primal solutions are only found in the problem with the discrete variables
+        std::cout << "Starting test for ending the relaxation after numerical trouble" << std::endl;
+        passed = GurobiDualProblemTest("data/instances/MINLP-nonconvex/nvs05.osil", false,
+            [](Solver& solver)
+            {
+                solver.updateSetting("Strategy.UseRecommendedSettings", false);
+                solver.updateSetting("Subsolver.Gurobi.NumericFocus", 3);
+            });
+        std::cout << "Finished test for ending the relaxation after numerical trouble." << std::endl;
+        break;
+    case 21:
+        std::cout << "Starting test for primal feasibility after an unbounded LP" << std::endl;
+        passed = GurobiPrimalValidationAfterUnboundedLPTest("data/instances/MIQCQP-convex/alan.osil");
+        std::cout << "Finished test for primal feasibility after an unbounded LP." << std::endl;
+        break;
+    case 22:
+        std::cout << "Starting test for quadratic objectives without recommended settings" << std::endl;
+        passed = GurobiQuadraticObjectiveWithoutRecommendedSettingsTest();
+        std::cout << "Finished test for quadratic objectives without recommended settings." << std::endl;
         break;
     default:
         passed = false;

@@ -21,7 +21,10 @@
 #include "../src/Model/Problem.h"
 #include "../src/Model/ObjectiveFunction.h"
 #include "../src/Tasks/TaskCreateMIPProblem.h"
+#include "IntegerCutTestCommon.h"
 
+#include <cmath>
+#include <functional>
 #include <iostream>
 
 using namespace SHOT;
@@ -79,7 +82,7 @@ bool CplexTest1(std::string filename, double correctObjectiveValue)
     if(solver->getOriginalProblem()->objectiveFunction->properties.isMinimize)
     {
         if(correctObjectiveValue <= solver->getPrimalBound() + 1e-5
-            && correctObjectiveValue >= solver->getCurrentDualBound() - 1e-5)
+            && correctObjectiveValue >= solver->getGlobalDualBound() - 1e-5)
         {
             std::cout << std::endl
                       << "Global objective value is within dual and primal bounds for minimization problem."
@@ -96,7 +99,7 @@ bool CplexTest1(std::string filename, double correctObjectiveValue)
     else
     {
         if(correctObjectiveValue >= solver->getPrimalBound() - 1e-5
-            && correctObjectiveValue <= solver->getCurrentDualBound() + 1e-5)
+            && correctObjectiveValue <= solver->getGlobalDualBound() + 1e-5)
         {
             std::cout << std::endl
                       << "Global objective value " << correctObjectiveValue
@@ -151,7 +154,7 @@ bool CplexGenericCallbackTest(std::string filename, double correctObjectiveValue
     }
 
     double primalBound = solver->getPrimalBound();
-    double dualBound = solver->getCurrentDualBound();
+    double dualBound = solver->getGlobalDualBound();
 
     std::cout << "Dual bound: " << dualBound << ", primal bound: " << primalBound
               << ", optimal objective value: " << correctObjectiveValue << "\n";
@@ -174,31 +177,6 @@ bool CplexGenericCallbackTest(std::string filename, double correctObjectiveValue
     }
 
     return (true);
-}
-
-// For nonconvex problems where finding a primal solution is not guaranteed;
-// only verifies the solver terminates without crashing.
-bool CplexTestNocrash(std::string filename)
-{
-    auto solver = std::make_unique<SHOT::Solver>();
-    auto env = solver->getEnvironment();
-
-    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
-
-    try
-    {
-        if(!solver->setProblem(filename))
-            return false;
-    }
-    catch(SHOT::Exception& e)
-    {
-        std::cout << "Error: " << e.what() << std::endl;
-        return false;
-    }
-
-    solver->solveProblem();
-
-    return true;
 }
 
 bool CplexTerminationCallbackTest(std::string filename)
@@ -619,7 +597,7 @@ bool CplexCallbackAfterSolveErrorTest(bool quadraticConstraint)
         return false;
 
     // Give the original quadratic model to CPLEX so SHOT's reformulation does not remove the error trigger.
-    TaskCreateMIPProblem(env, backend, problem).run();
+    TaskCreateMIPProblem(env, backend, problem, MIPSolverCplex::capabilities).run();
     backend->setTimeLimit(10.0);
     backend->setSolutionLimit(2100000000);
 
@@ -639,6 +617,202 @@ bool CplexCallbackAfterSolveErrorTest(bool quadraticConstraint)
     }
 
     backend.reset(); // Previously asserted in IloCplex::remove() after the unsuccessful solve.
+    return true;
+}
+
+// A convex quadratic objective keeps the quadratic constraints in CPLEX. An indefinite objective must stay
+// quadratic while the convex constraints are handled with cuts, since CPLEX rejects the direct combination.
+bool CplexQuadraticObjectiveAndConstraintsTest()
+{
+    for(bool discrete : { false, true })
+    {
+        for(bool nonconvexObjective : { false, true })
+        {
+            for(bool maximize : { false, true })
+            {
+                for(auto quadraticStrategy : { ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained,
+                        ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained })
+                {
+                    auto solver = std::make_unique<Solver>();
+                    auto env = solver->getEnvironment();
+                    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+                    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
+                    solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+                    solver->updateSetting(
+                        "Model.Reformulation.Quadratics.Strategy", static_cast<int>(quadraticStrategy));
+                    solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+                    solver->updateSetting("Primal.FixedInteger.Use", false);
+                    solver->updateSetting("Primal.PolishSolution.NumberOfPoints", 0);
+                    solver->updateSetting("Termination.ObjectiveGap.Absolute", 1e-8);
+                    solver->updateSetting("Termination.ObjectiveGap.Relative", 1e-8);
+                    solver->updateSetting("Termination.TimeLimit", 10.0);
+
+                    auto problem = std::make_shared<Problem>(env);
+                    problem->name = "cplexquadraticobjectiveandconstraints";
+                    auto x = std::make_shared<Variable>(
+                        "x", discrete ? E_VariableType::Integer : E_VariableType::Real, 0.0, 2.0);
+                    auto y = std::make_shared<Variable>("y", E_VariableType::Real, 0.0, 2.0);
+                    problem->add({ x, y });
+
+                    auto objective = std::make_shared<QuadraticObjectiveFunction>(
+                        maximize ? E_ObjectiveFunctionDirection::Maximize : E_ObjectiveFunctionDirection::Minimize);
+                    double objectiveSign = maximize ? -1.0 : 1.0;
+                    objective->add(
+                        std::make_shared<QuadraticTerm>(objectiveSign * (nonconvexObjective ? -1.0 : 1.0), x, x));
+                    objective->add(std::make_shared<QuadraticTerm>(objectiveSign, y, y));
+                    if(!nonconvexObjective)
+                        objective->add(std::make_shared<LinearTerm>(-4.0 * objectiveSign, x));
+                    problem->add(objective);
+
+                    for(int i : { 1, 2 })
+                    {
+                        auto constraint = std::make_shared<QuadraticConstraint>(
+                            "quadratic" + std::to_string(i), SHOT_DBL_MIN, 0.5 + 0.5 * i);
+                        constraint->add(std::make_shared<QuadraticTerm>(1.0, x, x));
+                        constraint->add(std::make_shared<QuadraticTerm>(static_cast<double>(i), y, y));
+                        problem->add(constraint);
+                    }
+                    problem->finalize();
+                    if(!solver->setProblem(problem))
+                        return false;
+
+                    auto expectedStrategy = nonconvexObjective
+                        ? (discrete ? E_SolutionStrategy::MultiTree : E_SolutionStrategy::NLP)
+                        : E_SolutionStrategy::MIQCQP;
+                    const auto& properties = env->reformulatedProblem->properties;
+                    if(env->results->usedSolutionStrategy != expectedStrategy
+                        || !env->reformulatedProblem->objectiveFunction->properties.hasQuadraticTerms
+                        || properties.numberOfQuadraticConstraints != (nonconvexObjective ? 0 : 2)
+                        || properties.numberOfNonlinearConstraints != (nonconvexObjective ? 2 : 0))
+                    {
+                        std::cout << "Incorrect CPLEX quadratic routing: nonconvex objective " << nonconvexObjective
+                                  << ", discrete " << discrete << ", strategy " << static_cast<int>(quadraticStrategy)
+                                  << '\n';
+                        return false;
+                    }
+
+                    // Both objectives attain their optima at (1, 0); without the constraints x could reach 2.
+                    double expectedObjective = objectiveSign * (nonconvexObjective ? -1.0 : -3.0);
+                    if(!solver->solveProblem() || !solver->hasPrimalSolution()
+                        || solver->getModelReturnStatus() != E_ModelReturnStatus::OptimalGlobal
+                        || std::abs(solver->getPrimalBound() - expectedObjective) > 1e-6
+                        || std::abs(solver->getGlobalDualBound() - expectedObjective) > 1e-6)
+                    {
+                        std::cout << "CPLEX quadratic solve failed: nonconvex objective " << nonconvexObjective
+                                  << ", discrete " << discrete << ", maximize " << maximize << ", strategy "
+                                  << static_cast<int>(quadraticStrategy) << ", bounds [" << solver->getGlobalDualBound()
+                                  << ", " << solver->getPrimalBound() << "]\n";
+                        return false;
+                    }
+
+                    auto expectedClass = nonconvexObjective
+                        ? (discrete ? E_DualProblemClass::MIQP : E_DualProblemClass::QP)
+                        : (discrete ? E_DualProblemClass::MIQCQP : E_DualProblemClass::QCQP);
+                    auto deviation = problem->getMaxNumericConstraintValue(
+                        solver->getPrimalSolution().point, problem->numericConstraints);
+                    if(env->dualSolver->MIPSolver->getProblemClass() != expectedClass || !std::isfinite(deviation.error)
+                        || deviation.error > 1e-6)
+                    {
+                        std::cout << "Incorrect CPLEX problem class or infeasible quadratic solution\n";
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+    return true;
+}
+
+bool CplexDirectNonconvexQPTest()
+{
+    for(bool discrete : { false, true })
+    {
+        for(bool maximize : { false, true })
+        {
+            for(bool indefinite : { false, true })
+            {
+                for(int quadraticStrategy : { -1, 0, 1, 2, 3 }) // Default, then each explicit quadratic strategy
+                {
+                    auto solver = std::make_unique<Solver>();
+                    auto env = solver->getEnvironment();
+                    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+                    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
+                    solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+                    solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+                    solver->updateSetting("Primal.FixedInteger.Use", false);
+                    solver->updateSetting("Primal.PolishSolution.NumberOfPoints", 0);
+                    solver->updateSetting("Termination.ObjectiveGap.Absolute", 1e-8);
+                    solver->updateSetting("Termination.ObjectiveGap.Relative", 1e-8);
+                    solver->updateSetting("Termination.TimeLimit", 10.0);
+                    if(quadraticStrategy >= 0)
+                        solver->updateSetting("Model.Reformulation.Quadratics.Strategy", quadraticStrategy);
+
+                    auto problem = std::make_shared<Problem>(env);
+                    problem->name = "cplexdirectnonconvexqp";
+                    auto x = std::make_shared<Variable>(
+                        "x", discrete ? E_VariableType::Integer : E_VariableType::Real, 0.0, 2.0);
+                    auto y = std::make_shared<Variable>("y", E_VariableType::Real, -1.0, 1.0);
+                    problem->add({ x, y });
+
+                    auto objective = std::make_shared<QuadraticObjectiveFunction>(
+                        maximize ? E_ObjectiveFunctionDirection::Maximize : E_ObjectiveFunctionDirection::Minimize);
+                    double sign = maximize ? 1.0 : -1.0;
+                    objective->add(std::make_shared<QuadraticTerm>(sign, x, x));
+                    objective->add(std::make_shared<QuadraticTerm>(indefinite ? -sign : sign, y, y));
+                    problem->add(objective);
+
+                    // The two rows give x + |y| <= 1. Both objective types have an optimum at (1, 0).
+                    for(int i : { -1, 1 })
+                    {
+                        auto constraint
+                            = std::make_shared<LinearConstraint>("linear" + std::to_string(i), SHOT_DBL_MIN, 1.0);
+                        constraint->add(std::make_shared<LinearTerm>(1.0, x));
+                        constraint->add(std::make_shared<LinearTerm>(static_cast<double>(i), y));
+                        problem->add(constraint);
+                    }
+                    problem->finalize();
+                    if(!solver->setProblem(problem))
+                        return false;
+
+                    auto expectedStrategy = quadraticStrategy == 0
+                        ? (discrete ? E_SolutionStrategy::MultiTree : E_SolutionStrategy::NLP)
+                        : E_SolutionStrategy::MIQP;
+                    if(env->results->usedSolutionStrategy != expectedStrategy)
+                    {
+                        std::cout << "Incorrect CPLEX nonconvex QP strategy: discrete " << discrete << ", maximize "
+                                  << maximize << ", indefinite " << indefinite << ", quadratic strategy "
+                                  << quadraticStrategy << '\n';
+                        return false;
+                    }
+                    if(quadraticStrategy == 0)
+                        continue;
+
+                    double expectedObjective = maximize ? 1.0 : -1.0;
+                    if(!solver->solveProblem() || !solver->hasPrimalSolution()
+                        || solver->getModelReturnStatus() != E_ModelReturnStatus::OptimalGlobal
+                        || std::abs(solver->getPrimalBound() - expectedObjective) > 1e-6
+                        || std::abs(solver->getGlobalDualBound() - expectedObjective) > 1e-6)
+                    {
+                        std::cout << "Direct CPLEX nonconvex QP solve failed: discrete " << discrete << ", maximize "
+                                  << maximize << ", indefinite " << indefinite << ", quadratic strategy "
+                                  << quadraticStrategy << ", bounds [" << solver->getGlobalDualBound() << ", "
+                                  << solver->getPrimalBound() << "]\n";
+                        return false;
+                    }
+                    auto expectedClass = discrete ? E_DualProblemClass::MIQP : E_DualProblemClass::QP;
+                    auto deviation = problem->getMaxNumericConstraintValue(
+                        solver->getPrimalSolution().point, problem->numericConstraints);
+                    if(env->dualSolver->MIPSolver->getProblemClass() != expectedClass
+                        || env->dualSolver->MIPSolver->hasDualAuxiliaryObjectiveVariable()
+                        || !std::isfinite(deviation.error) || deviation.error > 1e-6)
+                    {
+                        std::cout << "Incorrect CPLEX nonconvex QP class or infeasible solution\n";
+                        return false;
+                    }
+                }
+            }
+        }
+    }
     return true;
 }
 
@@ -676,7 +850,7 @@ bool CplexRelaxationConversionTest()
     if(!backend->initializeProblem())
         return false;
 
-    TaskCreateMIPProblem(env, backend, problem).run();
+    TaskCreateMIPProblem(env, backend, problem, MIPSolverCplex::capabilities).run();
     backend->setTimeLimit(10.0);
     backend->setSolutionLimit(2100000000);
 
@@ -693,6 +867,112 @@ bool CplexRelaxationConversionTest()
             return false;
     }
 
+    return true;
+}
+
+// Solves the problem with Cplex and the settings given by the function, and checks that the solution does not end with
+// an error, that there is a primal solution and that the primal bound is the optimum
+bool CplexSettingsTest(std::string filename, double correctObjectiveValue, std::function<void(Solver&)> setSettings)
+{
+    auto solver = std::make_unique<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
+    solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+    solver->updateSetting("Termination.TimeLimit", 60.0);
+    setSettings(*solver);
+
+    if(!solver->setProblem(filename))
+        return false;
+
+    solver->solveProblem();
+
+    if(env->results->terminationReason == E_TerminationReason::Error
+        || env->results->terminationReason == E_TerminationReason::NumericIssues)
+    {
+        std::cout << "The solution ended with an error: " << env->results->terminationReasonDescription << std::endl;
+        return false;
+    }
+
+    if(!env->results->hasPrimalSolution())
+    {
+        std::cout << "No primal solution was found." << std::endl;
+        return false;
+    }
+
+    // NaN when the problem is nonconvex and only a primal solution is required
+    if(!std::isnan(correctObjectiveValue)
+        && std::abs(solver->getPrimalBound() - correctObjectiveValue)
+            > 1e-4 * std::max(1.0, std::abs(correctObjectiveValue)))
+    {
+        std::cout << "The primal bound " << solver->getPrimalBound() << " is not the optimum " << correctObjectiveValue
+                  << "." << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+class CplexRecoveryProbe : public MIPSolverCplex
+{
+public:
+    using MIPSolverCplex::MIPSolverCplex;
+
+    E_ProblemSolutionStatus recoverWithExpiredBudget()
+    {
+        return resolveWithNumericalEmphasis(E_ProblemSolutionStatus::Infeasible,
+            cplexInstance.getCplexTime() - cplexInstance.getParam(IloCplex::Param::TimeLimit) - 1.0);
+    }
+};
+
+bool CplexInfeasibilityRecoverySettingsTest()
+{
+    for(int emphasis : { 0, 1 })
+    {
+        auto solver = std::make_unique<Solver>();
+        solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
+        solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+        solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+        solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+        auto env = solver->getEnvironment();
+        auto problem = std::make_shared<Problem>(env);
+        auto x = std::make_shared<Variable>("x", E_VariableType::Integer, 0.0, 1.0);
+        problem->add(x);
+        auto constraint = std::make_shared<LinearConstraint>("infeasible", 2.0, SHOT_DBL_MAX);
+        constraint->add(std::make_shared<LinearTerm>(1.0, x));
+        problem->add(constraint);
+        auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+        objective->add(std::make_shared<LinearTerm>(1.0, x));
+        problem->add(objective);
+        problem->finalize();
+        if(!solver->setProblem(problem))
+            return false;
+        auto backend = std::make_shared<CplexRecoveryProbe>(env);
+        if(!backend->initializeProblem())
+            return false;
+
+        TaskCreateMIPProblem(env, backend, problem, MIPSolverCplex::capabilities).run();
+        backend->setTimeLimit(10.0);
+        backend->cplexInstance.setParam(IloCplex::Param::Emphasis::Numerical, emphasis);
+        backend->cplexInstance.setParam(IloCplex::Param::Advance, 2);
+
+        auto settingsRestored = [&]()
+        {
+            return backend->cplexInstance.getParam(IloCplex::Param::Emphasis::Numerical) == emphasis
+                && backend->cplexInstance.getParam(IloCplex::Param::Preprocessing::Presolve)
+                && backend->cplexInstance.getParam(IloCplex::Param::Advance) == 2
+                && backend->cplexInstance.getParam(IloCplex::Param::TimeLimit) == 10.0;
+        };
+
+        if(backend->solveProblem() != E_ProblemSolutionStatus::Infeasible || !settingsRestored()
+            || backend->getDualObjectiveValue() != SHOT_DBL_MIN)
+            return false;
+
+        // Once the budget is exhausted, do not start another solve or publish a bound from the failed one.
+        if(backend->recoverWithExpiredBudget() != E_ProblemSolutionStatus::TimeLimit || !settingsRestored()
+            || backend->getDualObjectiveValue() != SHOT_DBL_MIN)
+            return false;
+    }
     return true;
 }
 
@@ -783,17 +1063,17 @@ int CplexTest(int argc, char* argv[])
         break;
     case 13:
         std::cout << "Starting test to solve gear.osil with Cplex." << std::endl;
-        passed = CplexTestNocrash("data/gear.osil");
+        passed = solveWithIntegerCuts(ES_MIPSolver::Cplex, "data/gear.osil", 0.0);
         std::cout << "Finished test to solve gear.osil with Cplex." << std::endl;
         break;
     case 14:
         std::cout << "Starting test to solve windfac.osil with Cplex." << std::endl;
-        passed = CplexTestNocrash("data/windfac.osil");
+        passed = solveWithIntegerCuts(ES_MIPSolver::Cplex, "data/windfac.osil", 0.254487);
         std::cout << "Finished test to solve windfac.osil with Cplex." << std::endl;
         break;
     case 15:
         std::cout << "Starting test to solve ex1252a.osil with Cplex." << std::endl;
-        passed = CplexTestNocrash("data/ex1252a.osil");
+        passed = solveWithIntegerCuts(ES_MIPSolver::Cplex, "data/ex1252a.osil", 128893.741);
         std::cout << "Finished test to solve ex1252a.osil with Cplex." << std::endl;
         break;
     case 16:
@@ -828,6 +1108,57 @@ int CplexTest(int argc, char* argv[])
     case 23:
         std::cout << "Testing the generic Cplex callback with local hyperplanes at relaxed points.\n";
         passed = CplexGenericCallbackTest("data/synthes1.osil", 6.00975891, 1, 10, true);
+        break;
+    case 24:
+        // The cutoff is a constraint in the LP relaxation, and the objective function has a constant
+        std::cout << "Testing the Cplex cutoff constraint with a constant in the objective function.\n";
+        passed = CplexSettingsTest("data/instances/minlp_tests_jl/nlp-mi_003_016.jl.nl", 6.141592653589793,
+            [](Solver& solver) { solver.updateSetting("Strategy.UseRecommendedSettings", false); });
+        break;
+    case 25:
+        // Cuts are added after the quadratic constraints and later removed when the dual problem is repaired
+        std::cout << "Testing the removal of Cplex cuts in a problem with quadratic constraints.\n";
+        passed = CplexSettingsTest("data/instances/minlp_tests_jl/nlp-cvx_108_012.jl.nl", 0.5927195136970647,
+            [](Solver& solver)
+            {
+                solver.updateSetting("Model.Reformulation.ObjectiveFunction.EpigraphStrategy",
+                    static_cast<int>(ES_ObjectiveEpigraphStrategy::EpigraphConstraint));
+            });
+        break;
+    case 26:
+        // Integer cuts of nonbinary variables add variables to the MIP problem in the single-tree strategy
+        std::cout << "Testing the Cplex single-tree callback after integer cuts of nonbinary variables.\n";
+        passed = integerCutsBetweenSingleTreeSolves(ES_MIPSolver::Cplex);
+        break;
+    case 27:
+        // Cplex fails with numerical trouble (status FailFeas) in a dual problem
+        std::cout << "Testing that numerical trouble in Cplex does not end the solution.\n";
+        passed = CplexSettingsTest("data/instances/MINLP-nonconvex/nvs05.osil", NAN, [](Solver&) { });
+        break;
+    case 28:
+        // Cplex's presolve reports the first dual problem, with convex quadratic constraints, as infeasible
+        std::cout << "Testing a feasible problem that Cplex's presolve reports as infeasible.\n";
+        for(auto treeStrategy : { ES_TreeStrategy::MultiTree, ES_TreeStrategy::SingleTree })
+            passed = CplexSettingsTest("data/instances/MINLP-convex-small/nvs11.osil", -431.0,
+                         [treeStrategy](Solver& solver)
+                         {
+                             solver.updateSetting("Dual.TreeStrategy", static_cast<int>(treeStrategy));
+                             solver.updateSetting("Model.Reformulation.ObjectiveFunction.EpigraphStrategy",
+                                 static_cast<int>(ES_ObjectiveEpigraphStrategy::EpigraphConstraint));
+                         })
+                && passed;
+        break;
+    case 29:
+        std::cout << "Testing Cplex recovery settings and remaining time.\n";
+        passed = CplexInfeasibilityRecoverySettingsTest();
+        break;
+    case 30:
+        std::cout << "Testing Cplex routing of quadratic objectives with quadratic constraints.\n";
+        passed = CplexQuadraticObjectiveAndConstraintsTest();
+        break;
+    case 31:
+        std::cout << "Testing direct Cplex solves of nonconvex QP and MIQP models.\n";
+        passed = CplexDirectNonconvexQPTest();
         break;
     default:
         passed = false;

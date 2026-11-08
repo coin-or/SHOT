@@ -56,6 +56,7 @@ static CppADErrorHandlerRegistrar cppad_error_handler_registrar;
 #include "Callback.h"
 
 #include "DualSolver.h"
+#include "MIPSolver/MIPSolverCapabilities.h"
 #include "PrimalSolver.h"
 #include "Report.h"
 #include "Results.h"
@@ -695,7 +696,8 @@ void checkVariablesInProblem(const Problem& problem)
 }
 
 // Adds a constraint given by a comparison. Without a name, it is named constraint_<index>
-void addConstraintExpression(Problem& problem, const ConstraintExpression& constraint, std::string name)
+void addConstraintExpression(Problem& problem, const ConstraintExpression& constraint, std::string name,
+    E_Convexity functionConvexity = E_Convexity::NotSet)
 {
     // A prefix that is unlikely to be used in a name the user gives, since checking the names of all the
     // constraints would make adding constraints quadratic in their number
@@ -726,8 +728,10 @@ void addConstraintExpression(Problem& problem, const ConstraintExpression& const
 
     // finalize() extracts the terms of the expression and changes the class of the constraint if nothing
     // nonlinear is left
-    problem.add(std::make_shared<NonlinearConstraint>(
-        name, constraint.expression, constraint.lowerBound, constraint.upperBound));
+    auto nonlinearConstraint = std::make_shared<NonlinearConstraint>(
+        name, constraint.expression, constraint.lowerBound, constraint.upperBound);
+    nonlinearConstraint->setFunctionConvexity(functionConvexity);
+    problem.add(nonlinearConstraint);
 }
 
 // SHOT gives a missing bound or objective gap as SHOT_DBL_MAX or SHOT_DBL_MIN, and a dual bound that has not been set
@@ -1021,6 +1025,43 @@ PYBIND11_MODULE(SHOTpy, m)
     // Function to get list of supported MIP solvers - uses C++ API directly
     m.def("getSupportedMIPSolvers", &Solver::getSupportedMIPSolvers,
         "Returns a list of MIP solvers supported in this build");
+
+    py::enum_<E_SemiVariableSupport>(
+        m, "SemiVariableSupport", "The nonzero intervals supported for a semi-variable, in addition to zero")
+        .value("None_", E_SemiVariableSupport::None, "The variable type is not supported")
+        .value("NonnegativeInterval", E_SemiVariableSupport::NonnegativeInterval,
+            "A nonnegative nonzero interval is supported")
+        .value("SignedInterval", E_SemiVariableSupport::SignedInterval,
+            "Both positive and negative nonzero intervals are supported");
+
+    py::class_<MIPSolverCapabilities>(m, "MIPSolverCapabilities",
+        "A read-only snapshot of the features supported by a compiled SHOT MIP backend.\n"
+        "Obtained with getMIPSolverCapabilities(), without constructing or licensing a solver.")
+        .def_readonly("convexQuadraticObjective", &MIPSolverCapabilities::convexQuadraticObjective,
+            "Supports convex quadratic minimization and concave quadratic maximization objectives")
+        .def_readonly("nonconvexQuadraticObjective", &MIPSolverCapabilities::nonconvexQuadraticObjective,
+            "Supports nonconvex quadratic objectives")
+        .def_readonly("convexQuadraticConstraints", &MIPSolverCapabilities::convexQuadraticConstraints,
+            "Supports convex quadratic constraints")
+        .def_readonly("nonconvexQuadraticConstraints", &MIPSolverCapabilities::nonconvexQuadraticConstraints,
+            "Supports nonconvex quadratic constraints")
+        .def_readonly("nonconvexObjectiveExcludesQuadraticConstraints",
+            &MIPSolverCapabilities::nonconvexObjectiveExcludesQuadraticConstraints,
+            "A nonconvex quadratic objective cannot be combined with quadratic constraints")
+        .def_readonly("SOS1", &MIPSolverCapabilities::SOS1, "Supports special ordered sets of type 1")
+        .def_readonly("SOS2", &MIPSolverCapabilities::SOS2, "Supports special ordered sets of type 2")
+        .def_readonly("singleTree", &MIPSolverCapabilities::singleTree,
+            "SHOT supports single-tree callback integration with this backend")
+        .def_readonly("semicontinuous", &MIPSolverCapabilities::semicontinuous,
+            "The nonzero intervals supported for semicontinuous variables")
+        .def_readonly("semiinteger", &MIPSolverCapabilities::semiinteger,
+            "The nonzero intervals supported for semi-integer variables")
+        .def_readonly("unboundedVariableBound", &MIPSolverCapabilities::unboundedVariableBound,
+            "The finite default magnitude for missing variable bounds; may differ from the backend's native infinity");
+
+    m.def("getMIPSolverCapabilities", &getMIPSolverCapabilities, py::arg("solver"),
+        "Returns a read-only capability snapshot for a compiled MIP backend, or None if unavailable or NotUsed.\n"
+        "No solver instance is constructed and no solver license is required.");
 
     // ===== NLP Solver Availability =====
     // These constants indicate which NLP solvers are available in this build
@@ -1994,6 +2035,8 @@ PYBIND11_MODULE(SHOTpy, m)
         .def_readonly("functionConvexity", &ConstraintProperties::functionConvexity,
             "The convexity of the function f(x) of the constraint L <= f(x) <= U, regardless of its bounds. An\n"
             "equality constraint with a convex function is nonconvex")
+        .def_readonly("userFunctionConvexity", &ConstraintProperties::userFunctionConvexity,
+            "The convexity of the function f(x) specified with setFunctionConvexity(), NotSet if it is detected")
         .def_readonly("hasLinearTerms", &ConstraintProperties::hasLinearTerms, "Whether it has linear terms")
         .def_readonly("hasQuadraticTerms", &ConstraintProperties::hasQuadraticTerms, "Whether it has quadratic terms")
         .def_readonly("hasMonomialTerms", &ConstraintProperties::hasMonomialTerms, "Whether it has monomial terms")
@@ -2180,6 +2223,12 @@ PYBIND11_MODULE(SHOTpy, m)
             "Add linear or quadratic terms")
         .def("add", py::overload_cast<QuadraticTermPtr>(&QuadraticConstraint::add), py::arg("term"),
             "Add linear or quadratic terms")
+        .def("setFunctionConvexity", &QuadraticConstraint::setFunctionConvexity, py::arg("convexity"),
+            "Specifies the convexity of the function f(x) in lhs <= f(x) <= rhs as Convexity.Convex, Concave or\n"
+            "Nonconvex, which SHOT then uses instead of detecting it; Convexity.NotSet detects it again. The\n"
+            "constraint is convex if f(x) is convex and only rhs is given, or concave and only lhs is given. The\n"
+            "solution status tells when the global optimality of a solution depends on this. Raises ValueError for\n"
+            "other values")
         .def("__repr__",
             [](QuadraticConstraintPtr c)
             {
@@ -2246,6 +2295,8 @@ PYBIND11_MODULE(SHOTpy, m)
             "isMaximize", &ObjectiveFunctionProperties::isMaximize, "Whether the objective function is maximized")
         .def_readonly("convexity", &ObjectiveFunctionProperties::convexity,
             "The convexity of the objective function as far as SHOT can determine it, which finalize() calculates")
+        .def_readonly("userFunctionConvexity", &ObjectiveFunctionProperties::userFunctionConvexity,
+            "The convexity specified with setFunctionConvexity(), NotSet if it is detected")
         .def_readonly("hasLinearTerms", &ObjectiveFunctionProperties::hasLinearTerms, "Whether it has linear terms")
         .def_readonly(
             "hasQuadraticTerms", &ObjectiveFunctionProperties::hasQuadraticTerms, "Whether it has quadratic terms")
@@ -2396,7 +2447,12 @@ PYBIND11_MODULE(SHOTpy, m)
         .def("add", py::overload_cast<const QuadraticTerms&>(&QuadraticObjectiveFunction::add), py::arg("terms"),
             "Add linear or quadratic terms")
         .def("add", py::overload_cast<QuadraticTermPtr>(&QuadraticObjectiveFunction::add), py::arg("term"),
-            "Add linear or quadratic terms");
+            "Add linear or quadratic terms")
+        .def("setFunctionConvexity", &QuadraticObjectiveFunction::setFunctionConvexity, py::arg("convexity"),
+            "Specifies the convexity of the objective function as Convexity.Convex, Concave or Nonconvex, which\n"
+            "SHOT then uses instead of detecting it; Convexity.NotSet detects it again. A minimized convex or\n"
+            "maximized concave function gives a convex problem. The solution status tells when the global\n"
+            "optimality of a solution depends on this. Raises ValueError for other values");
 
     // ===== NonlinearObjectiveFunction Class =====
     py::class_<NonlinearObjectiveFunction, QuadraticObjectiveFunction, std::shared_ptr<NonlinearObjectiveFunction>>(
@@ -2514,6 +2570,13 @@ PYBIND11_MODULE(SHOTpy, m)
             "The number of variables in the nonlinear expressions")
         .def_readonly("numberOfNonlinearExpressions", &ProblemProperties::numberOfNonlinearExpressions,
             "The number of nonlinear expressions, including one in the objective function")
+        .def_readonly("numberOfUserSpecifiedConvexConstraints",
+            &ProblemProperties::numberOfUserSpecifiedConvexConstraints,
+            "The number of constraints that are convex since the convexity of their functions has been specified\n"
+            "with setFunctionConvexity()")
+        .def_readonly("isObjectiveConvexityUserSpecified", &ProblemProperties::isObjectiveConvexityUserSpecified,
+            "Whether the objective function is convex when minimized, or concave when maximized, since its\n"
+            "convexity has been specified with setFunctionConvexity()")
         .def_readonly("name", &ProblemProperties::name, "The name of the problem")
         .def_readonly("description", &ProblemProperties::description, "A description of the problem")
         .def_readonly("isReformulated", &ProblemProperties::isReformulated,
@@ -2685,15 +2748,18 @@ PYBIND11_MODULE(SHOTpy, m)
             "RuntimeError if the problem has been finalized")
         .def(
             "addConstraint",
-            [](Problem& self, const ConstraintExpression& constraint, std::string name)
+            [](Problem& self, const ConstraintExpression& constraint, std::string name, E_Convexity functionConvexity)
             {
                 checkCanAdd(self);
-                addConstraintExpression(self, constraint, std::move(name));
+                addConstraintExpression(self, constraint, std::move(name), functionConvexity);
             },
             py::arg("constraint"), py::arg("name") = "",
+            py::arg_v("functionConvexity", E_Convexity::NotSet, "Convexity.NotSet"),
             "Add a constraint given by a comparison, e.g., x1 * x2 <= 5 or SHOTpy.inequality(1, x1 * x2, 5).\n"
             "Without a name, it is named constraint_<index>. The class of the constraint is decided by\n"
-            "finalize(), which may replace it, so read it back from the problem afterwards, e.g., by its name.")
+            "finalize(), which may replace it, so read it back from the problem afterwards, e.g., by its name.\n"
+            "functionConvexity specifies the convexity of the function as with setFunctionConvexity() on the\n"
+            "constraint; it is not used for a linear constraint.")
         // Problem::add(NumericConstraintPtr) dispatches on the properties of the constraint, so one overload takes
         // every kind. Adding a constraint is constant time, so this only saves the calls across the binding
         .def(
@@ -2801,17 +2867,26 @@ PYBIND11_MODULE(SHOTpy, m)
             "the problem, and RuntimeError if the problem has been finalized")
         .def(
             "setObjective",
-            [](Problem& self, NonlinearExpressionPtr expression, E_ObjectiveFunctionDirection direction)
+            [](Problem& self, NonlinearExpressionPtr expression, E_ObjectiveFunctionDirection direction,
+                E_Convexity functionConvexity)
             {
                 checkCanAdd(self);
                 checkVariablesInProblem(self, expression, "the objective function");
-                self.add(std::make_shared<NonlinearObjectiveFunction>(direction, expression, 0.0));
+
+                // The expression is added after the convexity is set, since the constructor taking it calculates the
+                // properties, and so detects the convexity
+                auto objective = std::make_shared<NonlinearObjectiveFunction>(direction);
+                objective->setFunctionConvexity(functionConvexity);
+                objective->add(expression);
+                self.add(objective);
             },
             py::arg("expression").none(false),
             py::arg_v("direction", E_ObjectiveFunctionDirection::Minimize, "ObjectiveDirection.Minimize"),
+            py::arg_v("functionConvexity", E_Convexity::NotSet, "Convexity.NotSet"),
             "Set the objective function to an expression, e.g., SHOTpy.exp(x) + x * y. The class of the objective\n"
             "function is decided by finalize(), which may replace it, so read it back from problem.objectiveFunction\n"
-            "afterwards.")
+            "afterwards. functionConvexity specifies the convexity of the function as with setFunctionConvexity()\n"
+            "on the objective function; it is not used for a linear one.")
         .def(
             "setObjective",
             [](Problem& self, VariablePtr variable, E_ObjectiveFunctionDirection direction)
@@ -3048,6 +3123,11 @@ PYBIND11_MODULE(SHOTpy, m)
         .def("getModelReturnStatus", &Solver::getModelReturnStatus,
             "The status of the solution, e.g., ModelReturnStatus.OptimalGlobal when the solution is proven\n"
             "optimal, or FeasibleSolution when a solution has been found without proving it optimal")
+        .def("getUserSpecifiedConvexityDescription", &Solver::getUserSpecifiedConvexityDescription,
+            "A message that the problem has been assumed to be convex (Model.Convexity.AssumeConvex), or that\n"
+            "the objective function or constraints are convex since their convexity has been specified with\n"
+            "setFunctionConvexity(), in which case the global optimality of a solution depends on it. Empty\n"
+            "otherwise")
         .def("getOptions", &Solver::getOptions,
             "The settings that differ from their defaults, in the format of an options file")
         .def("getOptionsOSoL", &Solver::getOptionsOSoL,
@@ -3120,6 +3200,16 @@ PYBIND11_MODULE(SHOTpy, m)
             "setProblem", [](Solver& self, ProblemPtr problem, ProblemPtr reformulatedProblem)
             { return self.setProblem(problem, reformulatedProblem, nullptr); }, "Set problem with reformulated problem",
             py::arg("problem"), py::arg("reformulatedProblem"))
+        .def("setStartingPoint", &Solver::setStartingPoint, py::arg("point"),
+            "Set a starting point, with a value for each variable of the original problem in its order, after\n"
+            "setProblem(), which replaces it with the starting point in the problem file, e.g., the initial values\n"
+            "in an AMPL .nl file. A feasible point is the first primal solution and the MIP start of the dual\n"
+            "problems. A point that is not feasible is the starting point of an NLP problem with the discrete\n"
+            "variables fixed to their rounded values if Primal.FixedInteger.UseStartingPoint is True. An empty list\n"
+            "removes the starting point. Returns False if no problem has been set, or if the point has the wrong\n"
+            "size or a value that is not finite")
+        .def("getStartingPoint", &Solver::getStartingPoint,
+            "The starting point given to setStartingPoint() or in the problem file, or an empty list if there is none")
         // The GIL is released while the problem is solved, so that the MIP solver can call Python callbacks from its
         // own threads
         .def("solveProblem", &Solver::solveProblem, py::call_guard<py::gil_scoped_release>(),
@@ -3186,7 +3276,7 @@ PYBIND11_MODULE(SHOTpy, m)
             "e.g., a PrimalCandidateCheckContext at CallbackLocation.PrimalCandidateCheck, and has the\n"
             "state of the solver and the actions available at the location. The context can only be used\n"
             "while the callback runs. If the callback raises an exception, SHOT terminates and\n"
-            "solveProblem() raises it.\n\n"
+            "solveProblem() raises it, or setProblem() for CallbackLocation.BoundTightening.\n\n"
             "Returns a handle for removeCallback().",
             py::arg("locations"), py::arg("callback"))
         .def("removeCallback", &Solver::removeCallback,
@@ -3202,6 +3292,7 @@ PYBIND11_MODULE(SHOTpy, m)
         .value("TerminationCheck", E_CallbackLocation::TerminationCheck)
         .value("HyperplaneSelection", E_CallbackLocation::HyperplaneSelection)
         .value("BoundsUpdated", E_CallbackLocation::BoundsUpdated)
+        .value("BoundTightening", E_CallbackLocation::BoundTightening)
         .def(
             "__or__", [](E_CallbackLocation first, E_CallbackLocation second)
             { return (static_cast<std::uint64_t>(first) | static_cast<std::uint64_t>(second)); }, py::is_operator())
@@ -3599,6 +3690,39 @@ PYBIND11_MODULE(SHOTpy, m)
             "Replace the interior points with at least one point in the variables of the original or the\n"
             "reformulated problem",
             py::arg("points"));
+
+    py::class_<BoundTighteningContext, CallbackContext, std::shared_ptr<BoundTighteningContext>>(
+        m, "BoundTighteningContext")
+        .def_property_readonly("problem", &BoundTighteningContext::getProblem,
+            "The problem whose bounds can be tightened: the original or the reformulated problem")
+        .def_property_readonly("isReformulatedProblem", &BoundTighteningContext::isReformulatedProblem,
+            "Whether the problem is the reformulated problem; reformulatedProblem is None in the call for the\n"
+            "original problem, since it has not been created yet")
+        .def_property_readonly(
+            "variableLowerBounds",
+            [](const BoundTighteningContext& self) { return (VectorDouble(self.getVariableLowerBounds())); },
+            "SHOT's lower bounds of the variables of the problem, -inf if there is none")
+        .def_property_readonly(
+            "variableUpperBounds",
+            [](const BoundTighteningContext& self) { return (VectorDouble(self.getVariableUpperBounds())); },
+            "SHOT's upper bounds of the variables of the problem, inf if there is none")
+        .def_property_readonly(
+            "proposedVariableLowerBounds",
+            [](const BoundTighteningContext& self) { return (VectorDouble(self.getProposedVariableLowerBounds())); },
+            "The lower bounds proposed in this context, intersected with SHOT's bounds")
+        .def_property_readonly(
+            "proposedVariableUpperBounds",
+            [](const BoundTighteningContext& self) { return (VectorDouble(self.getProposedVariableUpperBounds())); },
+            "The upper bounds proposed in this context, intersected with SHOT's bounds")
+        .def("setVariableBounds", py::overload_cast<int, double, double>(&BoundTighteningContext::setVariableBounds),
+            "Propose bounds for the variable with the index in the problem; they are intersected with SHOT's\n"
+            "bounds, and inf or -inf keeps a bound. Raises ValueError if the bounds are not valid or the\n"
+            "intersection is empty",
+            py::arg("variableIndex"), py::arg("lowerBound"), py::arg("upperBound"))
+        .def("setVariableBounds",
+            py::overload_cast<const VectorDouble&, const VectorDouble&>(&BoundTighteningContext::setVariableBounds),
+            "Propose bounds for all variables of the problem, as setVariableBounds() for each variable",
+            py::arg("lowerBounds"), py::arg("upperBounds"));
 
     py::class_<TerminationCheckContext, CallbackContext, std::shared_ptr<TerminationCheckContext>>(
         m, "TerminationCheckContext");

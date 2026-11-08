@@ -25,6 +25,8 @@
 namespace SHOT
 {
 
+struct GAMSNLPLicenseState;
+
 class NonlinearExpression;
 using NonlinearExpressionPtr = std::shared_ptr<NonlinearExpression>;
 
@@ -42,9 +44,6 @@ public:
 
     void setModelingObject(gmoHandle_t gmo);
 
-    // Adds modeling system specific settings
-    static void augmentSettings(SettingsPtr settings);
-
     // Get specific settings from modeling system
     void updateSettings(SettingsPtr settings) override;
 
@@ -58,9 +57,14 @@ public:
     // Move the solution and statistics from SHOT to the modeling system
     void finalizeSolution() override;
 
+    VectorDouble getStartingPoint() override;
+
     gmoHandle_t modelingObject;
     gevHandle_t modelingEnvironment;
     palHandle_t auditLicensing;
+
+    // Licence failures are shared by the NLP tasks using this GAMS model.
+    std::shared_ptr<GAMSNLPLicenseState> nlpLicenseState;
 
 private:
     bool createdtmpdir;

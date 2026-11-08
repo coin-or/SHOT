@@ -204,6 +204,7 @@ file(
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/IRelaxationStrategy.h"
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyIncrease.h"
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverBase.h"
+    "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCapabilities.h"
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyBase.h"
     "${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyStandard.h"
     "${PROJECT_SOURCE_DIR}/src/NLPSolver/INLPSolver.h"
@@ -301,7 +302,7 @@ endif(HAS_CPLEX)
 # Gurobi
 
 if(HAS_GUROBI)
-    find_package(GUROBI)
+    find_package(GUROBI 10.0)
 
     if(NOT GUROBI_FOUND)
         message(WARNING "Gurobi not found, setting HAS_GUROBI to OFF")
@@ -572,8 +573,14 @@ ExternalProject_Add(spdlog
 )
 
 # Adding CppAD using as an external project
+# CppAD rejects RelWithDebInfo (its check compares a lowercased build type with
+# a mixed-case name), and only distinguishes Debug from optimized builds anyway.
+set(CPPAD_BUILD_TYPE "${CMAKE_BUILD_TYPE}")
+if(CMAKE_BUILD_TYPE AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(CPPAD_BUILD_TYPE Release)
+endif()
 set(CPPAD_CMAKE_ARGS
-    -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+    -DCMAKE_BUILD_TYPE=${CPPAD_BUILD_TYPE}
     -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
     -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
     -DCMAKE_POLICY_VERSION_MINIMUM=3.5
@@ -805,6 +812,8 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolutionLimitStrategyIncrease.cpp
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverBase.h
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverBase.cpp
+    ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCapabilities.h
+    ${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverCapabilities.cpp
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyBase.h
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyBase.cpp
     ${PROJECT_SOURCE_DIR}/src/MIPSolver/RelaxationStrategyStandard.h
@@ -1058,6 +1067,7 @@ file(
     SOURCES
     "${PROJECT_SOURCE_DIR}/src/Report.cpp"
     "${PROJECT_SOURCE_DIR}/src/Solver.cpp"
+    "${PROJECT_SOURCE_DIR}/src/SolverSettings.cpp"
     "${PROJECT_SOURCE_DIR}/src/RootsearchMethod/RootsearchMethodBoost.cpp"
 )
 
