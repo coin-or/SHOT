@@ -176,7 +176,10 @@ Changes since SHOT 1.1.
   direct MILP solving when no cut callback remains ([#301]).
 - Nonconvex quadratic constraints retain their quadratic terms when the MIP
   backend and quadratic strategy support them, including Gurobi's recommended
-  strategy for binary quadratic models ([#301]).
+  strategy for binary quadratic models. Supported quadratic parts are also kept
+  by default in objectives and constraints containing higher-degree terms;
+  explicit partitioning and integer-bilinear reformulation settings remain
+  effective ([#301]).
 - Complete MILP reformulations are solved directly by the MIP backend to its
   optimality tolerances, without SHOT's single-tree callbacks or initial LP
   relaxation. Models with a `HyperplaneSelection` callback retain the tree

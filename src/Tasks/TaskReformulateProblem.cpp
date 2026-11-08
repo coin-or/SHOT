@@ -106,7 +106,7 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     bool retainConstraints = quadraticStrategy >= ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained;
     bool retainNonconvex = quadraticStrategy == ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained;
     useConvexQuadraticObjective = retainObjective && capabilities->convexQuadraticObjective;
-    useNonconvexQuadraticObjective = retainNonconvex && capabilities->nonconvexQuadraticObjective;
+    useNonconvexQuadraticObjective = retainObjective && capabilities->nonconvexQuadraticObjective;
     useConvexQuadraticConstraints = retainConstraints && capabilities->convexQuadraticConstraints;
     useNonconvexQuadraticConstraints = retainNonconvex && capabilities->nonconvexQuadraticConstraints;
 
@@ -638,7 +638,9 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
 
     if(((isObjectiveConvex && useConvexQuadraticObjective) || useNonconvexQuadraticObjective)
         && env->problem->objectiveFunction->properties.classification == E_ObjectiveFunctionClassification::Quadratic
-        && isQuadraticObjectiveSupported)
+        && isQuadraticObjectiveSupported
+        && !requiresIntegerBilinearReformulation(
+            std::dynamic_pointer_cast<QuadraticObjectiveFunction>(env->problem->objectiveFunction)->quadraticTerms))
     {
         // Quadratic objective function
         auto destinationObjective = std::make_shared<QuadraticObjectiveFunction>();
@@ -696,7 +698,8 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpConstant]
             = reformulateAndPartitionQuadraticSum(sourceObjective->quadraticTerms, isSignReversed,
                 static_cast<ES_PartitionNonlinearSums>(
-                    env->settings->getSetting<int>("Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms")));
+                    env->settings->getSetting<int>("Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms")),
+                true);
 
         destinationLinearTerms.add(tmpLinearTerms);
         destinationQuadraticTerms.add(tmpQuadraticTerms);
@@ -800,7 +803,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
         {
             auto tmpLinearTerms
                 = partitionNonlinearSum(std::dynamic_pointer_cast<ExpressionSum>(sourceObjective->nonlinearExpression),
-                    isSignReversed, objectivePartitionQuadraticTermsStrategy);
+                    isSignReversed, objectivePartitionQuadraticTermsStrategy, true);
             destinationLinearTerms.add(tmpLinearTerms);
         }
         else if(static_cast<ES_PartitionNonlinearSums>(
@@ -819,7 +822,7 @@ void TaskReformulateProblem::reformulateObjectiveFunction()
             if(areAllConvex)
             {
                 auto tmpLinearTerms
-                    = partitionNonlinearSum(sum, isSignReversed, objectivePartitionQuadraticTermsStrategy);
+                    = partitionNonlinearSum(sum, isSignReversed, objectivePartitionQuadraticTermsStrategy, true);
                 destinationLinearTerms.add(tmpLinearTerms);
             }
             else
@@ -1122,7 +1125,8 @@ void TaskReformulateProblem::reformulateConstraints()
         {
             reformulatedConstraints = reformulateConstraint(C);
         }
-        else if(isQuadraticConstraint && useNonconvexQuadraticConstraints)
+        else if(isQuadraticConstraint && useNonconvexQuadraticConstraints
+            && !requiresIntegerBilinearReformulation(std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms))
         {
             // A quadratic constraint with both bounds is nonconvex, also when its quadratic terms are convex, so it
             // can only be given to a MIP solver that supports nonconvex quadratic constraints. It is then copied as
@@ -1203,6 +1207,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms.getConvexity();
 
     if(isQuadraticConstraint
+        && !requiresIntegerBilinearReformulation(std::dynamic_pointer_cast<QuadraticConstraint>(C)->quadraticTerms)
         && (useNonconvexQuadraticConstraints
             || (C->properties.convexity == E_Convexity::Convex
                 && ((useConvexQuadraticConstraints
@@ -1275,7 +1280,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         auto sourceConstraint = std::dynamic_pointer_cast<QuadraticConstraint>(C);
 
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpConstant] = reformulateAndPartitionQuadraticSum(
-            sourceConstraint->quadraticTerms, isSignReversed, partitionQuadraticTermsStrategy);
+            sourceConstraint->quadraticTerms, isSignReversed, partitionQuadraticTermsStrategy, false);
 
         destinationLinearTerms.add(tmpLinearTerms);
         destinationQuadraticTerms.add(tmpQuadraticTerms);
@@ -1384,7 +1389,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
         if(tmpQuadraticTerms.size() > 0)
         {
             auto [tmpLinearTerms2, tmpQuadraticTerms2, tmpConstant2] = reformulateAndPartitionQuadraticSum(
-                tmpQuadraticTerms, isSignReversed, partitionQuadraticTermsStrategy);
+                tmpQuadraticTerms, isSignReversed, partitionQuadraticTermsStrategy, false);
 
             destinationLinearTerms.add(tmpLinearTerms2);
             destinationQuadraticTerms.add(tmpQuadraticTerms2);
@@ -1408,7 +1413,7 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
             && destinationExpression->getType() == E_NonlinearExpressionTypes::Sum)
         {
             auto tmpLinearTerms = partitionNonlinearSum(std::dynamic_pointer_cast<ExpressionSum>(destinationExpression),
-                isSignReversed, partitionQuadraticTermsStrategy);
+                isSignReversed, partitionQuadraticTermsStrategy, false);
             destinationLinearTerms.add(tmpLinearTerms);
         }
         else if(static_cast<ES_PartitionNonlinearSums>(
@@ -1426,7 +1431,8 @@ NumericConstraints TaskReformulateProblem::reformulateConstraint(NumericConstrai
 
             if(areAllConvex)
             {
-                auto tmpLinearTerms = partitionNonlinearSum(sum, isSignReversed, partitionQuadraticTermsStrategy);
+                auto tmpLinearTerms
+                    = partitionNonlinearSum(sum, isSignReversed, partitionQuadraticTermsStrategy, false);
                 destinationLinearTerms.add(tmpLinearTerms);
             }
             else
@@ -1825,7 +1831,7 @@ NumericConstraintPtr TaskReformulateProblem::copyConstraintWithUserSpecifiedConv
 }
 
 LinearTerms TaskReformulateProblem::partitionNonlinearSum(const std::shared_ptr<ExpressionSum>& source,
-    bool reversedSigns, ES_PartitionNonlinearSums partitionQuadraticTermsStrategy)
+    bool reversedSigns, ES_PartitionNonlinearSums partitionQuadraticTermsStrategy, bool isObjective)
 {
     LinearTerms resultLinearTerms;
     resultLinearTerms.takeOwnership(reformulatedProblem);
@@ -1857,8 +1863,8 @@ LinearTerms TaskReformulateProblem::partitionNonlinearSum(const std::shared_ptr<
                 quadTerms.takeOwnership(reformulatedProblem);
                 quadTerms.add(optionalQuadraticTerm.value());
 
-                auto [tmpLinearTerms, tmpQuadraticTerms, tmpConstant]
-                    = reformulateAndPartitionQuadraticSum(quadTerms, reversedSigns, partitionQuadraticTermsStrategy);
+                auto [tmpLinearTerms, tmpQuadraticTerms, tmpConstant] = reformulateAndPartitionQuadraticSum(
+                    quadTerms, reversedSigns, partitionQuadraticTermsStrategy, isObjective);
 
                 // A constant from a fixed variable cannot be returned here, so the term is then partitioned as a
                 // nonlinear term instead; the expressions have been simplified, so this should not happen
@@ -2197,7 +2203,8 @@ LinearTerms TaskReformulateProblem::partitionSignomialTerms(const SignomialTerms
 }
 
 std::tuple<LinearTerms, QuadraticTerms, double> TaskReformulateProblem::reformulateAndPartitionQuadraticSum(
-    QuadraticTerms& sourceQuadraticTerms, bool reversedSigns, ES_PartitionNonlinearSums partitionStrategy)
+    QuadraticTerms& sourceQuadraticTerms, bool reversedSigns, ES_PartitionNonlinearSums partitionStrategy,
+    bool isObjective)
 {
     LinearTerms resultLinearTerms;
     resultLinearTerms.takeOwnership(reformulatedProblem);
@@ -2268,6 +2275,35 @@ std::tuple<LinearTerms, QuadraticTerms, double> TaskReformulateProblem::reformul
     }
 
     QuadraticTerms& quadraticTerms = hasFixedVariables ? reducedQuadraticTerms : sourceQuadraticTerms;
+
+    // Native quadratic support also applies to the quadratic part of a higher-degree function. Keep it by
+    // default, but honor an explicit partitioning setting from the options file or API.
+    const auto partitionSetting = isObjective ? "Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms"
+                                              : "Model.Reformulation.Constraint.PartitionQuadraticTerms";
+
+    if(env->settings->getSettingPriority(partitionSetting) < E_SettingPriority::OptionsFile
+        && !requiresIntegerBilinearReformulation(quadraticTerms))
+    {
+        bool canRetain = isObjective ? useNonconvexQuadraticObjective : useNonconvexQuadraticConstraints;
+        bool canRetainConvex = isObjective ? useConvexQuadraticObjective : useConvexQuadraticConstraints;
+
+        if(!canRetain && canRetainConvex)
+        {
+            auto convexity = quadraticTerms.getConvexity();
+            bool hasConvexClassification = convexity == E_Convexity::Linear
+                || convexity == (reversedSigns ? E_Convexity::Concave : E_Convexity::Convex);
+            bool isConvex = reversedSigns ? quadraticTerms.maxEigenValue <= 0.0 : quadraticTerms.minEigenValue >= 0.0;
+            bool isConvexWithinTolerance = reversedSigns ? quadraticTerms.maxEigenValueWithinTolerance
+                                                         : quadraticTerms.minEigenValueWithinTolerance;
+            // Obvious convex/nonconvex sums can be classified without computing their eigenvalue bounds.
+            canRetain = hasConvexClassification
+                && (isConvex
+                    || (!isObjective && useConvexQuadraticConstraintsWithinTolerance && isConvexWithinTolerance));
+        }
+
+        if(canRetain)
+            partitionStrategy = ES_PartitionNonlinearSums::Never;
+    }
 
     bool performPartitioning = true;
 
@@ -4038,6 +4074,21 @@ void TaskReformulateProblem::reportBilinearReformulations()
                     numberOfTerms));
         }
     }
+}
+
+bool TaskReformulateProblem::requiresIntegerBilinearReformulation(const QuadraticTerms& terms)
+{
+    if(env->settings->getSetting<int>("Model.Reformulation.Bilinear.IntegerFormulation")
+        != static_cast<int>(ES_ReformulateBilinearInteger::Yes))
+        return false;
+
+    return std::any_of(terms.begin(), terms.end(),
+        [this](const QuadraticTermPtr& term)
+        {
+            return term->isBilinear
+                && (isDiscretizableInBilinearTerm(term->firstVariable)
+                    || isDiscretizableInBilinearTerm(term->secondVariable));
+        });
 }
 
 bool TaskReformulateProblem::isDiscretizableInBilinearTerm(const VariablePtr& variable)
