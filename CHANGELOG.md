@@ -49,6 +49,9 @@ Changes since SHOT 1.1.
   single-tree integration, and finite variable-bound defaults, available
   without constructing a solver. SHOTpy exposes the records through
   `getMIPSolverCapabilities()` with read-only properties ([#299]).
+- A [MIP solver capabilities guide](docs/MIPSolverCapabilities.md) and
+  [C++ and SHOTpy query examples](docs/site/concepts.md#solver-backends) in the
+  public documentation, with generated API references ([#299]).
 - Guides to interpreting terminal output, configuring solves, and understanding
   modeling and reformulation, with expanded result handling and C++ examples
   ([#295]).
