@@ -137,6 +137,10 @@ Changes since SHOT 1.1.
   by solving the LP with these values fixed. This is on for convex problems
   (setting `Dual.MIP.UseDualSolutionStart`), where it mainly helps HiGHS and
   Cbc find primal solutions ([#248]).
+- Systems of equations without an objective, i.e., GAMS CNS models and OSiL
+  files without an objective, are solved by minimizing zero, as in other
+  solvers. A solved GAMS CNS model gets the model status Solved. SHOT stopped
+  with an error for CNS models and crashed for such OSiL files.
 
 ### Changed
 

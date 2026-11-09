@@ -338,53 +338,60 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
         auto objectivesNodes = osilDocument.FirstChildElement("osil")
                                    ->FirstChildElement("instanceData")
                                    ->FirstChildElement("objectives");
+        auto objective = (objectivesNodes != nullptr) ? objectivesNodes->FirstChildElement("obj") : nullptr;
 
-        if(objectivesNodes->FirstChild()->NextSibling() != NULL)
+        // A problem without an objective, e.g., a system of equations, is solved by minimizing zero
+        if(objective == nullptr)
         {
-            // Error message here
-            env->timing->stopTimer("ProblemInitialization");
-            return (E_ProblemCreationStatus::ErrorInObjective);
+            problem->add(std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize));
         }
-
-        auto objective = objectivesNodes->FirstChildElement("obj");
-
-        if(objective->Attribute("maxOrMin") == NULL)
-        {
-            env->timing->stopTimer("ProblemInitialization");
-            return (E_ProblemCreationStatus::ErrorInObjective);
-        }
-
-        E_ObjectiveFunctionDirection direction = (std::string("min").compare(objective->Attribute("maxOrMin")) == 0)
-            ? E_ObjectiveFunctionDirection::Minimize
-            : E_ObjectiveFunctionDirection::Maximize;
-
-        double constant
-            = (objective->Attribute("constant") != NULL) ? std::stod(objective->Attribute("constant")) : 0.0;
-
-        auto nonlinearObjectiveExpression = nonlinearConstraints.find(-1);
-        auto objectiveHasQuadraticTerms = containsQuadraticTerms.find(-1);
-
-        if(nonlinearObjectiveExpression != nonlinearConstraints.end())
-            problem->add(std::make_shared<NonlinearObjectiveFunction>(
-                direction, nonlinearObjectiveExpression->second, constant));
-        else if(objectiveHasQuadraticTerms != containsQuadraticTerms.end())
-            problem->add(std::make_shared<QuadraticObjectiveFunction>(direction, constant));
         else
-            problem->add(std::make_shared<LinearObjectiveFunction>(direction, constant));
-
-        for(auto C = objective->FirstChildElement("coef"); C != nullptr; C = C->NextSiblingElement("coef"))
         {
-            if(C->Attribute("idx") == NULL)
+            if(objective->NextSiblingElement("obj") != nullptr)
+            {
+                // Error message here
+                env->timing->stopTimer("ProblemInitialization");
+                return (E_ProblemCreationStatus::ErrorInObjective);
+            }
+
+            if(objective->Attribute("maxOrMin") == NULL)
             {
                 env->timing->stopTimer("ProblemInitialization");
                 return (E_ProblemCreationStatus::ErrorInObjective);
             }
 
-            double coefficient = std::stod(C->GetText());
-            int index = std::stoi(C->Attribute("idx"));
+            E_ObjectiveFunctionDirection direction = (std::string("min").compare(objective->Attribute("maxOrMin")) == 0)
+                ? E_ObjectiveFunctionDirection::Minimize
+                : E_ObjectiveFunctionDirection::Maximize;
 
-            std::dynamic_pointer_cast<LinearObjectiveFunction>(problem->objectiveFunction)
-                ->add(std::make_shared<LinearTerm>(coefficient, problem->allVariables[index]));
+            double constant
+                = (objective->Attribute("constant") != NULL) ? std::stod(objective->Attribute("constant")) : 0.0;
+
+            auto nonlinearObjectiveExpression = nonlinearConstraints.find(-1);
+            auto objectiveHasQuadraticTerms = containsQuadraticTerms.find(-1);
+
+            if(nonlinearObjectiveExpression != nonlinearConstraints.end())
+                problem->add(std::make_shared<NonlinearObjectiveFunction>(
+                    direction, nonlinearObjectiveExpression->second, constant));
+            else if(objectiveHasQuadraticTerms != containsQuadraticTerms.end())
+                problem->add(std::make_shared<QuadraticObjectiveFunction>(direction, constant));
+            else
+                problem->add(std::make_shared<LinearObjectiveFunction>(direction, constant));
+
+            for(auto C = objective->FirstChildElement("coef"); C != nullptr; C = C->NextSiblingElement("coef"))
+            {
+                if(C->Attribute("idx") == NULL)
+                {
+                    env->timing->stopTimer("ProblemInitialization");
+                    return (E_ProblemCreationStatus::ErrorInObjective);
+                }
+
+                double coefficient = std::stod(C->GetText());
+                int index = std::stoi(C->Attribute("idx"));
+
+                std::dynamic_pointer_cast<LinearObjectiveFunction>(problem->objectiveFunction)
+                    ->add(std::make_shared<LinearTerm>(coefficient, problem->allVariables[index]));
+            }
         }
     }
     catch(const std::exception&)

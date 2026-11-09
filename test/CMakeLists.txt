@@ -136,7 +136,8 @@ if(HAS_GAMS)
       14
       15
       16
-      17)
+      17
+      18)
   # HiGHS does not implement SHOT's SOS interface.
   if(NOT (HAS_CBC OR HAS_CPLEX OR HAS_GUROBI))
     list(REMOVE_ITEM GAMS_parts 8 9 10)
@@ -200,7 +201,8 @@ set(Solver_parts
     48
     49
     50
-    51)
+    51
+    53)
 if(HAS_IPOPT)
   list(APPEND Solver_parts 46)
 endif()

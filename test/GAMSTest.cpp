@@ -298,6 +298,7 @@ bool TestGamsFunctions(std::string filename)
 
 // In ModelTest.cpp
 bool SolveMinimumAndMaximumProblem(const std::string& filename);
+bool SolveConstrainedNonlinearSystem(const std::string& filename);
 bool SolveProblemWithInfeasibleDualProblemAfterSolutionLimitGAMS(const std::string& filename);
 
 bool ReadProblemGAMS(std::string filename)
@@ -848,6 +849,11 @@ int GAMSTest(int argc, char* argv[])
     case 17:
         std::cout << "Testing GAMS NLP licence failures and fallback without relying on local licences.\n";
         passed = TestGAMSNLPLicenseFailures();
+        break;
+    case 18:
+        std::cout << "Starting test to solve a constrained nonlinear system (CNS) in GAMS syntax:" << std::endl;
+        passed = SolveConstrainedNonlinearSystem("data/cns.gms");
+        std::cout << "Finished test to solve a constrained nonlinear system (CNS) in GAMS syntax." << std::endl;
         break;
     default:
         passed = false;
