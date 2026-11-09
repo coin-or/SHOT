@@ -1562,6 +1562,7 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
         {
             size_t index = 0;
             CoinPackedVector cut;
+            int numberOfOnes = 0;
 
             for(auto& I : integerCut.variableIndexes)
             {
@@ -1569,7 +1570,10 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
                 int variableValue = integerCut.variableValues[index];
 
                 if(variableValue == 1.0)
+                {
                     cut.insert(VAR->getIndex(), 1.0);
+                    numberOfOnes++;
+                }
                 else if(variableValue == 0.0)
                     cut.insert(VAR->getIndex(), -1.0);
                 else
@@ -1583,7 +1587,9 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
 
             int tmpNumConstraints = osiInterface->getNumRows();
 
-            osiInterface->addRow(cut, -osiInterface->getInfinity(), integerCut.variableValues.size() - 1.0,
+            // The sum of the variables that are one minus those that are zero is at most the number of ones minus one,
+            // which only excludes the given combination
+            osiInterface->addRow(cut, -osiInterface->getInfinity(), numberOfOnes - 1.0,
                 fmt::format("IC_{}", env->solutionStatistics.numberOfIntegerCuts));
 
             if(osiInterface->getNumRows() > tmpNumConstraints)
@@ -1713,9 +1719,10 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
                     osiInterface->setColLower(wIndex, 0);
                     osiInterface->setColLower(vIndex, 0);
                     osiInterface->setColUpper(vIndex, 1);
-
-                    index++;
                 }
+
+                // Also after a value at a bound, or the values of the following variables are those of earlier ones
+                index++;
             }
 
             int tmpNumConstraints = osiInterface->getNumRows();

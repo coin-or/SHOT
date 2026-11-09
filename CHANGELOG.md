@@ -209,6 +209,13 @@ Changes since SHOT 1.1.
   relative to the largest deviation not cut yet. It was relative to the
   largest one, so that no cut was added and SHOT ended with "no additional
   dual cuts can be added".
+- With HiGHS and Cbc, an integer cut for binary variables excludes its
+  combination of values. It only excluded the combination where all variables
+  are one, so that the dual problem could give the same combination again
+  after an infeasible fixed NLP problem, and SHOT often ended with "no
+  additional dual cuts can be added" on nonconvex problems. With Cbc, an
+  integer cut for general integer variables could exclude another
+  combination when a variable before the last one was at a bound.
 - Cbc's time limit is wall-clock time. With several threads it was CPU time
   summed over the threads, so Cbc stopped after a fraction of
   `Termination.TimeLimit`, e.g., after about 56 s of 900 s with 16 threads

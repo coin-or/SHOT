@@ -1094,6 +1094,132 @@ bool testIntegerCutVariablesSurviveRelaxation(ES_MIPSolver mipSolver)
     return true;
 }
 
+struct IntegerCutTestVariable
+{
+    std::string name;
+    E_VariableType type;
+    double lowerBound;
+    double upperBound;
+    double cost;
+};
+
+// Minimizes the costs of the variables and cuts off the given combinations of values one at a time. After each cut,
+// the optimum must be the given value, so that the cut excludes exactly its combination
+bool testIntegerCutsExcludeTheirCombination(ES_MIPSolver mipSolver,
+    const std::vector<IntegerCutTestVariable>& variables, const std::vector<VectorInteger>& excludedCombinations,
+    const VectorDouble& expectedObjectives, bool areAllVariablesBinary)
+{
+    auto solver = std::make_shared<Solver>();
+    auto env = solver->getEnvironment();
+
+    solver->updateSetting("Dual.MIP.Solver", static_cast<int>(mipSolver));
+    solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+
+    auto problem = std::make_shared<Problem>(env);
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+
+    for(auto& V : variables)
+    {
+        auto variable = std::make_shared<Variable>(V.name, V.type, V.lowerBound, V.upperBound);
+        problem->add(variable);
+        objective->add(std::make_shared<LinearTerm>(V.cost, variable));
+    }
+
+    problem->add(objective);
+    problem->finalize();
+
+    if(!solver->setProblem(problem))
+    {
+        std::cout << "Could not create problem for " << name(mipSolver) << '\n';
+        return false;
+    }
+
+    env->results->usedMIPSolver = mipSolver;
+    env->results->createIteration();
+
+    auto backend = makeBackend(env, mipSolver);
+
+    if(!backend->initializeProblem())
+    {
+        std::cout << "Could not initialize " << name(mipSolver) << '\n';
+        return false;
+    }
+
+    // HiGHS's callback checks the solution limit of the dual solver's MIP solver
+    env->dualSolver->MIPSolver = backend;
+
+    TaskCreateMIPProblem(env, backend, env->reformulatedProblem, getMIPSolverCapabilities(mipSolver).value()).run();
+    backend->setTimeLimit(10.0);
+    backend->setSolutionLimit(2100000000);
+
+    VectorInteger indexes;
+
+    for(auto& V : variables)
+    {
+        for(auto& R : env->reformulatedProblem->allVariables)
+        {
+            if(R->name == V.name)
+                indexes.push_back(R->getIndex());
+        }
+    }
+
+    for(size_t i = 0; i < excludedCombinations.size(); i++)
+    {
+        IntegerCut cut;
+        cut.variableIndexes = indexes;
+        cut.variableValues = excludedCombinations[i];
+        cut.areAllVariablesBinary = areAllVariablesBinary;
+
+        if(!backend->createIntegerCut(cut))
+        {
+            std::cout << name(mipSolver) << ": the integer cut was not created\n";
+            return false;
+        }
+
+        auto status = backend->solveProblem();
+
+        if(status != E_ProblemSolutionStatus::Optimal)
+        {
+            std::cout << name(mipSolver) << ": with " << i + 1 << " integer cuts, the status is "
+                      << static_cast<int>(status) << " instead of optimal\n";
+            return false;
+        }
+
+        if(std::abs(backend->getObjectiveValue() - expectedObjectives[i]) > 1e-6)
+        {
+            std::cout << name(mipSolver) << ": with " << i + 1 << " integer cuts, the objective value is "
+                      << backend->getObjectiveValue() << " instead of " << expectedObjectives[i] << '\n';
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// An integer cut for binary variables only excludes exactly its combination of values, also when some of the values are
+// zero. The optimum of b1 + 2*b2 + 4*b3 is at (0, 0, 0), then at (1, 0, 0), (0, 1, 0) and (1, 1, 0).
+bool testBinaryIntegerCutsExcludeTheirCombination(ES_MIPSolver mipSolver)
+{
+    std::vector<IntegerCutTestVariable> variables = { { "b1", E_VariableType::Binary, 0.0, 1.0, 1.0 },
+        { "b2", E_VariableType::Binary, 0.0, 1.0, 2.0 }, { "b3", E_VariableType::Binary, 0.0, 1.0, 4.0 } };
+
+    return testIntegerCutsExcludeTheirCombination(
+        mipSolver, variables, { { 0, 0, 0 }, { 1, 0, 0 }, { 0, 1, 0 } }, { 1.0, 2.0, 3.0 }, true);
+}
+
+// An integer cut for general integer variables excludes exactly its combination of values, with values at the lower
+// and upper bounds and between them. The optimum of z1 + 4*z2 + 16*b with z1 and z2 in {0, ..., 3} and the binary b is
+// at (0, 0, 0), then at (1, 0, 0), (2, 0, 0), (3, 0, 0), (0, 1, 0) and (1, 1, 0).
+bool testGeneralIntegerCutsExcludeTheirCombination(ES_MIPSolver mipSolver)
+{
+    std::vector<IntegerCutTestVariable> variables = { { "z1", E_VariableType::Integer, 0.0, 3.0, 1.0 },
+        { "z2", E_VariableType::Integer, 0.0, 3.0, 4.0 }, { "b", E_VariableType::Binary, 0.0, 1.0, 16.0 } };
+
+    return testIntegerCutsExcludeTheirCombination(mipSolver, variables,
+        { { 0, 0, 0 }, { 1, 0, 0 }, { 2, 0, 0 }, { 3, 0, 0 }, { 0, 1, 0 } }, { 1.0, 2.0, 3.0, 4.0, 5.0 }, false);
+}
+
 enum class CutStrategy
 {
     ESHMaxFunction,
@@ -1564,6 +1690,18 @@ int DualBoundTest(int argc, char* argv[])
         for(auto mipSolver : compiledSolvers())
             passed = testInfeasibilityWithArtificialBounds(mipSolver) && passed;
         std::cout << "Finished test for infeasibility with artificial bounds.\n";
+        break;
+    case 21:
+        std::cout << "Starting test that binary integer cuts exclude their combination:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testBinaryIntegerCutsExcludeTheirCombination(mipSolver) && passed;
+        std::cout << "Finished test that binary integer cuts exclude their combination.\n";
+        break;
+    case 22:
+        std::cout << "Starting test that general integer cuts exclude their combination:\n";
+        for(auto mipSolver : compiledSolvers())
+            passed = testGeneralIntegerCutsExcludeTheirCombination(mipSolver) && passed;
+        std::cout << "Finished test that general integer cuts exclude their combination.\n";
         break;
     default:
         passed = false;

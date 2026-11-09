@@ -1497,6 +1497,7 @@ bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
             size_t index = 0;
             VectorInteger cutIndexes;
             VectorDouble cutCoeffs;
+            int numberOfOnes = 0;
 
             for(auto& I : integerCut.variableIndexes)
             {
@@ -1507,6 +1508,7 @@ bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
                 {
                     cutIndexes.push_back(VAR->getIndex());
                     cutCoeffs.push_back(1.0);
+                    numberOfOnes++;
                 }
                 else if(variableValue == 0.0)
                 {
@@ -1524,8 +1526,10 @@ bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
 
             int tmpNumConstraints = highsInstance.getNumRow();
 
-            highsInstance.addRow(-highsInstance.getInfinity(), integerCut.variableValues.size() - 1.0,
-                cutIndexes.size(), cutIndexes.data(), cutCoeffs.data());
+            // The sum of the variables that are one minus those that are zero is at most the number of ones minus one,
+            // which only excludes the given combination
+            highsInstance.addRow(-highsInstance.getInfinity(), numberOfOnes - 1.0, cutIndexes.size(), cutIndexes.data(),
+                cutCoeffs.data());
 
             if(highsInstance.getNumRow() > tmpNumConstraints)
             {
