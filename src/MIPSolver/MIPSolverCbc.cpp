@@ -619,7 +619,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
     cachedSolutionHasChanged = true;
 
     // The arguments are counted as they are added, since some of them are only passed on conditionally
-    const int maxArguments = 29;
+    const int maxArguments = 31;
     char* argv[maxArguments];
     int numArguments = 0;
     std::string arg;
@@ -731,6 +731,11 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
         arg = fmt::format("{}", this->cutOff);
         argv[numArguments++] = strdup(arg.c_str());
     }
+
+    // Cbc measures its time limit in CPU time summed over all threads unless told otherwise, so with n threads it
+    // would stop after a fraction 1/n of the time limit, which is wall-clock time in SHOT
+    argv[numArguments++] = strdup("-timeMode");
+    argv[numArguments++] = strdup("elapsed");
 
     argv[numArguments++] = strdup("-sec");
     arg = fmt::format("{}", this->timeLimit);
@@ -1123,7 +1128,7 @@ bool MIPSolverCbc::repairInfeasibility()
         cachedSolutionHasChanged = true;
 
         // The arguments are counted as they are added, since some of them are only passed on conditionally
-        const int maxArguments = 25;
+        const int maxArguments = 27;
         char* argv[maxArguments];
         int numArguments = 0;
         std::string arg;
@@ -1234,6 +1239,10 @@ bool MIPSolverCbc::repairInfeasibility()
             arg = fmt::format("{}", this->cutOff);
 
         argv[numArguments++] = strdup(arg.c_str());*/
+
+        // See the comment in solveProblem()
+        argv[numArguments++] = strdup("-timeMode");
+        argv[numArguments++] = strdup("elapsed");
 
         argv[numArguments++] = strdup("-sec");
         arg = fmt::format("{}", this->timeLimit);
