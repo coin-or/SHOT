@@ -76,6 +76,18 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
         // Calculated once, since the point is checked for every deviating constraint
         auto pointHashes = env->dualSolver->calculateHashes(solPoints.at(i).point);
 
+        // The selection factor is relative to the largest deviation that can still be cut in the point. Otherwise,
+        // when the most deviating constraints have been cut in the point already, e.g., after the infeasibility repair
+        // has relaxed these cuts, none of the other deviating constraints is cut either
+        double largestUncutError = 0.0;
+
+        for(auto& NCV : numericConstraintValues)
+        {
+            if(!std::isnan(NCV.error) && NCV.error > largestUncutError
+                && !env->dualSolver->hasHyperplaneBeenAdded(pointHashes, NCV.constraint->getIndex()))
+                largestUncutError = NCV.error;
+        }
+
         for(auto& NCV : numericConstraintValues)
         {
             // Do not add hyperplane if one has been added for this constraint already
@@ -90,8 +102,8 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
                 continue;
             }
 
-            // Do not add hyperplane if constraint value is much less than largest
-            if(NCV.error < constraintMaxSelectionFactor * numericConstraintValues.at(0).error)
+            // Do not add hyperplane if constraint value is much less than the largest one not cut yet
+            if(NCV.error < constraintMaxSelectionFactor * largestUncutError)
             {
                 continue;
             }

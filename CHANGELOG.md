@@ -199,6 +199,12 @@ Changes since SHOT 1.1.
   It stopped after the cuts of the nonconvex constraints had been reset three
   times, and SHOT then ended with "no additional dual cuts can be added"
   without a solution.
+- Cutting planes are added for the deviating constraints also when the most
+  deviating ones have already been cut in the same point, e.g., after an
+  infeasibility repair. `Dual.HyperplaneCuts.MaxConstraintFactor` is now
+  relative to the largest deviation not cut yet. It was relative to the
+  largest one, so that no cut was added and SHOT ended with "no additional
+  dual cuts can be added".
 - Cbc's time limit is wall-clock time. With several threads it was CPU time
   summed over the threads, so Cbc stopped after a fraction of
   `Termination.TimeLimit`, e.g., after about 56 s of 900 s with 16 threads
