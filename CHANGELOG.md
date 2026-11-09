@@ -194,6 +194,11 @@ Changes since SHOT 1.1.
   maximization problems, and when the objective is unbounded with the cuts
   relaxed. It failed in both cases, so that SHOT stopped without a solution
   on nonconvex problems whose cuts made the dual problem infeasible.
+- On nonconvex problems without a primal solution, the infeasibility repair
+  continues when the repaired dual problem keeps giving the same solutions.
+  It stopped after the cuts of the nonconvex constraints had been reset three
+  times, and SHOT then ended with "no additional dual cuts can be added"
+  without a solution.
 - Cbc's time limit is wall-clock time. With several threads it was CPU time
   summed over the threads, so Cbc stopped after a fraction of
   `Termination.TimeLimit`, e.g., after about 56 s of 900 s with 16 threads
