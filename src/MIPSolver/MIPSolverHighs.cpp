@@ -1049,11 +1049,13 @@ bool MIPSolverHighs::repairInfeasibility()
         feasModel.setOptionValue("output_flag", false);
         feasModel.passModel(highsInstance.getModel());
 
-        // Remove cutoff constraint if present (similar to Gurobi's cutoff removal)
-        if(isMinimizationProblem)
-            feasModel.setOptionValue("objective_bound", SHOT_DBL_MAX);
-        else
-            feasModel.setOptionValue("objective_bound", SHOT_DBL_MIN);
+        // HiGHS's feasibility relaxation replaces the costs by the penalties of the violations, but keeps the
+        // objective sense, so for a maximization problem it would maximize the violations
+        feasModel.changeObjectiveSense(ObjSense::kMinimize);
+
+        // Remove the cutoff (similar to Gurobi's cutoff removal). The bound is on the minimized objective, also for a
+        // maximization problem, so a bound of minus infinity there would cut off every solution
+        feasModel.setOptionValue("objective_bound", kHighsInf);
 
         int numOrigConstraints = env->reformulatedProblem->properties.numberOfLinearConstraints;
         int numCurrConstraints = highsInstance.getNumRow();
@@ -1094,7 +1096,13 @@ bool MIPSolverHighs::repairInfeasibility()
             Highs feasibilityCheckModel;
             feasibilityCheckModel.passOptions(feasModel.getOptions());
             feasibilityCheckModel.setOptionValue("output_flag", false);
-            feasibilityCheckModel.passModel(feasModel.getModel());
+
+            // Only the feasibility is checked. With the repairable rows relaxed, the objective can be unbounded, and
+            // HiGHS's presolve then reports the problem as infeasible or unbounded
+            auto checkModel = feasModel.getModel();
+            std::fill(checkModel.lp_.col_cost_.begin(), checkModel.lp_.col_cost_.end(), 0.0);
+            checkModel.lp_.offset_ = 0.0;
+            feasibilityCheckModel.passModel(checkModel);
 
             double checkInfinity = feasibilityCheckModel.getInfinity();
 

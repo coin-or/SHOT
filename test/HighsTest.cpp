@@ -113,6 +113,73 @@ bool HighsLargeIntegerDomainWithoutPresolveTest()
     return true;
 }
 
+// The infeasibility repair must work for maximization problems, and when the objective is unbounded with the
+// repairable cuts relaxed
+bool HighsRepairInfeasibilityTest()
+{
+    for(bool isMinimization : { false, true })
+    {
+        Solver solver;
+        auto env = solver.getEnvironment();
+        env->reformulatedProblem = std::make_shared<Problem>(env);
+        env->results->createIteration();
+        // The repair requires a generated cut to have been recorded
+        env->dualSolver->generatedHyperplanes.push_back(std::make_shared<GeneratedHyperplane>());
+
+        MIPSolverHighs mip(env);
+        mip.initializeProblem();
+        // Maximize an integer variable in [0, 10], or minimize a free variable
+        if(isMinimization)
+            mip.addVariable("x", E_VariableType::Real, -mip.getUnboundedVariableBoundValue(),
+                mip.getUnboundedVariableBoundValue(), 0.0);
+        else
+            mip.addVariable("x", E_VariableType::Integer, 0.0, 10.0, 0.0);
+
+        mip.addVariable("y", E_VariableType::Binary, 0.0, 1.0, 0.0);
+        mip.initializeObjective();
+        mip.addLinearTermToObjective(1.0, 0);
+        mip.finalizeObjective(isMinimization);
+        mip.finalizeProblem();
+        mip.setSolutionLimit(2100000000);
+        mip.setTimeLimit(10.0);
+
+        // The repairable cuts x >= 2 and x <= 1 contradict each other
+        std::map<int, double> terms = { { 0, 1.0 } };
+        mip.addLinearConstraint(terms, -2.0, "lower", true, true);
+        mip.addLinearConstraint(terms, 1.0, "upper", false, true);
+
+        if(mip.solveProblem() != E_ProblemSolutionStatus::Infeasible)
+        {
+            std::cout << "The problem with the contradicting cuts is not infeasible.\n";
+            return (false);
+        }
+
+        if(!mip.repairInfeasibility())
+        {
+            std::cout << "The infeasibility repair failed for a " << (isMinimization ? "minimization" : "maximization")
+                      << " problem.\n";
+            return (false);
+        }
+
+        if(env->results->getCurrentIteration()->numberOfInfeasibilityRepairedConstraints == 0)
+        {
+            std::cout << "No constraint was relaxed by the infeasibility repair.\n";
+            return (false);
+        }
+
+        auto status = mip.solveProblem();
+
+        if(status != E_ProblemSolutionStatus::Optimal)
+        {
+            std::cout << "The repaired problem is not solved to optimality, status " << static_cast<int>(status)
+                      << ".\n";
+            return (false);
+        }
+    }
+
+    return (true);
+}
+
 bool HighsTest1(std::string filename, double correctObjectiveValue)
 {
     bool passed = true;
@@ -534,6 +601,10 @@ int HighsTest(int argc, char* argv[])
     case 14:
         std::cout << "Testing unsafe integer domains without HiGHS presolve." << std::endl;
         passed = HighsLargeIntegerDomainWithoutPresolveTest();
+        break;
+    case 15:
+        std::cout << "Testing the HiGHS infeasibility repair for minimization and maximization problems." << std::endl;
+        passed = HighsRepairInfeasibilityTest();
         break;
     default:
         passed = false;

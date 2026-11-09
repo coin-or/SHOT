@@ -190,6 +190,10 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- The infeasibility repair of the dual problem works with HiGHS for
+  maximization problems, and when the objective is unbounded with the cuts
+  relaxed. It failed in both cases, so that SHOT stopped without a solution
+  on nonconvex problems whose cuts made the dual problem infeasible.
 - Cbc's time limit is wall-clock time. With several threads it was CPU time
   summed over the threads, so Cbc stopped after a fraction of
   `Termination.TimeLimit`, e.g., after about 56 s of 900 s with 16 threads
