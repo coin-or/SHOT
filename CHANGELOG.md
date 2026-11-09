@@ -190,6 +190,10 @@ Changes since SHOT 1.1.
 
 ### Fixed
 
+- Cbc's time limit is wall-clock time. With several threads it was CPU time
+  summed over the threads, so Cbc stopped after a fraction of
+  `Termination.TimeLimit`, e.g., after about 56 s of 900 s with 16 threads
+  ([#311]).
 - Documentation navigation and tutorial links open the corresponding pages
   on the documentation site instead of source files on GitHub.
 - Native MSVC builds with tests enabled link correctly with HiGHS and GAMS.
@@ -585,6 +589,7 @@ Changes since SHOT 1.1.
 [#307]: https://github.com/coin-or/SHOT/pull/307
 [#308]: https://github.com/coin-or/SHOT/pull/308
 [#309]: https://github.com/coin-or/SHOT/pull/309
+[#311]: https://github.com/coin-or/SHOT/pull/311
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
