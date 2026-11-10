@@ -163,8 +163,10 @@ introduced, or reproduce a failure in isolation instead of debugging a full
   (modeling, constraints, callbacks, gradients/Hessians) rather than the
   core solve algorithm, so they're more useful for API-layer bugs than
   solver-behavior ones. `Python_test_tutorial` runs the cells of the SHOTpy
-  tutorial notebook and also needs `numpy`, `matplotlib` and `ipython`, the
-  `test-requires` of the wheels in `pyproject.toml`.
+  tutorial notebooks in `docs/tutorial` and also needs `numpy`,
+  `matplotlib`, `ipython` and `pandas`, the `test-requires` of the wheels in
+  `pyproject.toml`; a notebook whose `%pip install` packages are missing is
+  skipped.
 
 ## Lessons from real debugging sessions
 

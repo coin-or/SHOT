@@ -2,7 +2,6 @@
 """Build the public docs; run with the matching SHOTpy on PYTHONPATH."""
 
 import argparse
-import json
 import os
 from pathlib import Path
 import re
@@ -22,58 +21,24 @@ GUIDES = (
     'DebuggingSHOT.md',
     'DeveloperDebugging.md',
     'MIPSolverCapabilities.md',
-    'SHOTpy_Tutorial.ipynb',
 )
 
 
-def build_tutorial(notebook, source):
-    """Publish one notebook source as a navigable series, preserving cell order."""
-    sections = []
-    for cell in notebook['cells']:
-        text = ''.join(cell['source'])
-        heading = re.match(r'^## \d+\. (.+?) \{#([^}]+)\}', text) if cell['cell_type'] == 'markdown' else None
-        if heading:
-            sections.append((heading[2], heading[1], []))
-        if sections:
-            sections[-1][2].append(cell)
-    labels = {
-        'getting-started': 'Getting started',
-        'creating-variables': 'Variables',
-        'linear-problems': 'Linear models',
-        'mixed-integer-problems': 'Integer variables',
-        'quadratic-problems': 'Quadratic models',
-        'nonlinear-problems': 'Nonlinear models',
-        'reading-from-files': 'Problem files',
-        'solver-settings': 'Solver settings',
-        'advanced-features': 'Advanced features',
-        'callbacks': 'Callbacks',
-        'building-large-problems': 'Large models',
-    }
-    links = {slug: f'{slug}.ipynb' for slug, _, _ in sections}
-    folder = source / 'tutorial'
-    folder.mkdir()
-    for slug, title, cells in sections:
-        for cell in cells:
-            if cell['cell_type'] != 'markdown':
-                continue
-            text = ''.join(cell['source'])
-            text = re.sub(r'^## \d+\. (.+?) \{#([^}]+)\}', r'(\2)=\n# \1', text)
-            # Promote subsection headings after splitting into individual pages.
-            text = re.sub(r'^###', '##', text, flags=re.MULTILINE)
-            for anchor, filename in links.items():
-                text = text.replace(f'](#{anchor})', f']({filename})')
-            cell['source'] = text.splitlines(keepends=True)
-        page = dict(notebook, cells=cells)
-        (folder / f'{slug}.ipynb').write_text(json.dumps(page))
+def build_tutorial(source):
+    """Publish the tutorial notebooks, with their stored outputs, as pages after the overview in their README."""
+    tutorial = ROOT / 'docs/tutorial'
+    shutil.copytree(tutorial, source / 'tutorial', ignore=shutil.ignore_patterns('README.md', '.ipynb_checkpoints'))
+    overview = (tutorial / 'README.md').read_text()
+    # The numbered links of the README give the chapters and their order
+    chapters = re.findall(r'^\d+\. \[(.+?)\]\((\S+?)\.ipynb\)', overview, flags=re.MULTILINE)
+    overview = re.sub(r'\]\((\S+?\.ipynb)\)', r'](tutorial/\1)', overview)
     assets = source / '_assets'
     assets.mkdir()
-    shutil.copyfile(ROOT / 'docs/SHOTpy_Tutorial.ipynb', assets / 'SHOTpy_Tutorial.ipynb')
+    shutil.make_archive(str(assets / 'SHOTpy_Tutorial'), 'zip', tutorial.parent, tutorial.name)
     (source / 'SHOTpy_Tutorial.md').write_text(
-        '# SHOTpy tutorial\n\nLearn to model and solve MINLP problems with SHOTpy. '
-        'The chapters follow the original notebook in order; examples may reuse imports or objects from earlier chapters.\n\n'
-        '{download}`Download the complete notebook <_assets/SHOTpy_Tutorial.ipynb>`\n\n'
-        '```{toctree}\n:maxdepth: 1\n\n'
-        + '\n'.join(f'{labels.get(slug, title)} <tutorial/{slug}>' for slug, title, _ in sections)
+        overview + '\n{download}`Download the notebooks and their data files <_assets/SHOTpy_Tutorial.zip>`\n\n'
+        '```{toctree}\n:hidden:\n:maxdepth: 1\n\n'
+        + '\n'.join(f'{label} <tutorial/{name}>' for label, name in chapters)
         + '\n```\n'
     )
 
@@ -96,10 +61,8 @@ def main():
             content = content.replace(
                 '](../ThirdParty/', f'](https://github.com/coin-or/SHOT/blob/{args.source_ref}/ThirdParty/'
             )
-            if guide.endswith('.ipynb'):
-                build_tutorial(json.loads(content), source)
-            else:
-                (source / guide).write_text(content)
+            (source / guide).write_text(content)
+        build_tutorial(source)
         settings = SHOTpy.Solver().getSettingsAsMarkup()
         settings = re.sub(r'^(#+) ', r'\1# ', settings, flags=re.MULTILINE)
         (source / 'reference/settings.md').write_text(

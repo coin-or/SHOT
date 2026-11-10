@@ -697,7 +697,7 @@ if(TARGET SHOTpy)
                     Python_${pytest_file}
                     PROPERTIES
                         ENVIRONMENT
-                        "PYTHONPATH=${CMAKE_BINARY_DIR};SHOT_TUTORIAL_NOTEBOOK=${PROJECT_SOURCE_DIR}/docs/SHOTpy_Tutorial.ipynb"
+                        "PYTHONPATH=${CMAKE_BINARY_DIR};SHOT_TUTORIAL_FOLDER=${PROJECT_SOURCE_DIR}/docs/tutorial"
                         FAIL_REGULAR_EXPRESSION
                         "FAILED;ERROR"
                         SKIP_RETURN_CODE
@@ -726,7 +726,7 @@ if(TARGET SHOTpy)
                             ${gams_test}
                             PROPERTIES
                                 ENVIRONMENT
-                                "PYTHONPATH=${CMAKE_BINARY_DIR};SHOT_TUTORIAL_NOTEBOOK=${PROJECT_SOURCE_DIR}/docs/SHOTpy_Tutorial.ipynb"
+                                "PYTHONPATH=${CMAKE_BINARY_DIR};SHOT_TUTORIAL_FOLDER=${PROJECT_SOURCE_DIR}/docs/tutorial"
                                 FAIL_REGULAR_EXPRESSION
                                 "FAILED;ERROR"
                                 SKIP_RETURN_CODE

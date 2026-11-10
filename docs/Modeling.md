@@ -100,7 +100,7 @@ Changing a setting after preparation does not rebuild the model. See
 
 Use bulk variable, constraint, and term containers instead of repeatedly merging
 one term into a large expression. The tutorial's
-[large-model chapter](tutorial/building-large-problems.ipynb) gives the APIs and
+[section on large problems](tutorial/01_getting_started.ipynb#6-building-large-problems-efficiently) gives the APIs and
 explains the cost of repeated insertion. Keep original variable indices/order
 when creating starting points, and check status and feasibility before consuming
 the returned solution.
