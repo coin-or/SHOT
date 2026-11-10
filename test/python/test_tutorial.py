@@ -35,8 +35,9 @@ def codeCells():
 
     notebook = json.loads(path.read_text(encoding="utf-8"))
 
-    return [(index, "".join(cell["source"])) for index, cell in enumerate(notebook["cells"])
-            if cell["cell_type"] == "code"]
+    return [
+        (index, "".join(cell["source"])) for index, cell in enumerate(notebook["cells"]) if cell["cell_type"] == "code"
+    ]
 
 
 CELLS = codeCells()

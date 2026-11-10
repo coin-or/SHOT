@@ -234,9 +234,8 @@ void TaskPerformConvexBounding::run()
 
     // Values read from the MIP solver are in the reformulated problem's objective direction
     double objectiveSignFactor
-        = (env->reformulatedProblem->objectiveFunction->direction == env->problem->objectiveFunction->direction)
-        ? 1.0
-        : -1.0;
+        = (env->reformulatedProblem->objectiveFunction->direction == env->problem->objectiveFunction->direction) ? 1.0
+                                                                                                                 : -1.0;
 
     auto solutionPoints = MIPSolver->getAllVariableSolutions();
 

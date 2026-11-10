@@ -279,8 +279,8 @@ bool CplexExternalPrimalSolutionSingleTreeTest(std::string filename)
 
     {
         std::unique_ptr<Solver> solver = std::make_unique<Solver>();
-    // A time limit so that a test that does not converge cannot stop the test suite
-    solver->updateSetting("Termination.TimeLimit", 60.0);
+        // A time limit so that a test that does not converge cannot stop the test suite
+        solver->updateSetting("Termination.TimeLimit", 60.0);
 
         solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Info));
         solver->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex));
@@ -355,8 +355,7 @@ bool CplexExternalPrimalSolutionSingleTreeTest(std::string filename)
 
     if(foundExternalSolution)
     {
-        int count
-            = env->results->primalSolutionSourceStatistics.at(E_PrimalSolutionSource::ExternalPrimalSolution);
+        int count = env->results->primalSolutionSourceStatistics.at(E_PrimalSolutionSource::ExternalPrimalSolution);
         std::cout << count << " external primal solution(s) were accepted by the solver\n";
     }
 
@@ -421,13 +420,13 @@ bool CplexExternalDualBoundLazyConstraintTest(std::string filename, double exter
 
     double finalDualBound = solver->getCurrentDualBound();
     bool isMin = solver->getOriginalProblem()->objectiveFunction->properties.isMinimize;
-    bool boundRespected = isMin ? (finalDualBound >= externalDualBound - 1e-6)
-                                : (finalDualBound <= externalDualBound + 1e-6);
+    bool boundRespected
+        = isMin ? (finalDualBound >= externalDualBound - 1e-6) : (finalDualBound <= externalDualBound + 1e-6);
 
     if(!boundRespected)
     {
-        std::cout << "Final dual bound " << finalDualBound
-                  << " does not respect the provided external bound " << externalDualBound << "\n";
+        std::cout << "Final dual bound " << finalDualBound << " does not respect the provided external bound "
+                  << externalDualBound << "\n";
         return (false);
     }
 

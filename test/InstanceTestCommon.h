@@ -232,8 +232,8 @@ static E_InstanceResult solveInstance(const InstanceEntry& entry, const std::str
         }
         else
         {
-            detailOut = fmt::format("expected infeasible, got status {} ({}, {}, {:.1f}s)",
-                static_cast<int>(status), convexityDesc, boundsDesc, elapsed);
+            detailOut = fmt::format("expected infeasible, got status {} ({}, {}, {:.1f}s)", static_cast<int>(status),
+                convexityDesc, boundsDesc, elapsed);
             std::cout << fmt::format("  [WARN] {}: {}\n", entry.file, detailOut);
             return E_InstanceResult::WarnFeasibility;
         }

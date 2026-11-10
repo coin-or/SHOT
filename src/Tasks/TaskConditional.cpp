@@ -13,7 +13,7 @@
 namespace SHOT
 {
 
-TaskConditional::TaskConditional(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
+TaskConditional::TaskConditional(EnvironmentPtr envPtr) : TaskBase(envPtr) { }
 
 TaskConditional::TaskConditional(
     EnvironmentPtr envPtr, std::function<bool()> conditionFunct, TaskPtr taskTrue, TaskPtr taskFalse)

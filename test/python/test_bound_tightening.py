@@ -30,8 +30,13 @@ class TestDiscreteVariableBounds:
         # b1 is in both constraints, and x in all terms
         problem.setObjective(x + b1 + b2)
         problem.addConstraint(SHOTpy.square(b1) / (33.7026 - x + 5.2974 * b1) - 0.122521 * b1 <= 0, "c1")
-        problem.addConstraint(SHOTpy.square(b2) / (34.4395 - x + 4.5605 * b2)
-                              + SHOTpy.square(b1) / (65.4828 - x + 4.7172 * b1) - 0.15 * b2 <= 0, "c2")
+        problem.addConstraint(
+            SHOTpy.square(b2) / (34.4395 - x + 4.5605 * b2)
+            + SHOTpy.square(b1) / (65.4828 - x + 4.7172 * b1)
+            - 0.15 * b2
+            <= 0,
+            "c2",
+        )
         problem.finalize()
         return problem
 

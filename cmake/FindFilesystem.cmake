@@ -24,14 +24,19 @@ elseif(HAVE_STD_EXPERIMENTAL_FILESYSTEM)
     set(namespace std::experimental::filesystem)
 endif()
 
-string(CONFIGURE [[
+string(
+    CONFIGURE
+        [[
     #include <@header@>
 
     int main() {
         auto cwd = @namespace@::current_path();
         return cwd.string().size();
     }
-]] code @ONLY)
+]]
+        code
+    @ONLY
+)
 
 if(have_fs)
     check_cxx_source_compiles("${code}" CAN_COMPILE_FS_WITHOUT_LINK)
@@ -49,9 +54,15 @@ if(have_fs AND (CAN_COMPILE_FS_WITHOUT_LINK OR CAN_COMPILE_FS_WITH_LINK))
     if(NOT CAN_COMPILE_FS_WITHOUT_LINK)
         target_link_libraries(CXX::Filesystem INTERFACE stdc++fs)
     endif()
-    set(Filesystem_FOUND TRUE CACHE BOOL "" FORCE)
+    set(Filesystem_FOUND
+        TRUE
+        CACHE BOOL "" FORCE
+    )
 else()
-    set(Filesystem_FOUND FALSE CACHE BOOL "" FORCE)
+    set(Filesystem_FOUND
+        FALSE
+        CACHE BOOL "" FORCE
+    )
     if(Filesystem_FIND_REQUIRED)
         message(FATAL_ERROR "No linkable C++17 filesystem implementation found (also tried stdc++fs).")
     endif()

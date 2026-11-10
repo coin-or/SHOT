@@ -26,7 +26,7 @@ namespace SHOT
 std::vector<NumericConstraint*> activeConstraints;
 double lastActiveConstraintUpdateValue;
 
-Test::Test(EnvironmentPtr envPtr) : env(envPtr) {}
+Test::Test(EnvironmentPtr envPtr) : env(envPtr) { }
 
 Test::~Test()
 {
@@ -75,7 +75,7 @@ double Test::operator()(const double x)
     return (calculatedValue);
 }
 
-TestObjective::TestObjective(EnvironmentPtr envPtr) : env(envPtr) {}
+TestObjective::TestObjective(EnvironmentPtr envPtr) : env(envPtr) { }
 
 TestObjective::~TestObjective() = default;
 

@@ -174,8 +174,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         // Saves the LP problem to file if in debug mode
         if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
-            auto filename
-                = fmt::format("{}/minimax{}", env->settings->getSetting<std::string>("Output.Debug.Path"), i);
+            auto filename = fmt::format("{}/minimax{}", env->settings->getSetting<std::string>("Output.Debug.Path"), i);
 
             LPSolver->writeProblemToDebugFiles(filename);
         }
@@ -302,7 +301,8 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
         // Calculating the gradients can take long for a large problem, so the time limits are also checked for every
         // cut. The cuts created so far are still added.
-        auto isOutOfTime = [&]() {
+        auto isOutOfTime = [&]()
+        {
             return (env->timing->getElapsedTime("InteriorPointSearch") > timeLimit
                 || env->timing->getElapsedTime("Total") > env->settings->getSetting<double>("Termination.TimeLimit"));
         };

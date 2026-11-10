@@ -1239,8 +1239,8 @@ static std::optional<FirstPrimalSolution> SolveAndGetFirstPrimalSolution(SHOT::S
         [&firstSolution](NewPrimalSolutionContext& context)
         {
             if(!firstSolution)
-                firstSolution = FirstPrimalSolution { context.getPoint(), context.getObjectiveValue(),
-                    context.getSource() };
+                firstSolution
+                    = FirstPrimalSolution { context.getPoint(), context.getObjectiveValue(), context.getSource() };
         });
 
     solver.solveProblem();
@@ -1290,8 +1290,8 @@ bool TestAMPLInitialValues()
     auto& pt = firstSolution->point;
     if(std::abs(pt[0] - 0.5) > 1e-10 || std::abs(pt[1] - 0.1) > 1e-10 || std::abs(pt[2] - 1.0) > 1e-10)
     {
-        std::cout << fmt::format("  First primal solution ({}, {}, {}) - FAILED, expected (0.5, 0.1, 1.0)\n", pt[0],
-            pt[1], pt[2]);
+        std::cout << fmt::format(
+            "  First primal solution ({}, {}, {}) - FAILED, expected (0.5, 0.1, 1.0)\n", pt[0], pt[1], pt[2]);
         passed = false;
     }
 
@@ -1415,8 +1415,8 @@ bool TestTerminationReasonOfOrdinarySolve()
     // The interrupted dual problem must still be accounted for in the statistics
     auto& stats = env->solutionStatistics;
     int solvedDiscreteDualProblems = stats.numberOfProblemsOptimalMILP + stats.numberOfProblemsFeasibleMILP
-        + stats.numberOfProblemsOptimalMIQP + stats.numberOfProblemsFeasibleMIQP
-        + stats.numberOfProblemsOptimalMIQCQP + stats.numberOfProblemsFeasibleMIQCQP;
+        + stats.numberOfProblemsOptimalMIQP + stats.numberOfProblemsFeasibleMIQP + stats.numberOfProblemsOptimalMIQCQP
+        + stats.numberOfProblemsFeasibleMIQCQP;
 
     if(solvedDiscreteDualProblems == 0)
     {
@@ -1520,12 +1520,12 @@ bool TestCallbackGenericContext()
                 contextClassesMatch = false;
         });
 
-    solver->registerCallback<BoundsUpdatedContext>([&](BoundsUpdatedContext& context)
+    solver->registerCallback<BoundsUpdatedContext>(
+        [&](BoundsUpdatedContext& context)
         {
             boundEvents++;
             if(context.getLocation() != E_CallbackLocation::BoundsUpdated || !context.hasChanged()
-                || context.isPrimalBoundChanged()
-                    != (context.getPreviousPrimalBound() != context.getPrimalBound())
+                || context.isPrimalBoundChanged() != (context.getPreviousPrimalBound() != context.getPrimalBound())
                 || context.isDualBoundChanged() != (context.getPreviousDualBound() != context.getDualBound())
                 || context.isGlobalDualBoundChanged()
                     != (context.getPreviousGlobalDualBound() != context.getGlobalDualBound()))
@@ -2621,13 +2621,13 @@ bool TestStrategySelectionForLinearAndQuadraticProblems()
 
                     auto problem = std::make_shared<Problem>(env);
                     problem->name = "strategyselection";
-                    auto x = std::make_shared<Variable>("x",
-                        discrete ? E_VariableType::Integer : E_VariableType::Real, 0.0, 4.0);
+                    auto x = std::make_shared<Variable>(
+                        "x", discrete ? E_VariableType::Integer : E_VariableType::Real, 0.0, 4.0);
                     problem->add(x);
                     if((quadraticType & 1) || quadraticType == 4)
                     {
-                        auto objective = std::make_shared<QuadraticObjectiveFunction>(
-                            E_ObjectiveFunctionDirection::Minimize);
+                        auto objective
+                            = std::make_shared<QuadraticObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
                         if(quadraticType == 4)
                         {
                             solver->updateSetting("Model.Reformulation.Bilinear.IntegerFormulation",
@@ -2642,7 +2642,8 @@ bool TestStrategySelectionForLinearAndQuadraticProblems()
                     }
                     else
                     {
-                        auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+                        auto objective
+                            = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
                         objective->add(std::make_shared<LinearTerm>(1.0, x));
                         problem->add(objective);
                     }
@@ -2671,9 +2672,9 @@ bool TestStrategySelectionForLinearAndQuadraticProblems()
                     }
                     if(env->results->usedSolutionStrategy != expected)
                     {
-                        std::cout << "Incorrect strategy for backend " << static_cast<int>(backend)
-                                  << ", discrete " << discrete << ", quadratic type " << quadraticType
-                                  << ", tree " << static_cast<int>(tree) << std::endl;
+                        std::cout << "Incorrect strategy for backend " << static_cast<int>(backend) << ", discrete "
+                                  << discrete << ", quadratic type " << quadraticType << ", tree "
+                                  << static_cast<int>(tree) << std::endl;
                         return false;
                     }
                 }
@@ -2967,8 +2968,8 @@ bool TestNoFixedIntegerNLPForReformulatedMILP()
     auto env = solver->getEnvironment();
     solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
     solver->updateSetting("Termination.TimeLimit", 60.0);
-    solver->updateSetting("Model.Reformulation.Quadratics.Strategy",
-        static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
+    solver->updateSetting(
+        "Model.Reformulation.Quadratics.Strategy", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
 
     auto problem = std::make_shared<Problem>(env);
     problem->name = "binaryproducts";
@@ -3346,14 +3347,15 @@ bool TestTimeLimitReachedBeforeDualProblem()
 
         auto& stats = env->solutionStatistics;
         int solvedDualProblems = stats.numberOfProblemsLP + stats.numberOfProblemsQP + stats.numberOfProblemsQCQP
-            + stats.numberOfProblemsOptimalMILP + stats.numberOfProblemsFeasibleMILP
-            + stats.numberOfProblemsOptimalMIQP + stats.numberOfProblemsFeasibleMIQP
-            + stats.numberOfProblemsOptimalMIQCQP + stats.numberOfProblemsFeasibleMIQCQP;
+            + stats.numberOfProblemsOptimalMILP + stats.numberOfProblemsFeasibleMILP + stats.numberOfProblemsOptimalMIQP
+            + stats.numberOfProblemsFeasibleMIQP + stats.numberOfProblemsOptimalMIQCQP
+            + stats.numberOfProblemsFeasibleMIQCQP;
 
         if(env->results->terminationReason != E_TerminationReason::TimeLimit)
         {
-            std::cout << "The " << strategy << " strategy did not end on the time limit: "
-                      << env->results->terminationReasonDescription << '\n';
+            std::cout << "The " << strategy
+                      << " strategy did not end on the time limit: " << env->results->terminationReasonDescription
+                      << '\n';
             passed = false;
         }
 
@@ -3384,7 +3386,7 @@ bool TestTimeLimitReachedBeforeDualProblem()
 class TaskCountRuns : public TaskBase
 {
 public:
-    TaskCountRuns(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
+    TaskCountRuns(EnvironmentPtr envPtr) : TaskBase(envPtr) { }
 
     void run() override { numberOfRuns++; }
     std::string getType() override { return "TaskCountRuns"; }

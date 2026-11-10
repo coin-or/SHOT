@@ -24,7 +24,7 @@
 namespace SHOT
 {
 
-TaskCalculateSolutionChangeNorm::TaskCalculateSolutionChangeNorm(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
+TaskCalculateSolutionChangeNorm::TaskCalculateSolutionChangeNorm(EnvironmentPtr envPtr) : TaskBase(envPtr) { }
 
 TaskCalculateSolutionChangeNorm::~TaskCalculateSolutionChangeNorm() = default;
 

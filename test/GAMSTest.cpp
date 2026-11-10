@@ -197,8 +197,8 @@ bool TestGAMSNLPLicenseFailures()
 bool TestGamsFunctions(std::string filename)
 {
     // arcsin, arccos, arctan, sinh, cosh, tanh, arctan2, entropy, centropy (with and without its third argument),
-    // sigmoid, poly and edist are read as expressions SHOT has. Their values are compared with the definitions in the GAMS
-    // documentation, also where an argument is zero, and their gradients with central differences.
+    // sigmoid, poly and edist are read as expressions SHOT has. Their values are compared with the definitions in the
+    // GAMS documentation, also where an argument is zero, and their gradients with central differences.
 
     bool passed = true;
 
@@ -277,8 +277,8 @@ bool TestGamsFunctions(std::string filename)
 
                 if(std::abs(derivative - difference) > 1e-5 * std::max(1.0, std::abs(difference)))
                 {
-                    std::cout << "  FAILED: the derivative of " << C->name << " with respect to " << V->name
-                              << " is " << derivative << ", expected " << difference << ".\n";
+                    std::cout << "  FAILED: the derivative of " << C->name << " with respect to " << V->name << " is "
+                              << derivative << ", expected " << difference << ".\n";
                     passed = false;
                 }
             }

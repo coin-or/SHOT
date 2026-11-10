@@ -603,8 +603,8 @@ GurobiCallbackSingleTree::GurobiCallbackSingleTree(GRBVar* xvars, EnvironmentPtr
 
     taskCalculateSolutionChangeNorm = std::make_shared<TaskCalculateSolutionChangeNorm>(env);
 
-    auto NLPProblemSource = static_cast<ES_PrimalNLPProblemSource>(
-        env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"));
+    auto NLPProblemSource
+        = static_cast<ES_PrimalNLPProblemSource>(env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"));
 
     // The tasks create the NLP problem, which is not needed when the fixed-integer NLP strategy is not used
     bool useFixedNLP = env->settings->getSetting<bool>("Primal.FixedInteger.Use");
@@ -792,12 +792,11 @@ void GurobiCallbackSingleTree::addExternalDualBoundLazyConstraint()
             env->output->outputDebug(
                 fmt::format("        Adding external dual bound lazy constraint with auxiliary variable, new bound: {}",
                     newBound.value()));
-
         }
         else
         {
-            auto linObj = std::dynamic_pointer_cast<LinearObjectiveFunction>(
-                env->reformulatedProblem->objectiveFunction);
+            auto linObj
+                = std::dynamic_pointer_cast<LinearObjectiveFunction>(env->reformulatedProblem->objectiveFunction);
 
             if(linObj)
             {
@@ -805,9 +804,9 @@ void GurobiCallbackSingleTree::addExternalDualBoundLazyConstraint()
                     objExpr += T->coefficient * vars[T->variable->getIndex()];
             }
 
-            env->output->outputDebug(
-                fmt::format("        Adding external dual bound lazy constraint without auxiliary variable, new bound: {}",
-                    newBound.value()));
+            env->output->outputDebug(fmt::format(
+                "        Adding external dual bound lazy constraint without auxiliary variable, new bound: {}",
+                newBound.value()));
         }
 
         if(isMinimization)

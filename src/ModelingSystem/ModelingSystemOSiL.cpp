@@ -316,11 +316,13 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
                 auto nonlinearExpression = nonlinearConstraints.find(constraintCounter);
                 auto hasQuadraticTerms = containsQuadraticTerms.find(constraintCounter);
 
-                if(nonlinearExpression != nonlinearConstraints.end()) problem->add(
-                    std::make_shared<NonlinearConstraint>(name, nonlinearExpression->second, lowerBound, upperBound));
-                else if(hasQuadraticTerms != containsQuadraticTerms.end(
-                    )) problem->add(std::make_shared<QuadraticConstraint>(name, lowerBound, upperBound));
-                else problem->add(std::make_shared<LinearConstraint>(name, lowerBound, upperBound));
+                if(nonlinearExpression != nonlinearConstraints.end())
+                    problem->add(std::make_shared<NonlinearConstraint>(
+                        name, nonlinearExpression->second, lowerBound, upperBound));
+                else if(hasQuadraticTerms != containsQuadraticTerms.end())
+                    problem->add(std::make_shared<QuadraticConstraint>(name, lowerBound, upperBound));
+                else
+                    problem->add(std::make_shared<LinearConstraint>(name, lowerBound, upperBound));
 
                 constraintCounter++;
             }
@@ -449,8 +451,7 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
                     if(firstVariableFixed && secondVariableFixed)
                     {
                         std::dynamic_pointer_cast<LinearConstraint>(problem->numericConstraints[placementIndex])
-                            ->constant
-                            += coefficient * firstVariable->lowerBound * secondVariable->lowerBound;
+                            ->constant += coefficient * firstVariable->lowerBound * secondVariable->lowerBound;
                     }
                     else if(firstVariableFixed)
                     {
@@ -576,8 +577,7 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
 
                         if(variable->lowerBound == variable->upperBound)
                             std::dynamic_pointer_cast<LinearConstraint>(problem->numericConstraints[indices[counter]])
-                                ->constant
-                                += coefficients[counter] * variable->lowerBound;
+                                ->constant += coefficients[counter] * variable->lowerBound;
                         else
                             constraintLinearTerms[indices[counter]].push_back(
                                 std::make_shared<LinearTerm>(coefficients[counter], variable));

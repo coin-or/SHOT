@@ -28,7 +28,7 @@ TaskInitializeRootsearch::TaskInitializeRootsearch(EnvironmentPtr envPtr) : Task
 
 TaskInitializeRootsearch::~TaskInitializeRootsearch() = default;
 
-void TaskInitializeRootsearch::run() {}
+void TaskInitializeRootsearch::run() { }
 
 std::string TaskInitializeRootsearch::getType()
 {

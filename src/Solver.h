@@ -176,27 +176,40 @@ public:
     std::string getResultsSol();
 
     void updateSetting(std::string settingName, int value)
-    { env->settings->updateSetting(settingName, value, E_SettingPriority::UserAPI); }
+    {
+        env->settings->updateSetting(settingName, value, E_SettingPriority::UserAPI);
+    }
     void updateSetting(std::string settingName, std::string value)
-    { env->settings->updateSetting<std::string>(settingName, value, E_SettingPriority::UserAPI); }
+    {
+        env->settings->updateSetting<std::string>(settingName, value, E_SettingPriority::UserAPI);
+    }
     void updateSetting(std::string settingName, double value)
-    { env->settings->updateSetting(settingName, value, E_SettingPriority::UserAPI); }
+    {
+        env->settings->updateSetting(settingName, value, E_SettingPriority::UserAPI);
+    }
     void updateSetting(std::string settingName, bool value)
-    { env->settings->updateSetting(settingName, value, E_SettingPriority::UserAPI); }
+    {
+        env->settings->updateSetting(settingName, value, E_SettingPriority::UserAPI);
+    }
 
     void updateSetting(std::string settingName, int value, E_SettingPriority priority)
-    { env->settings->updateSetting(settingName, value, priority); }
-    void updateSetting(std::string settingName, std::string value, E_SettingPriority priority)
-    { env->settings->updateSetting<std::string>(settingName, value, priority); }
-    void updateSetting(std::string settingName, double value, E_SettingPriority priority)
-    { env->settings->updateSetting(settingName, value, priority); }
-    void updateSetting(std::string settingName, bool value, E_SettingPriority priority)
-    { env->settings->updateSetting(settingName, value, priority); }
-
-    template <typename T> T getSetting(std::string settingName)
     {
-        return (env->settings->getSetting<T>(settingName));
+        env->settings->updateSetting(settingName, value, priority);
     }
+    void updateSetting(std::string settingName, std::string value, E_SettingPriority priority)
+    {
+        env->settings->updateSetting<std::string>(settingName, value, priority);
+    }
+    void updateSetting(std::string settingName, double value, E_SettingPriority priority)
+    {
+        env->settings->updateSetting(settingName, value, priority);
+    }
+    void updateSetting(std::string settingName, bool value, E_SettingPriority priority)
+    {
+        env->settings->updateSetting(settingName, value, priority);
+    }
+
+    template <typename T> T getSetting(std::string settingName) { return (env->settings->getSetting<T>(settingName)); }
 
     E_SettingPriority getSettingPriority(std::string settingName)
     {

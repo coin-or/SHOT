@@ -72,8 +72,8 @@ bool IpoptTest1()
 
     SHOT::NonlinearExpressionPtr exprSquared2 = std::make_shared<SHOT::ExpressionSquare>(expressionVariable_x);
     SHOT::NonlinearExpressionPtr exprPlus = std::make_shared<SHOT::ExpressionSum>(exprSquared2, expressionVariable_y);
-    SHOT::NonlinearConstraintPtr nonlinearConstraint = std::make_shared<SHOT::NonlinearConstraint>(
-        "nlconstr", exprPlus, 1.0, 1.0);
+    SHOT::NonlinearConstraintPtr nonlinearConstraint
+        = std::make_shared<SHOT::NonlinearConstraint>("nlconstr", exprPlus, 1.0, 1.0);
     problem->add(nonlinearConstraint);
 
     std::cout << '\n';
@@ -266,8 +266,7 @@ bool IpoptTest3()
     problem->add(first);
 
     auto second = std::make_shared<NonlinearConstraint>("second",
-        std::make_shared<ExpressionExp>(std::make_shared<ExpressionSum>(
-            std::make_shared<ExpressionVariable>(x),
+        std::make_shared<ExpressionExp>(std::make_shared<ExpressionSum>(std::make_shared<ExpressionVariable>(x),
             std::make_shared<ExpressionNegate>(std::make_shared<ExpressionVariable>(y)))),
         -10.0, 10.0);
     second->add(std::make_shared<QuadraticTerm>(2.0, x, x));
@@ -287,14 +286,12 @@ bool IpoptTest3()
     VectorDouble point { 0.3, -0.4 };
     VectorDouble multipliers { 1.3, -0.7 };
 
-    nlp.eval_jac_g(n, point.data(), true, m, jacobianNonzeros,
-        jacobianRows.data(), jacobianColumns.data(), nullptr);
-    nlp.eval_jac_g(n, point.data(), true, m, jacobianNonzeros,
-        nullptr, nullptr, jacobianValues.data());
-    nlp.eval_h(n, point.data(), true, 0.0, m, multipliers.data(), true, hessianNonzeros,
-        hessianRows.data(), hessianColumns.data(), nullptr);
-    nlp.eval_h(n, point.data(), true, 0.0, m, multipliers.data(), true, hessianNonzeros,
-        nullptr, nullptr, hessianValues.data());
+    nlp.eval_jac_g(n, point.data(), true, m, jacobianNonzeros, jacobianRows.data(), jacobianColumns.data(), nullptr);
+    nlp.eval_jac_g(n, point.data(), true, m, jacobianNonzeros, nullptr, nullptr, jacobianValues.data());
+    nlp.eval_h(n, point.data(), true, 0.0, m, multipliers.data(), true, hessianNonzeros, hessianRows.data(),
+        hessianColumns.data(), nullptr);
+    nlp.eval_h(n, point.data(), true, 0.0, m, multipliers.data(), true, hessianNonzeros, nullptr, nullptr,
+        hessianValues.data());
 
     bool passed = true;
     for(size_t k = 0; k < jacobianValues.size(); ++k)
@@ -314,8 +311,7 @@ bool IpoptTest3()
         {
             auto hessian = problem->numericConstraints[constraint]->calculateHessian(point, false);
             for(const auto& term : hessian)
-                if(term.first.first->getIndex() == hessianRows[k]
-                    && term.first.second->getIndex() == hessianColumns[k])
+                if(term.first.first->getIndex() == hessianRows[k] && term.first.second->getIndex() == hessianColumns[k])
                     expected += multipliers[constraint] * term.second;
         }
         passed &= std::abs(hessianValues[k] - expected) < 1e-9;

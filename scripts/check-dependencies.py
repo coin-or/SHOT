@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Check submodule pins and vendored file contents against versions.json."""
+
 import hashlib
 import json
 from pathlib import Path
@@ -30,8 +31,7 @@ def main():
             # Pin verification requires a Git checkout; source distributions
             # have no submodule metadata.
             if (directory / ".git").exists():
-                commit = subprocess.check_output(
-                    ["git", "-C", str(directory), "rev-parse", "HEAD"], text=True).strip()
+                commit = subprocess.check_output(["git", "-C", str(directory), "rev-parse", "HEAD"], text=True).strip()
                 if commit != dependency["commit"]:
                     failures.append(f"{name}: submodule commit differs from manifest")
             continue

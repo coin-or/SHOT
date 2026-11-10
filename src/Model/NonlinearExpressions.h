@@ -200,7 +200,7 @@ public:
     };
 
     explicit NonlinearExpressions(std::vector<NonlinearExpressionPtr> expressions)
-        : std::vector<NonlinearExpressionPtr>(std::move(expressions)) {};
+        : std::vector<NonlinearExpressionPtr>(std::move(expressions)) { };
 
     inline void add(NonlinearExpressionPtr expression) { (*this).push_back(expression); };
     inline void add(const NonlinearExpressions& expressions)
@@ -1373,12 +1373,10 @@ public:
         auto childConvexity = child->getConvexity();
         auto childBounds = child->getBounds();
 
-        if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Convex)
-            && childBounds.u() <= 0.0)
+        if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Convex) && childBounds.u() <= 0.0)
             return E_Convexity::Convex;
 
-        if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Concave)
-            && childBounds.l() >= 0.0)
+        if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Concave) && childBounds.l() >= 0.0)
             return E_Convexity::Concave;
 
         return E_Convexity::Unknown;
@@ -1542,8 +1540,7 @@ public:
         if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Convex) && childBounds.l() >= 0.0)
             return E_Convexity::Convex;
 
-        if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Concave)
-            && childBounds.u() <= 0.0)
+        if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Concave) && childBounds.u() <= 0.0)
             return E_Convexity::Concave;
 
         return E_Convexity::Unknown;
@@ -1720,8 +1717,7 @@ public:
         if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Convex) && childBounds.u() <= 0.0)
             return E_Convexity::Convex;
 
-        if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Concave)
-            && childBounds.l() >= 0.0)
+        if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Concave) && childBounds.l() >= 0.0)
             return E_Convexity::Concave;
 
         return E_Convexity::Unknown;
@@ -1820,8 +1816,7 @@ public:
         if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Convex) && childBounds.u() <= 0.0)
             return E_Convexity::Convex;
 
-        if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Concave)
-            && childBounds.l() >= 0.0)
+        if((childConvexity == E_Convexity::Linear || childConvexity == E_Convexity::Concave) && childBounds.l() >= 0.0)
             return E_Convexity::Concave;
 
         return E_Convexity::Unknown;
@@ -1872,9 +1867,8 @@ public:
     inline bool tightenBounds(Interval bound) override
     {
         // The inverse is the signed power with the exponent 1/c
-        auto inverse = [this](double x) {
-            return (x >= 0.0 ? std::pow(x, 1.0 / exponent) : -std::pow(-x, 1.0 / exponent));
-        };
+        auto inverse
+            = [this](double x) { return (x >= 0.0 ? std::pow(x, 1.0 / exponent) : -std::pow(-x, 1.0 / exponent)); };
 
         return (child->tightenBounds(Interval(inverse(bound.l()), inverse(bound.u()))));
     };
@@ -2015,8 +2009,8 @@ public:
         bool firstTightened = firstChild->tightenBounds(secondChild->getBounds() * bound);
 
         // The denominator is the numerator divided by the quotient, which requires that the quotient is not zero
-        bool secondTightened = (bound.l() > 0 || bound.u() < 0)
-            && secondChild->tightenBounds(firstChild->getBounds() / bound);
+        bool secondTightened
+            = (bound.l() > 0 || bound.u() < 0) && secondChild->tightenBounds(firstChild->getBounds() / bound);
 
         // The numerator is tightened again with the tightened bounds of the denominator. The call is made first, so
         // that it is not skipped when the numerator has already been tightened.
@@ -3582,7 +3576,6 @@ public:
     }
 };
 // End general operations
-
 
 // Functions without expressions of their own, given by other expressions. An argument used several times is the same
 // node, which Problem::finalize() copies.

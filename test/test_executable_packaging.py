@@ -64,15 +64,22 @@ class ExecutablePackagingTest(unittest.TestCase):
         archive = PACKAGER.package(wheel, "macos-arm64", self.root / "output")
         destination = self.root / "relocated with spaces"
         shutil.unpack_archive(archive, destination)
-        executable, = destination.glob("*/SHOT")
-        result = subprocess.run([str(executable), "argument with spaces"], cwd=self.root,
-                                capture_output=True, text=True, check=True)
+        (executable,) = destination.glob("*/SHOT")
+        result = subprocess.run(
+            [str(executable), "argument with spaces"], cwd=self.root, capture_output=True, text=True, check=True
+        )
         self.assertEqual(result.stdout, "argument with spaces\n")
 
     def test_windows_dlls_beside_executable(self):
-        wheel = self.wheel("win_amd64", {"SHOT.exe": "exe", "SHOTSolver.dll": "solver",
-                                          "shotpy.libs/libipopt-hash.dll": "ipopt",
-                                          "SHOTpy.cp311-win_amd64.pyd": "Python module"})
+        wheel = self.wheel(
+            "win_amd64",
+            {
+                "SHOT.exe": "exe",
+                "SHOTSolver.dll": "solver",
+                "shotpy.libs/libipopt-hash.dll": "ipopt",
+                "SHOTpy.cp311-win_amd64.pyd": "Python module",
+            },
+        )
         runtime = self.root / "msvc-runtime"
         runtime.mkdir()
         for name in ("vcruntime140.dll", "vcruntime140_1.dll"):
@@ -88,8 +95,7 @@ class ExecutablePackagingTest(unittest.TestCase):
             self.assertNotIn("SHOTpy.cp311-win_amd64.pyd", names)
 
     def test_conflicting_windows_dlls_fail(self):
-        wheel = self.wheel("win_amd64", {"SHOT.exe": "exe", "ipopt.dll": "one",
-                                          "shotpy.libs/ipopt.dll": "different"})
+        wheel = self.wheel("win_amd64", {"SHOT.exe": "exe", "ipopt.dll": "one", "shotpy.libs/ipopt.dll": "different"})
         with self.assertRaisesRegex(ValueError, "Conflicting libraries"):
             PACKAGER.package(wheel, "windows-x86_64", self.root / "output")
 

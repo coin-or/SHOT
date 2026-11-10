@@ -1213,8 +1213,8 @@ bool Settings::readSettingsFromString(std::string options)
             if(convertedValue)
                 updateSetting(name, category, *convertedValue, E_SettingPriority::OptionsFile);
             else
-                output->outputError("  Cannot update setting <" + category + "," + name
-                    + "> since the value is of the wrong format.");
+                output->outputError(
+                    "  Cannot update setting <" + category + "," + name + "> since the value is of the wrong format.");
 
             break;
         }

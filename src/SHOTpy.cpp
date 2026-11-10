@@ -494,8 +494,8 @@ template <typename T> void checkPointSize(NonlinearExpression& expression, const
 
         if(!problem)
         {
-            throw py::value_error("The expression cannot be evaluated before its variable " + V->name
-                + " has been added to a problem.");
+            throw py::value_error(
+                "The expression cannot be evaluated before its variable " + V->name + " has been added to a problem.");
         }
 
         checkPointSize(*problem, point);
@@ -907,13 +907,12 @@ PYBIND11_MODULE(SHOTpy, m)
         .def_property_readonly(
             "width", [](const Interval& self) { return (self.u() - self.l()); }, "upper - lower")
         .def_property_readonly(
-            "midpoint", [](const Interval& self) { return (0.5 * self.l() + 0.5 * self.u()); },
-            "(lower + upper) / 2")
+            "midpoint", [](const Interval& self) { return (0.5 * self.l() + 0.5 * self.u()); }, "(lower + upper) / 2")
         .def(
             "contains", [](const Interval& self, double value) { return (self.l() <= value && value <= self.u()); },
             py::arg("value"), "Whether lower <= value <= upper")
-        .def("__contains__",
-            [](const Interval& self, double value) { return (self.l() <= value && value <= self.u()); })
+        .def(
+            "__contains__", [](const Interval& self, double value) { return (self.l() <= value && value <= self.u()); })
         .def("__iter__", [](const Interval& self) { return (py::iter(py::make_tuple(self.l(), self.u()))); })
         .def(
             "__eq__", [](const Interval& self, const Interval& other)
@@ -944,8 +943,7 @@ PYBIND11_MODULE(SHOTpy, m)
     py::implicitly_convertible<py::int_, Interval>();
 
     // ===== IntervalDerivatives Class =====
-    intervalDerivativesClass
-        .def_readonly("value", &PythonIntervalDerivatives::value, "The bounds of the value")
+    intervalDerivativesClass.def_readonly("value", &PythonIntervalDerivatives::value, "The bounds of the value")
         .def_readonly("gradient", &PythonIntervalDerivatives::gradient,
             "The bounds of the gradient as a dict {variable index: Interval}, without the elements that are zero")
         .def_readonly("hessian", &PythonIntervalDerivatives::hessian,
@@ -1684,8 +1682,7 @@ PYBIND11_MODULE(SHOTpy, m)
 
             return std::make_shared<ExpressionSignPower>(wrapInExpression(var), exponent);
         },
-        "The signed power sign(x) * |x|^exponent with a positive constant exponent", py::arg("x"),
-        py::arg("exponent"));
+        "The signed power sign(x) * |x|^exponent with a positive constant exponent", py::arg("x"), py::arg("exponent"));
 
     m.def(
         "signpower",
@@ -1696,8 +1693,7 @@ PYBIND11_MODULE(SHOTpy, m)
 
             return std::make_shared<ExpressionSignPower>(expr, exponent);
         },
-        "The signed power sign(x) * |x|^exponent with a positive constant exponent", py::arg("x"),
-        py::arg("exponent"));
+        "The signed power sign(x) * |x|^exponent with a positive constant exponent", py::arg("x"), py::arg("exponent"));
 
     // The arguments of min and max are variables, expressions and numbers, given separately or as one list
     auto minimumOrMaximumArguments = [](const py::args& args, const std::string& name)
@@ -1729,16 +1725,14 @@ PYBIND11_MODULE(SHOTpy, m)
     };
 
     m.def(
-        "min",
-        [minimumOrMaximumArguments](const py::args& args) -> NonlinearExpressionPtr
+        "min", [minimumOrMaximumArguments](const py::args& args) -> NonlinearExpressionPtr
         { return createMinimum(minimumOrMaximumArguments(args, "min")); },
         "The minimum of variables, expressions and numbers, given separately or as one list. It is reformulated "
         "with absolute values, min(a, b) = (a + b - |a - b|)/2, which need a binary variable only where the "
         "optimum does not push the minimum up");
 
     m.def(
-        "max",
-        [minimumOrMaximumArguments](const py::args& args) -> NonlinearExpressionPtr
+        "max", [minimumOrMaximumArguments](const py::args& args) -> NonlinearExpressionPtr
         { return createMaximum(minimumOrMaximumArguments(args, "max")); },
         "The maximum of variables, expressions and numbers, given separately or as one list. It is reformulated "
         "with absolute values, max(a, b) = (a + b + |a - b|)/2, which need a binary variable only where the "
@@ -3636,10 +3630,9 @@ PYBIND11_MODULE(SHOTpy, m)
         .def_property_readonly("isIncumbent", &NewPrimalSolutionContext::isIncumbent,
             "Whether the solution is better than the best one SHOT had before it");
 
-    py::class_<BoundsUpdatedContext, CallbackContext, std::shared_ptr<BoundsUpdatedContext>>(
-        m, "BoundsUpdatedContext")
-        .def_property_readonly("previousPrimalBound", &BoundsUpdatedContext::getPreviousPrimalBound,
-            "The primal bound before this update")
+    py::class_<BoundsUpdatedContext, CallbackContext, std::shared_ptr<BoundsUpdatedContext>>(m, "BoundsUpdatedContext")
+        .def_property_readonly(
+            "previousPrimalBound", &BoundsUpdatedContext::getPreviousPrimalBound, "The primal bound before this update")
         .def_property_readonly("previousDualBound", &BoundsUpdatedContext::getPreviousDualBound,
             "The current dual bound before this update")
         .def_property_readonly("previousGlobalDualBound", &BoundsUpdatedContext::getPreviousGlobalDualBound,

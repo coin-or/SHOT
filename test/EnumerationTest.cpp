@@ -237,8 +237,7 @@ bool EnumerationTestNoIntegerCuts()
     passed = expect(env->dualSolver->integerCutWaitingList.empty() && env->dualSolver->generatedIntegerCuts.empty(),
                  "an integer cut was added in the search")
         && passed;
-    passed
-        = expect(env->primalSolver->usedPrimalNLPCandidates.size() == 1, "the combination was not added as used")
+    passed = expect(env->primalSolver->usedPrimalNLPCandidates.size() == 1, "the combination was not added as used")
         && passed;
 
     return (passed);
@@ -388,8 +387,8 @@ bool EnumerationTestFallback()
         if(useFallback)
         {
             passed = expect(numberOfCombinationsSolved(env)
-                             + env->solutionStatistics.numberOfFixedIntegerEnumerationCombinationsSkipped
-                         == 8,
+                                 + env->solutionStatistics.numberOfFixedIntegerEnumerationCombinationsSkipped
+                             == 8,
                          "not all combinations were solved or skipped")
                 && passed;
             passed = expect(std::abs(solver->getPrimalBound() - 6.00976) < 1e-3,
@@ -437,8 +436,8 @@ bool EnumerationTestFallback()
                                       : "the fallback search was not run after the search before the dual strategy")
             && passed;
         passed = expect(numberOfCombinationsSolved(env)
-                         + env->solutionStatistics.numberOfFixedIntegerEnumerationCombinationsSkipped
-                     == 8,
+                             + env->solutionStatistics.numberOfFixedIntegerEnumerationCombinationsSkipped
+                         == 8,
                      "not all combinations were solved or skipped")
             && passed;
     }

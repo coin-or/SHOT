@@ -82,9 +82,8 @@ std::shared_ptr<Variables> ObjectiveFunction::getGradientSparsityPattern()
 
     // Sorts the variables
     std::sort(gradientSparsityPattern->begin(), gradientSparsityPattern->end(),
-        [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
-            return (variableOne->getIndex() < variableTwo->getIndex());
-        });
+        [](const VariablePtr& variableOne, const VariablePtr& variableTwo)
+        { return (variableOne->getIndex() < variableTwo->getIndex()); });
 
     // Remove duplicates
     auto last = std::unique(gradientSparsityPattern->begin(), gradientSparsityPattern->end());
@@ -107,8 +106,8 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> ObjectiveFunct
 
     // Sorts the elements
     std::sort(hessianSparsityPattern->begin(), hessianSparsityPattern->end(),
-        [](const std::pair<VariablePtr, VariablePtr>& elementOne,
-            const std::pair<VariablePtr, VariablePtr>& elementTwo) {
+        [](const std::pair<VariablePtr, VariablePtr>& elementOne, const std::pair<VariablePtr, VariablePtr>& elementTwo)
+        {
             if(elementOne.first->getIndex() != elementTwo.first->getIndex())
                 return (elementOne.first->getIndex() < elementTwo.first->getIndex());
 
@@ -491,10 +490,7 @@ SparseVariableMatrix QuadraticObjectiveFunction::calculateHessian(
 }
 
 // The Hessian of a quadratic function is constant, and is cached by the terms
-const SparseVariableMatrix* QuadraticObjectiveFunction::getConstantHessian()
-{
-    return (&quadraticTerms.getHessian());
-}
+const SparseVariableMatrix* QuadraticObjectiveFunction::getConstantHessian() { return (&quadraticTerms.getHessian()); }
 
 void QuadraticObjectiveFunction::initializeHessianSparsityPattern()
 {
@@ -1000,8 +996,8 @@ SparseVariableMatrix NonlinearObjectiveFunction::calculateHessian(const VectorDo
                 auto values = sharedOwnerProblem->ADFunctions.Hessian(pointNonlinearSubset, weights);
 
                 for(size_t k = 0; k < pattern.nnz(); ++k)
-                    addHessianElement(pattern.row()[k], pattern.col()[k],
-                        values[pattern.row()[k] * dimension + pattern.col()[k]]);
+                    addHessianElement(
+                        pattern.row()[k], pattern.col()[k], values[pattern.row()[k] * dimension + pattern.col()[k]]);
             }
             else
             {

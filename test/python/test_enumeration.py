@@ -28,13 +28,14 @@ def solve_synthes1(solver, data_dir, settings=None, callback=None):
 
 
 def number_of_combinations_solved(statistics):
-    return (statistics.numberOfFixedIntegerEnumerationCombinationsFeasible
-            + statistics.numberOfFixedIntegerEnumerationCombinationsInfeasible
-            + statistics.numberOfFixedIntegerEnumerationCombinationsUnresolved)
+    return (
+        statistics.numberOfFixedIntegerEnumerationCombinationsFeasible
+        + statistics.numberOfFixedIntegerEnumerationCombinationsInfeasible
+        + statistics.numberOfFixedIntegerEnumerationCombinationsUnresolved
+    )
 
 
 class TestExhaustiveFixedIntegerSearch:
-
     def test_not_used_by_default_for_convex_problem(self, solver, data_dir):
         statistics = solve_synthes1(solver, data_dir)
 

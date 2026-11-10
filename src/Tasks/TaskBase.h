@@ -41,6 +41,6 @@ private:
     bool active = true;
 };
 
-using TaskPtr =std::shared_ptr<TaskBase> ;
+using TaskPtr = std::shared_ptr<TaskBase>;
 
 } // namespace SHOT

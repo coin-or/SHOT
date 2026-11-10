@@ -56,7 +56,8 @@ VectorInteger MIPSolverBase::addLinearConstraints(const std::vector<std::map<int
     constraintIndexes.reserve(elements.size());
 
     for(size_t i = 0; i < elements.size(); i++)
-        constraintIndexes.push_back(addLinearConstraint(elements[i], constants[i], names[i], isGreaterThan, allowRepair));
+        constraintIndexes.push_back(
+            addLinearConstraint(elements[i], constants[i], names[i], isGreaterThan, allowRepair));
 
     return (constraintIndexes);
 }

@@ -465,7 +465,8 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
         if(solvestatus == E_NLPSolutionStatus::Error && useContinuousWarmstart
             && env->timing->getElapsedTime("Total") < env->settings->getSetting<double>("Termination.TimeLimit"))
         {
-            env->output->outputDebug("         Retrying fixed NLP problem without warm start for continuous variables.");
+            env->output->outputDebug(
+                "         Retrying fixed NLP problem without warm start for continuous variables.");
 
             NLPSolver->clearStartingPoint();
             NLPSolver->setStartingPoint(discreteVariableIndexes, fixedVariableValues);
@@ -509,7 +510,7 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
                 "         Source from candidate point is first MIP solution point which gave dual bound update.");
             sourceDesc = "NEWDB-" + source;
             candidateSource = isFinalPolish ? "dual solution selected for final polishing"
-                                           : "best dual solution associated with a dual-bound update";
+                                            : "best dual solution associated with a dual-bound update";
             break;
         case E_PrimalNLPSource::Enumeration:
             env->output->outputDebug(

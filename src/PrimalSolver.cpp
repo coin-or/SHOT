@@ -208,7 +208,9 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     {
         auto value = V->calculate(tmpPoint);
 
-        if(value == 0.0) { }
+        if(value == 0.0)
+        {
+        }
         else if(Utilities::isAlmostZero(value, 1e-7))
         {
             tmpPoint.at(V->getIndex()) = 0.0;
@@ -258,7 +260,9 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     {
         auto value = V->calculate(tmpPoint);
 
-        if(value == 0.0) { }
+        if(value == 0.0)
+        {
+        }
         else if(Utilities::isAlmostZero(value, 1e-7))
         {
             tmpPoint.at(V->getIndex()) = 0.0;

@@ -96,14 +96,14 @@ struct SpecialOrderedSet
 
     SpecialOrderedSet() = default;
 
-    SpecialOrderedSet(E_SOSType SOSType, Variables vars, VectorDouble w = {})
+    SpecialOrderedSet(E_SOSType SOSType, Variables vars, VectorDouble w = { })
     {
         type = SOSType;
         variables = vars;
         weights = w;
     };
 
-    void takeOwnership([[maybe_unused]] ProblemPtr owner) {};
+    void takeOwnership([[maybe_unused]] ProblemPtr owner) { };
 };
 
 using SpecialOrderedSetPtr = std::shared_ptr<SpecialOrderedSet>;

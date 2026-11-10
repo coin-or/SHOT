@@ -14,11 +14,11 @@
 namespace SHOT
 {
 
-TaskBase::TaskBase(EnvironmentPtr envPtr) : env(envPtr) {}
+TaskBase::TaskBase(EnvironmentPtr envPtr) : env(envPtr) { }
 
-void TaskBase::initialize() {}
+void TaskBase::initialize() { }
 
-void TaskBase::run() {}
+void TaskBase::run() { }
 
 std::string TaskBase::getType()
 {

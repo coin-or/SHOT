@@ -90,8 +90,7 @@ public:
     // Adds several linear constraints at once, which is faster in solvers that copy the matrix for every added
     // constraint. Returns the index of each added constraint, or -1 for the ones that were not added.
     virtual VectorInteger addLinearConstraints(const std::vector<std::map<int, double>>& elements,
-        const VectorDouble& constants, const VectorString& names, bool isGreaterThan, bool allowRepair)
-        = 0;
+        const VectorDouble& constants, const VectorString& names, bool isGreaterThan, bool allowRepair) = 0;
 
     virtual bool addSpecialOrderedSet(E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights = { })
         = 0;

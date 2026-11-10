@@ -49,9 +49,63 @@ run and any untested configurations; a few sentences suffice for a small
 change. Write `Fixes #123` when the PR resolves an issue. PRs are squash merged
 with the PR title as the commit subject.
 
-Format only the code you change with `.clang-format` and `.cmake-format`, not
-whole files. Keep dependency versions pinned; see
+Keep dependency versions pinned; see
 [ThirdParty/README.md](ThirdParty/README.md). Never force-push `master`.
+
+## Formatting
+
+Use Python 3.11 or newer, shown as `python` below. From the repository root,
+the same commands work on Linux, macOS and Windows:
+
+```bash
+python scripts/format.py --setup
+python scripts/format.py --apply
+python scripts/format.py --check
+```
+
+Run `--setup` once, and again when the pins in `scripts/requirements-format.txt`
+change. It creates or reuses `build/format-venv` and installs the pinned tools
+there. Both formatting modes select that environment automatically, verify the
+installed versions and run its executables. No environment activation or
+platform-specific paths are needed. The formatting CI check runs the same
+commands on Linux and Windows.
+
+Both modes select the same tracked files using `git ls-files`: C++ sources,
+headers and header templates in `src/` and `test/`; CMake files and templates
+in the project root, `cmake/` and `test/`; and Python files in `src/`, `test/`,
+`scripts/` and `docs/`. Add new source files to Git before running the script.
+Dependencies in `ThirdParty/`, build outputs, model data, notebooks, symlinks and the
+copied GAMS header `src/GAMS/GamsNLinstr.h` are excluded. The Python manifest
+generator in `test/data/instances/` is included. Shell, PowerShell and website
+assets are outside this formatter's scope.
+
+The style is defined by `.clang-format`, `.cmake-format` and `.ruff.toml`.
+C++ uses Allman braces with `else` and `else if` on their own lines, four-space
+indentation and a 120-column limit.
+CMake and Python use four-space indentation and a 120-column target too.
+C++ formatting preserves include order and existing template declaration breaks,
+and wraps comments. CMake formatting preserves argument order and comment text.
+Python formatting preserves existing string quote choices and does not run lint
+fixes or sort imports. All three formatters
+preserve checkout line endings; Git normalizes text through `.gitattributes`.
+The `project(...)` declaration
+keeps its existing layout because packaging reads its version prefix.
+
+The initial repository-wide formatting pass is a deliberate baseline reset.
+Keep it separate from functional changes. After that, format the code you
+change; the full-tree apply command should leave unrelated files unchanged.
+Configure editor format-on-save to use the pinned tools and these configuration
+files. The blank-line conventions in `AGENTS.md` still require review because
+clang-format does not fully enforce them.
+
+After the baseline PR is merged, add its full merged commit SHA to
+`.git-blame-ignore-revs` in a follow-up change. PRs are squash merged, so use
+the SHA on `master`, not a branch commit. To enable this file locally after
+checking out a branch containing it:
+
+```bash
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
 
 ## Validation
 

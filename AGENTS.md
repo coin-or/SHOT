@@ -46,12 +46,14 @@ workflow — including how to use the automated test suite (`test_runner`,
 
 ## Code and tests
 
+- Use the pinned tools through `scripts/format.py --apply` and `--check`;
+  installation and file scope are documented in `CONTRIBUTING.md`.
 - Match the surrounding spacing between logical blocks as well as
   `.clang-format` and `.cmake-format`. Add a blank line before an `if`
   statement when other code precedes it in the same block; no extra blank
-  line is needed when it starts the block. Keep `else if` and `else` attached
-  to the preceding branch. Separate a completed control-flow block from a
-  following `return` with a blank line.
+  line is needed when it starts the block. Put `else if` and `else` on their
+  own lines after the preceding branch. Separate a completed control-flow
+  block from a following `return` with a blank line.
 - Do not name test instances (MINLPLib, QPLIB, ...) in code comments;
   describe the case in general terms, e.g., "a square of a variable with a
   negative lower bound". Instance names belong in commit messages, PRs,

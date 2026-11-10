@@ -219,7 +219,7 @@ public:
     // The terms are taken as they are, as push_back does, so several terms of the same variables are kept. They are
     // merged when the container is given to the add(Terms) of another container, which is what such a container is
     // built for
-    explicit Terms(std::vector<T> terms) : std::vector<T>(std::move(terms)) {};
+    explicit Terms(std::vector<T> terms) : std::vector<T>(std::move(terms)) { };
 
     double calculate(const VectorDouble& point) const
     {
@@ -319,7 +319,7 @@ public:
     using std::vector<LinearTermPtr>::size;
 
     LinearTerms() = default;
-    explicit LinearTerms(std::vector<LinearTermPtr> terms) : Terms<LinearTermPtr>(std::move(terms)) {};
+    explicit LinearTerms(std::vector<LinearTermPtr> terms) : Terms<LinearTermPtr>(std::move(terms)) { };
 
     void add(LinearTermPtr term)
     {
@@ -613,7 +613,7 @@ public:
     using std::vector<QuadraticTermPtr>::size;
 
     QuadraticTerms() = default;
-    explicit QuadraticTerms(std::vector<QuadraticTermPtr> terms) : Terms<QuadraticTermPtr>(std::move(terms)) {};
+    explicit QuadraticTerms(std::vector<QuadraticTermPtr> terms) : Terms<QuadraticTermPtr>(std::move(terms)) { };
 
     // Also marks the values calculated from the terms as not valid
     inline void invalidateProperties()
@@ -1013,7 +1013,7 @@ public:
     using std::vector<MonomialTermPtr>::size;
 
     MonomialTerms() = default;
-    explicit MonomialTerms(std::vector<MonomialTermPtr> terms) : Terms<MonomialTermPtr>(std::move(terms)) {};
+    explicit MonomialTerms(std::vector<MonomialTermPtr> terms) : Terms<MonomialTermPtr>(std::move(terms)) { };
 
     void add(MonomialTermPtr term)
     {
@@ -1594,7 +1594,7 @@ public:
     using std::vector<SignomialTermPtr>::size;
 
     SignomialTerms() = default;
-    explicit SignomialTerms(std::vector<SignomialTermPtr> terms) : Terms<SignomialTermPtr>(std::move(terms)) {};
+    explicit SignomialTerms(std::vector<SignomialTermPtr> terms) : Terms<SignomialTermPtr>(std::move(terms)) { };
 
     void add(SignomialTermPtr term)
     {

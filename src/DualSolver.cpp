@@ -591,8 +591,7 @@ void DualSolver::addGeneratedIntegerCut(IntegerCut integerCut)
         env->output->outputInfo("        Solution is no longer global since integer cut has been added.");
     }
 
-    env->output->outputDebug(
-        fmt::format("        Added integer cut with hash {}", integerCut.pointHashes.first));
+    env->output->outputDebug(fmt::format("        Added integer cut with hash {}", integerCut.pointHashes.first));
 
     generatedIntegerCuts.push_back(integerCut);
 
@@ -638,7 +637,8 @@ void DualSolver::removeArtificialBounds(const std::vector<VariablePtr>& variable
 
         env->output->outputDebug(fmt::format("        Removing the artificial bounds of variable {}.", V->name));
 
-        env->problem->setVariableBounds(V->getIndex(), V->properties.hasArtificialLowerBound ? lowerLimit : V->lowerBound,
+        env->problem->setVariableBounds(V->getIndex(),
+            V->properties.hasArtificialLowerBound ? lowerLimit : V->lowerBound,
             V->properties.hasArtificialUpperBound ? upperLimit : V->upperBound);
 
         if(env->reformulatedProblem)

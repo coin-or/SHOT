@@ -114,7 +114,7 @@ NLPSolverGAMS::NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject, 
         std::transform(selectedNLPSolver.begin(), selectedNLPSolver.end(), selectedNLPSolver.begin(), ::toupper);
 
 #if !defined(GAMS_BUILD) && defined(HAS_IPOPT)
-        if( selectedNLPSolver.compare(0, 5, "IPOPT", 5) == 0 )
+        if(selectedNLPSolver.compare(0, 5, "IPOPT", 5) == 0)
             solvelink = gevSolveLinkCallModule;
 #endif
     }
@@ -133,7 +133,7 @@ void NLPSolverGAMS::setStartingPoint(VectorInteger variableIndexes, VectorDouble
     }
 }
 
-void NLPSolverGAMS::clearStartingPoint() {}
+void NLPSolverGAMS::clearStartingPoint() { }
 
 void NLPSolverGAMS::fixVariables(VectorInteger variableIndexes, VectorDouble variableValues)
 {
@@ -154,9 +154,9 @@ void NLPSolverGAMS::unfixVariables()
     }
 }
 
-void NLPSolverGAMS::saveOptionsToFile([[maybe_unused]] std::string fileName) {}
+void NLPSolverGAMS::saveOptionsToFile([[maybe_unused]] std::string fileName) { }
 
-void NLPSolverGAMS::saveProblemToFile([[maybe_unused]] std::string fileName) {}
+void NLPSolverGAMS::saveProblemToFile([[maybe_unused]] std::string fileName) { }
 
 VectorDouble NLPSolverGAMS::getSolution()
 {

@@ -28,8 +28,13 @@ class TestCollections:
     def test_index_outside_an_empty_container_raises(self):
         import SHOTpy
 
-        for container in (SHOTpy.Variables(), SHOTpy.LinearTerms(), SHOTpy.QuadraticTerms(),
-                          SHOTpy.SignomialTerms(), SHOTpy.MonomialTerms()):
+        for container in (
+            SHOTpy.Variables(),
+            SHOTpy.LinearTerms(),
+            SHOTpy.QuadraticTerms(),
+            SHOTpy.SignomialTerms(),
+            SHOTpy.MonomialTerms(),
+        ):
             with pytest.raises(IndexError):
                 container[0]
             with pytest.raises(IndexError):

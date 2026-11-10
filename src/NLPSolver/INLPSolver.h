@@ -18,7 +18,7 @@ namespace SHOT
 class INLPSolver
 {
 public:
-    INLPSolver(EnvironmentPtr envPtr) : env(envPtr) {};
+    INLPSolver(EnvironmentPtr envPtr) : env(envPtr) { };
 
     virtual ~INLPSolver() = default;
 

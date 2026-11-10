@@ -44,13 +44,11 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
     int addedHyperplanes = 0;
     auto currIter = env->results->getCurrentIteration(); // The unsolved new iteration
 
-    auto constraintSelectionFactor
-        = env->settings->getSetting<double>("Dual.HyperplaneCuts.ConstraintSelectionFactor");
+    auto constraintSelectionFactor = env->settings->getSetting<double>("Dual.HyperplaneCuts.ConstraintSelectionFactor");
     bool useUniqueConstraints = env->settings->getSetting<bool>("Dual.HyperplaneCuts.UniqueConstraints");
 
     int maxHyperplanesPerIter = env->settings->getSetting<int>("Dual.HyperplaneCuts.MaxPerIteration");
-    double constraintMaxSelectionFactor
-        = env->settings->getSetting<double>("Dual.HyperplaneCuts.MaxConstraintFactor");
+    double constraintMaxSelectionFactor = env->settings->getSetting<double>("Dual.HyperplaneCuts.MaxConstraintFactor");
 
     // Contains boolean array that indicates if a constraint has been added or not
     std::vector<bool> hyperplaneAddedToConstraint(
@@ -206,8 +204,7 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
             // As for the convex constraints, no hyperplane can be generated in a point where the constraint is
             // not finite, and the point is then moved toward one where it is. The check below that the hyperplane
             // does not cut away a primal solution is made for the hyperplane of the point that is used.
-            auto generationPoint
-                = env->dualSolver->getHyperplaneGenerationPoint(solPoints.at(i).point, NCV.constraint);
+            auto generationPoint = env->dualSolver->getHyperplaneGenerationPoint(solPoints.at(i).point, NCV.constraint);
 
             if(!generationPoint)
             {

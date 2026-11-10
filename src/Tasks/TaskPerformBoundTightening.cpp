@@ -335,8 +335,9 @@ void TaskPerformBoundTightening::addPOACuts(std::shared_ptr<NLPSolverSHOT> solve
             // returns a solution that is not optimal
             MIPSolverBase::scaleHyperplaneTerms(tmpPair);
 
-            auto linearConstraint = std::make_shared<LinearConstraint>(fmt::format(
-                "initPOA_{}_{}", newHP->sourceConstraint->name, hyperplaneCounter), SHOT_DBL_MIN, -tmpPair.second);
+            auto linearConstraint = std::make_shared<LinearConstraint>(
+                fmt::format("initPOA_{}_{}", newHP->sourceConstraint->name, hyperplaneCounter), SHOT_DBL_MIN,
+                -tmpPair.second);
 
             linearConstraint->properties.classification = E_ConstraintClassification::Linear;
             linearConstraint->properties.convexity = E_Convexity::Linear;
