@@ -146,7 +146,7 @@ jobs:
 
       - name: Install dependencies
         shell: bash
-        run: sudo apt-get update ; sudo apt-get install -y libc6-dev libbz2-dev zlib1g-dev liblapack-dev libnauty2-dev libopenblas-base libopenblas-dev libmumps-dev pkgconf
+        run: sudo apt-get update ; sudo apt-get install -y libc6-dev libbz2-dev zlib1g-dev liblapack-dev libopenblas-dev libmumps-dev pkgconf
 
       - name: Identify compiler for dependency caches
         id: toolchain
