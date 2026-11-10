@@ -32,7 +32,7 @@ PYTHONPATH="$PWD/build" .venv-docs/bin/python docs/check_examples.py
 This check also validates setting names in inline configuration examples against
 that module. The documentation workflow runs it before building the site. The
 notebook has its own execution test, `test/python/test_tutorial.py`; run it with
-`pytest` when changing notebook code (it also needs NumPy, Matplotlib, and IPython).
+`pytest` when changing notebook code (it also needs NumPy, Matplotlib, IPython, and pandas).
 For external-link maintenance, run Sphinx's `linkcheck` builder on an assembled
 source tree when network access is available; the normal warning-as-error HTML
 build checks internal document links without depending on external services.
@@ -70,9 +70,13 @@ Update the vendored tokens and components together from SHOT-branding; do not
 edit the generated token file. Website-specific layouts remain in the website
 repository. No deploy credentials are needed by SHOT's validation workflow.
 
-The SHOTpy notebook remains the single tutorial source. The builder splits its
-numbered sections into `tutorial/*.ipynb` and creates a chapter overview and a
-complete-notebook download. Fix prose and equations in the source notebook.
+The SHOTpy tutorial is the series of notebooks in `docs/tutorial`. The builder
+publishes each notebook as a page, with the outputs stored in it, after an
+overview made from `docs/tutorial/README.md`, whose numbered links give the
+chapters and their order, and offers the folder as a zip download. The stored
+outputs, including the figures, are what readers see on the site and on GitHub,
+so execute the notebooks again, from their folder and with a Release build,
+after changing them.
 
 The settings page is progressively enhanced by `shot.js`: local filtering,
 category navigation, collapsible groups, and copy controls. Without JavaScript,
