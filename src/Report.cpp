@@ -102,7 +102,10 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
 
         if(lineType == E_IterationLineType::DualRepair)
         {
-            combDualCuts = fmt::format("Relaxed constraints: {:<4d}", dualCutsAdded);
+            combDualCuts = fmt::format(
+                "Relaxed constraints: {}. Total primal improvements after repair / reduction cut: {} / {}",
+                dualCutsAdded, env->solutionStatistics.numberOfPrimalImprovementsAfterInfeasibilityRepair,
+                env->solutionStatistics.numberOfPrimalImprovementsAfterReductionCut);
         }
         else if(lineType == E_IterationLineType::DualReductionCut)
         {
@@ -153,11 +156,6 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
             env->output->outputInfo(fmt::format("{:>6d}: {:<10s}{:^10.2f}{:^13s}{:>27s}{:>19s}{:<32s}", iterationNumber,
                 iterationDesc, totalTime, combDualCuts, "", "", ""));
             env->output->outputDebug("");
-
-            env->output->outputInfo(fmt::format("{} {} {} / {}", std::string(27, ' '),
-                "Total primal improvements after repair / reduction cut:  ",
-                env->solutionStatistics.numberOfPrimalImprovementsAfterInfeasibilityRepair,
-                env->solutionStatistics.numberOfPrimalImprovementsAfterReductionCut));
         }
         else
         {
