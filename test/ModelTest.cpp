@@ -10808,6 +10808,11 @@ bool ModelTestPolishFromSeveralPoints()
         // the objective values are within the default gap tolerances
         solver->updateSetting("Termination.ObjectiveGap.Absolute", 1e-5);
         solver->updateSetting("Termination.ObjectiveGap.Relative", 1e-5);
+        // The polish does not solve the NLP problem twice from the same point, so the best primal solution is only one
+        // more point if it is not one of the dual solutions. The dual solutions violate the nonlinear constraint by
+        // about 1e-6 to 1e-5, so with the default tolerance it depends on the MIP solver whether the best primal
+        // solution is one of them. With this tolerance, it is always a solution of the line search or the NLP solver.
+        solver->updateSetting("Primal.Tolerance.NonlinearConstraint", 1e-7);
         // The final reduction cut continues the search while the objective gap is open, e.g., with a MIP solver
         // without quadratic constraints, and the solution is then polished again
         solver->updateSetting("Dual.ReductionCut.Use", false);

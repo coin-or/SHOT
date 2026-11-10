@@ -280,6 +280,15 @@ use the `/MD` Cbc 2.10.13 package described in the wheel section; the Cbc
 Keep Gurobi's `bin` directory on `PATH` so Windows can load `gurobi130.dll`.
 Gurobi is not included in the public SHOTpy wheels.
 
+With `-DHAS_PYTHON=ON`, `PATH` is not enough: Python 3.8 and newer do not
+search it for the DLLs of an extension module. Copy `gurobi130.dll` beside
+`SHOTpy` in the build directory before building, e.g.,
+`copy C:\gurobi1303\win64\bin\gurobi130.dll build-msvc-gurobi\`. Otherwise
+importing SHOTpy from the build directory, e.g., in the Python tests, fails with
+`ImportError: DLL load failed while importing SHOTpy`. If `pybind11-stubgen` is
+installed, the build itself imports SHOTpy to generate its type stubs and fails
+with this error.
+
 #### Adding CONOPT
 
 The native MSVC build has been tested with CONOPT 4.39.3. Extract
