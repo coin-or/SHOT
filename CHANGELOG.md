@@ -87,7 +87,9 @@ Changes since SHOT 1.1.
 - Fixed-integer NLP problems are also solved during the search for nonconvex
   continuous problems ([#235]).
 - Final polishing of the solution with NLP solves
-  (`Primal.PolishSolution.NumberOfPoints`, on by default) ([#204]).
+  (`Primal.PolishSolution.NumberOfPoints`, on by default) ([#204]). Its NLP
+  solves are shown as `NLPFINAL`, and it is skipped for problems without
+  continuous variables ([#318]).
 - Exit codes in the SHOT executable ([#207]).
 - Starting points from GAMS ([#190]) and AMPL ([1b054e3e]), the
   `shot_options` environment variable in AMPL mode ([#227]), and the `tan`
@@ -619,6 +621,7 @@ Changes since SHOT 1.1.
 [#311]: https://github.com/coin-or/SHOT/pull/311
 [#312]: https://github.com/coin-or/SHOT/pull/312
 [#317]: https://github.com/coin-or/SHOT/pull/317
+[#318]: https://github.com/coin-or/SHOT/pull/318
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
