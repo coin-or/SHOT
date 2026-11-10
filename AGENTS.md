@@ -39,10 +39,16 @@ mechanism and verbose console logging:
 ```
 
 This writes per-iteration intermediate problems and solution points to
-`<directory>`. For the full file reference and a step-by-step debugging
-workflow — including how to use the automated test suite (`test_runner`,
-`InstanceTest`) to reproduce/isolate a regression — see
-[docs/DebuggingSHOT.md](docs/DebuggingSHOT.md).
+`<directory>`. For the debug file reference, the solution strategies and a
+step-by-step debugging workflow, see
+[docs/DebuggingSHOT.md](docs/DebuggingSHOT.md). For developer notes — how
+to use the automated test suite (`test_runner`, `InstanceTest`) to
+reproduce/isolate a regression, and lessons from earlier debugging sessions
+(settings pitfalls, false convergence, infeasible dual problems, equality
+constraints, invalid single-tree bounds, crash diagnosis) — see
+[docs/DeveloperDebugging.md](docs/DeveloperDebugging.md); add new lessons
+there. [docs/UnderstandingOutput.md](docs/UnderstandingOutput.md) explains
+the iteration columns, labels, bounds and gaps in the console output.
 
 ## Code and tests
 
