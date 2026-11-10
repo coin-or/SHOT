@@ -33,6 +33,16 @@ TaskSelectPrimalFixedNLPPointsFromSolutionPool::~TaskSelectPrimalFixedNLPPointsF
 
 void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 {
+    // Without continuous variables, all variables are fixed in the NLP problem, so the polish can only evaluate the
+    // point again
+    if(isFinalPolish
+        && env->problem->properties.numberOfRealVariables + env->problem->properties.numberOfSemicontinuousVariables
+            == 0)
+    {
+        env->output->outputDebug("        No final polish since the problem has no continuous variables.");
+        return;
+    }
+
     auto currIter = env->results->getCurrentIteration();
     auto sourceIter = currIter;
 
@@ -65,6 +75,30 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
 
         if(primalSolution.sourceType == E_PrimalSolutionSource::NLPFixedIntegers)
             return;
+
+        // The primal solution is often a solution of the dual problem already added, e.g. when the MIP solver solves
+        // the problem directly, and solving the same NLP problem from the same point again gives nothing new
+        auto isSamePoint = [&](const PrimalFixedNLPCandidate& C)
+        {
+            if(C.point.size() < primalSolution.point.size())
+                return (false);
+
+            for(size_t i = 0; i < primalSolution.point.size(); i++)
+            {
+                if(std::abs(C.point[i] - primalSolution.point[i]) > 1e-10 * (1.0 + std::abs(primalSolution.point[i])))
+                    return (false);
+            }
+
+            return (true);
+        };
+
+        if(std::any_of(env->primalSolver->fixedPrimalNLPCandidates.begin(),
+               env->primalSolver->fixedPrimalNLPCandidates.end(), isSamePoint))
+        {
+            env->output->outputDebug("        The primal solution is already a candidate for the final polish.");
+            return;
+        }
+
         env->primalSolver->addFixedNLPCandidate(primalSolution.point, E_PrimalNLPSource::FeasibleSolution,
             primalSolution.objValue, primalSolution.iterFound, primalSolution.maxDeviatingConstraintNonlinear);
     };

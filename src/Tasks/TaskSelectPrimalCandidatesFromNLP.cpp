@@ -527,6 +527,10 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
             break;
         }
 
+        // All points of the final polish are shown with the same name, whichever solution they come from
+        if(isFinalPolish)
+            sourceDesc = "FINAL-" + source;
+
         env->output->outputDebug(fmt::format("        NLP solve #{} (SHOT iteration {}), start {}/{}: {} ({} problem).",
             env->solutionStatistics.numberOfProblemsFixedNLP, currIter->iterationNumber, counter + 1, candidates.size(),
             candidateSource, sourceIsReformulatedProblem ? "reformulated" : "original"));
