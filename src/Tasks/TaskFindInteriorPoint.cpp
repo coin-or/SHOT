@@ -112,6 +112,8 @@ void TaskFindInteriorPoint::run()
                 env->output->outputWarning(" Maximum deviation in interior point is not usable: "
                     + Utilities::toString(maxDev.normalizedValue));
 
+                env->output->outputWarning("");
+
                 if(env->settings->getSetting<bool>("Output.Debug.Enable"))
                 {
                     std::string filename = env->settings->getSetting<std::string>("Output.Debug.Path")
@@ -123,6 +125,8 @@ void TaskFindInteriorPoint::run()
             {
                 env->output->outputInfo(" Valid interior point with constraint deviation "
                     + Utilities::toString(maxDev.normalizedValue) + " found.");
+
+                env->output->outputInfo("");
 
                 env->dualSolver->interiorPts.push_back(tmpIP);
 
