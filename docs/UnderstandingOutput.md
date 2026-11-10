@@ -173,12 +173,13 @@ problem**; the `O` here has a different meaning from a dual row's optimal suffix
 | Label before `-O` or `-R` | Candidate source |
 | --- | --- |
 | `NLPSOLPT` | First MIP solution point. |
-| `NLPFEASP` | A feasible candidate from the dual solution pool, or the incumbent during final polishing. |
+| `NLPFEASP` | A feasible candidate from the dual solution pool. |
 | `NLPPOOL` | Another dual solution-pool point that violates the nonlinear constraints. |
 | `NLPSMDEV` | MIP candidate with the smallest nonlinear constraint deviation. |
-| `NLPNEWDB` | First dual solution associated with a dual-bound update, or a dual solution selected for final polishing. |
+| `NLPNEWDB` | First dual solution associated with a dual-bound update. |
 | `NLPENUM` | Enumeration of discrete variable assignments. |
 | `NLPSTART` | Given starting point. |
+| `NLPFINAL` | Final polishing after the search, from a dual solution or the incumbent. It is skipped when the problem has no continuous variables. |
 
 The number at the start of an NLP row is the cumulative number of fixed-integer
 NLP problems solved. With `Output.Console.LogLevel=1` (Debug), a separate
