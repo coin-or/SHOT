@@ -91,7 +91,7 @@ Matches the packages installed in CI
 ```bash
 sudo apt-get update
 sudo apt-get install -y libc6-dev libbz2-dev zlib1g-dev liblapack-dev \
-    libnauty2-dev libopenblas-base libopenblas-dev libmumps-dev pkgconf
+    libopenblas-dev libmumps-dev pkgconf
 ```
 
 If your distro's packaged Cbc/Ipopt are too old or lack pkg-config files,
