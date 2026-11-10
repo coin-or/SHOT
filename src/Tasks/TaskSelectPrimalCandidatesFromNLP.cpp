@@ -594,18 +594,18 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
                 env->output->outputDebug(fmt::format("         Max error {} from nonlinear or quadratic constraint {}.",
                     mostDevConstr->normalizedValue, mostDevConstr->constraint->name));
 
-                env->report->outputIterationDetail(currIter->iterationNumber, ("NLP" + sourceDesc),
-                    env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded, currIter->totNumHyperplanes,
-                    env->results->getCurrentDualBound(), env->results->getPrimalBound(),
+                env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP,
+                    ("NLP" + sourceDesc), env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded,
+                    currIter->totNumHyperplanes, env->results->getCurrentDualBound(), env->results->getPrimalBound(),
                     env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(),
                     tmpObj, mostDevConstr->constraint->getIndex(), mostDevConstr->normalizedValue,
                     E_IterationLineType::PrimalNLP);
             }
             else
             {
-                env->report->outputIterationDetail(currIter->iterationNumber, ("NLP" + sourceDesc),
-                    env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded, currIter->totNumHyperplanes,
-                    env->results->getCurrentDualBound(), env->results->getPrimalBound(),
+                env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP,
+                    ("NLP" + sourceDesc), env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded,
+                    currIter->totNumHyperplanes, env->results->getCurrentDualBound(), env->results->getPrimalBound(),
                     env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(),
                     tmpObj,
                     -1, // Not shown
@@ -635,7 +635,7 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
         else if(solvestatus == E_NLPSolutionStatus::Error || solvestatus == E_NLPSolutionStatus::Unbounded
             || solvestatus == E_NLPSolutionStatus::Infeasible)
         {
-            env->report->outputIterationDetail(currIter->iterationNumber, ("NLP" + sourceDesc),
+            env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP, ("NLP" + sourceDesc),
                 env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded, currIter->totNumHyperplanes,
                 env->results->getCurrentDualBound(), env->results->getPrimalBound(),
                 env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(), NAN, -1,
@@ -662,18 +662,18 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
                 if(!isEnumeration && env->settings->getSetting<bool>("Primal.FixedInteger.CreateInfeasibilityCut"))
                     createInfeasibilityCut(variableSolution);
 
-                env->report->outputIterationDetail(currIter->iterationNumber, ("NLP" + sourceDesc),
-                    env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded, currIter->totNumHyperplanes,
-                    env->results->getCurrentDualBound(), env->results->getPrimalBound(),
+                env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP,
+                    ("NLP" + sourceDesc), env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded,
+                    currIter->totNumHyperplanes, env->results->getCurrentDualBound(), env->results->getPrimalBound(),
                     env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(),
                     tmpObj, mostDevConstr->constraint->getIndex(), mostDevConstr->normalizedValue,
                     E_IterationLineType::PrimalNLP);
             }
             else
             {
-                env->report->outputIterationDetail(currIter->iterationNumber, ("NLP" + sourceDesc),
-                    env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded, currIter->totNumHyperplanes,
-                    env->results->getCurrentDualBound(), env->results->getPrimalBound(),
+                env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP,
+                    ("NLP" + sourceDesc), env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded,
+                    currIter->totNumHyperplanes, env->results->getCurrentDualBound(), env->results->getPrimalBound(),
                     env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(), NAN,
                     -1, NAN, E_IterationLineType::PrimalNLP);
             }
@@ -685,9 +685,9 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
 
             if(variableSolution.size() > 0)
             {
-                env->report->outputIterationDetail(currIter->iterationNumber, ("NLP" + sourceDesc),
-                    env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded, currIter->totNumHyperplanes,
-                    env->results->getCurrentDualBound(), env->results->getPrimalBound(),
+                env->report->outputIterationDetail(env->solutionStatistics.numberOfProblemsFixedNLP,
+                    ("NLP" + sourceDesc), env->timing->getElapsedTime("Total"), currIter->numHyperplanesAdded,
+                    currIter->totNumHyperplanes, env->results->getCurrentDualBound(), env->results->getPrimalBound(),
                     env->results->getAbsoluteGlobalObjectiveGap(), env->results->getRelativeGlobalObjectiveGap(), NAN,
                     -1, NAN, E_IterationLineType::PrimalNLP);
             }
