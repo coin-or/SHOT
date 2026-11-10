@@ -33,7 +33,15 @@ def _setup_path():
       4. the build directories of the repository; if several contain it, the most recently built one, so that an
          old build directory does not hide the current one,
       5. an installed SHOTpy, e.g., a wheel, which is what the tests of a wheel build use.
+
+    SHOTPY_TEST_INSTALLED=1 skips steps 1-4, so that the tests of a wheel build use the installed wheel even when
+    the checkout contains a build directory with a working module.
     """
+    if os.environ.get("SHOTPY_TEST_INSTALLED") == "1":
+        if importlib.util.find_spec("SHOTpy") is None:
+            raise ImportError("SHOTPY_TEST_INSTALLED=1 requires an installed SHOTpy package.")
+        return None
+
     explicit = os.environ.get("SHOTPY_BUILD_DIR")
     if explicit:
         if not _has_shotpy(Path(explicit)):

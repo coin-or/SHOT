@@ -40,7 +40,7 @@ class OptimizationTestBase:
             The primal solution object
         """
         problem.finalize()
-        solver.setProblem(problem)
+        assert solver.setProblem(problem), "Solver failed to prepare the problem"
 
         result = solver.solveProblem()
         assert result == True, "Solver failed to find a solution"
