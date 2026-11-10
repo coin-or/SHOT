@@ -147,10 +147,11 @@ Changes since SHOT 1.1.
 - Nonconvex continuous problems use the best dual solution as the default NLP
   starting point, rather than every point in the solution pool. Explicit
   `Primal.FixedInteger.Source` selections still take precedence ([#306]).
-- NLP progress rows show the outer SHOT iteration, with separate NLP solve
-  and batch-start counters. `NLPPOOL` replaces `NLPUNFEA` to distinguish a
+- NLP progress rows are numbered by the fixed-integer NLP problems solved.
+  The outer SHOT iteration and the batch-start counter are shown in a
+  separate debug message. `NLPPOOL` replaces `NLPUNFEA` to distinguish a
   starting point that violates nonlinear constraints from an infeasible NLP
-  ([#306]).
+  ([#306], [#317]).
 - Equality constraints and ranges are kept as they are in the original
   problem ([#210]).
 - Much faster reading, reformulating and solving of large problems, and
@@ -617,6 +618,7 @@ Changes since SHOT 1.1.
 [#309]: https://github.com/coin-or/SHOT/pull/309
 [#311]: https://github.com/coin-or/SHOT/pull/311
 [#312]: https://github.com/coin-or/SHOT/pull/312
+[#317]: https://github.com/coin-or/SHOT/pull/317
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e

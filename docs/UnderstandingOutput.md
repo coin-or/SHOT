@@ -82,7 +82,7 @@ For minimization, the main header is:
 
 | Column | Interpretation |
 | --- | --- |
-| `#: type` | Outer SHOT iteration for dual solves and NLP searches, followed by the row label. NLP solve and batch-start counters are shown separately. Repairs, reduction-cut updates and callbacks use their operation-specific counters. |
+| `#: type` | Outer SHOT iteration for dual solves, followed by the row label. NLP rows show the cumulative number of fixed-integer NLP problems solved instead. Repairs, reduction-cut updates and callbacks use their operation-specific counters. |
 | `Time: tot.` | Cumulative elapsed seconds, including preparation, rather than the duration of this row. |
 | `Dual cuts: + / tot.` | Number of hyperplanes added and accumulated total for the associated dual iteration. Blank when the added count is zero. NLP rows can repeat the dual iteration's counts; do not add the counts across printed rows. |
 | `Objective value: dual` | Bound from the current dual problem. It is distinct from the objective of that problem's returned solution. See the global-bound caveat below. |
@@ -122,8 +122,8 @@ Times, iteration paths, and last digits can change with the build and subsolvers
 ```text
      1: LP-O         0.05                    -37.8684 | inf.            inf. | inf.        -37.8684 | 11: 2.11e+01
      6: MILP-SL1     0.17      2 | 12        0.716245 | 14.9066      1.4e+01 | 9.5e-01      7.92975 | 10: 5.92e-01
-     6: NLPSOLPT-R   0.19      2 | 12        0.716245 | 10           9.3e+00 | 9.3e-01           10 | 1: 9.61e-09
-     6: NLPFEASP-R   0.19      2 | 12        0.716245 | 6.00976      5.3e+00 | 8.8e-01      6.00976 | 1: 9.94e-09
+     1: NLPSOLPT-R   0.19      2 | 12        0.716245 | 10           9.3e+00 | 9.3e-01           10 | 1: 9.61e-09
+     2: NLPFEASP-R   0.19      2 | 12        0.716245 | 6.00976      5.3e+00 | 8.8e-01      6.00976 | 1: 9.94e-09
     10: MILP-O       0.47                     6.00976 | 6.00976      0.0e+00 | 0.0e+00      6.00976 | 3: 9.87e-11
 ```
 
@@ -134,8 +134,8 @@ Times, iteration paths, and last digits can change with the build and subsolvers
    nonlinear constraint. A different, accepted point supplies the incumbent
    `14.9066`. A solution limit is an intentional way of limiting early MIP work.
 3. `NLPSOLPT-R` fixes integers from the first MIP solution and solves an NLP on
-   the reformulated model. It improves the incumbent to `10`. Its row retains
-   the outer iteration number `6`; the separate NLP message counts NLP solves.
+   the reformulated model. It improves the incumbent to `10`. Its row number `1`
+   counts the NLP problems solved, not the outer iteration `6`.
 4. `NLPFEASP-R` uses another solution-pool candidate and improves the incumbent
    again, to about `6.00976`.
 5. `MILP-O` closes the gap. The final solution report confirms global optimality
@@ -180,12 +180,13 @@ problem**; the `O` here has a different meaning from a dual row's optimal suffix
 | `NLPENUM` | Enumeration of discrete variable assignments. |
 | `NLPSTART` | Given starting point. |
 
-The number at the start of an NLP row is the outer SHOT iteration. A separate
-message identifies the cumulative NLP solve number and the starting point's
-position in the current batch, for example:
+The number at the start of an NLP row is the cumulative number of fixed-integer
+NLP problems solved. With `Output.Console.LogLevel=1` (Debug), a separate
+message before each row also identifies the outer SHOT iteration and the
+starting point's position in the current batch, for example:
 
 ```text
- NLP solve #3 (SHOT iteration 2), start 2/5: dual pool point violating the nonlinear constraints (original problem).
+        NLP solve #3 (SHOT iteration 2), start 2/5: dual pool point violating the nonlinear constraints (original problem).
 ```
 
 The candidate-source label describes the point before the NLP solve. An
@@ -239,8 +240,8 @@ action. Their counters are separate from dual iterations.
 | `REDCUT-<n>` | Objective cutoff was tightened in an attempt to find an improved primal solution. The suffix counts successive updates without improvement. |
 
 `Relaxed constraints` is the repair count; `Obj.cut` is the objective cutoff.
-The following `Total primal improvements after repair / reduction cut` line
-counts improvements associated with those strategies.
+A repair row also shows `Total primal improvements after repair / reduction
+cut`, the number of primal improvements associated with those strategies.
 
 ## Bounds, gaps, and the asterisk
 

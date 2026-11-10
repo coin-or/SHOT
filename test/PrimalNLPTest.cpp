@@ -192,7 +192,7 @@ bool loggingTest()
     solver.updateSetting("Primal.FixedInteger.CreateSupportingHyperplanes", false);
     solver.updateSetting("Output.Console.Iteration.Detail", static_cast<int>(ES_IterationOutputDetail::Full));
     auto env = solver.getEnvironment();
-    env->output->setLogLevels(E_LogLevel::Info, E_LogLevel::Off);
+    env->output->setLogLevels(E_LogLevel::Debug, E_LogLevel::Off);
     auto problem = std::make_shared<Problem>(env);
     auto x = std::make_shared<Variable>("x", E_VariableType::Real, -2.0, 2.0);
     auto y = std::make_shared<Variable>("y", E_VariableType::Real, -2.0, 2.0);
@@ -236,8 +236,8 @@ bool loggingTest()
         && expect(
             output.find("dual pool point violating the nonlinear constraints (original problem)") != std::string::npos,
             "the candidate source is unclear")
-        && expect(output.find("     7: NLPPOOL-O") != std::string::npos,
-            "the NLP row does not show the outer iteration and the new pool label")
+        && expect(output.find("    42: NLPPOOL-O") != std::string::npos,
+            "the NLP row does not show the NLP solve number and the new pool label")
         && expect(output.find("NLPUNFEA") == std::string::npos, "the ambiguous infeasibility label remains");
 }
 #endif

@@ -102,7 +102,10 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
 
         if(lineType == E_IterationLineType::DualRepair)
         {
-            combDualCuts = fmt::format("Relaxed constraints: {:<4d}", dualCutsAdded);
+            combDualCuts = fmt::format(
+                "Relaxed constraints: {}. Total primal improvements after repair / reduction cut: {} / {}",
+                dualCutsAdded, env->solutionStatistics.numberOfPrimalImprovementsAfterInfeasibilityRepair,
+                env->solutionStatistics.numberOfPrimalImprovementsAfterReductionCut);
         }
         else if(lineType == E_IterationLineType::DualReductionCut)
         {
@@ -153,11 +156,6 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
             env->output->outputInfo(fmt::format("{:>6d}: {:<10s}{:^10.2f}{:^13s}{:>27s}{:>19s}{:<32s}", iterationNumber,
                 iterationDesc, totalTime, combDualCuts, "", "", ""));
             env->output->outputDebug("");
-
-            env->output->outputInfo(fmt::format("{} {} {} / {}", std::string(27, ' '),
-                "Total primal improvements after repair / reduction cut:  ",
-                env->solutionStatistics.numberOfPrimalImprovementsAfterInfeasibilityRepair,
-                env->solutionStatistics.numberOfPrimalImprovementsAfterReductionCut));
         }
         else
         {
@@ -304,14 +302,15 @@ void Report::outputSolverHeader()
                             "-------------------------------------------------------------------");
 #else
     env->output->outputInfo("");
-    env->output->outputInfo("╶ Supporting Hyperplane Optimization Toolkit (SHOT) "
+    env->output->outputInfo("- Supporting Hyperplane Optimization Toolkit (SHOT) "
                             "──────────────────────────────────────────────────────────────────╴");
 #endif
 
     env->output->outputInfo("");
 
     env->output->outputInfo(fmt::format(" Andreas Lundell and Jan Kronqvist, Åbo Akademi University, Finland."));
-    env->output->outputInfo(" See documentation for full list of contributors and utilized software libraries.");
+    env->output->outputInfo(
+        " See https://shotsolver.dev for more information, including contributors and utilized software libraries.");
 
     env->output->outputInfo("");
 
@@ -327,7 +326,17 @@ void Report::outputSolverHeader()
     }
 
     env->output->outputInfo("");
-    env->output->outputInfo(" For more information visit https://shotsolver.dev");
+    env->output->outputInfo(" If you publish work using this software, please cite publications from "
+                            "https://shotsolver.dev/publications, such as:");
+    env->output->outputInfo("");
+    env->output->outputInfo("  - A. Lundell, J. Kronqvist and T. Westerlund. The supporting hyperplane optimization "
+                            "toolkit for convex MINLP.");
+    env->output->outputInfo("    Journal of Global Optimization, 84(1):1-41, 2022. doi:10.1007/s10898-022-01128-0");
+    env->output->outputInfo("");
+    env->output->outputInfo("  - A. Lundell and J. Kronqvist. Polyhedral approximation strategies for nonconvex "
+                            "mixed-integer nonlinear");
+    env->output->outputInfo("    programming in SHOT. Journal of Global Optimization, 82(4):863-896, 2022. "
+                            "doi:10.1007/s10898-021-01006-1");
     env->output->outputInfo("");
 }
 
@@ -340,7 +349,7 @@ void Report::outputOptionsReport()
                             "------------------------------------------------------------------------------------------"
                             "-------------------");
 #else
-    env->output->outputInfo("╶ Options "
+    env->output->outputInfo("- Options "
                             "──────────────────────────────────────────────────────────────────────────────────────────"
                             "──────────────────╴");
 #endif
@@ -348,11 +357,15 @@ void Report::outputOptionsReport()
     env->output->outputInfo("");
 
     if(auto optionsFile = env->settings->getSetting<std::string>("Input.OptionsFile"); optionsFile == "")
+    {
         env->output->outputDebug(" No options file specified.");
+        env->output->outputDebug("");
+    }
     else
+    {
         env->output->outputInfo(fmt::format(" Options read from file:     {}", optionsFile));
-
-    env->output->outputInfo("");
+        env->output->outputInfo("");
+    }
 
     if(auto nonDefaultSettings = env->settings->getChangedSettings(); nonDefaultSettings.size() > 0)
     {
@@ -466,7 +479,7 @@ void Report::outputModelingSystemReport(ES_ModelingSystem system, std::string fi
         "-----------------------------------------------------------------------------------------------------");
 #else
     env->output->outputInfo(
-        "╶ Modeling system "
+        "- Modeling system "
         "────────────────────────────────────────────────────────────────────────────────────────────────────╴");
 #endif
 
@@ -509,7 +522,7 @@ void Report::outputProblemInstanceReport()
         "----------------------------------------------------------------------------------------------------");
 #else
     env->output->outputInfo(
-        "╶ Problem instance "
+        "- Problem instance "
         "───────────────────────────────────────────────────────────────────────────────────────────────────╴");
 #endif
 
@@ -913,7 +926,7 @@ void Report::outputSolutionReport()
         "-----------------------------------------------------------------------------------------------------");
 #else
     env->output->outputInfo(
-        "╶ Solution report "
+        "- Solution report "
         "────────────────────────────────────────────────────────────────────────────────────────────────────╴");
 #endif
 
@@ -1241,24 +1254,18 @@ void Report::outputSolutionReport()
 
 void Report::outputInteriorPointPreReport()
 {
-    std::stringstream report;
-
-    env->output->outputInfo("");
-
 #ifdef SIMPLE_OUTPUT_CHARS
     env->output->outputInfo(
         "- Interior point search "
         "-----------------------------------------------------------------------------------------------");
 #else
     env->output->outputInfo(
-        "╶ Interior point search "
+        "- Interior point search "
         "──────────────────────────────────────────────────────────────────────────────────────────────╴");
 #endif
 
     env->output->outputInfo("");
     env->output->outputInfo(" Strategy selected:          cutting plane minimax");
-
-    env->output->outputInfo(report.str());
 }
 
 void Report::outputPreReport()
@@ -1273,7 +1280,7 @@ void Report::outputPreReport()
         "-------------------------------------------------------------------------------------------------");
 #else
     env->output->outputInfo(
-        "╶ Main iteration step "
+        "- Main iteration step "
         "────────────────────────────────────────────────────────────────────────────────────────────────╴");
 #endif
 
