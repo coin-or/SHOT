@@ -55,7 +55,11 @@ bool MIPSolverGurobi::initializeProblem()
 
     try
     {
-        GRBEnv env = GRBEnv();
+        // Start an empty environment with console output off, so that the licence messages are not printed
+        GRBEnv env = GRBEnv(true);
+        env.set(GRB_IntParam_LogToConsole, 0);
+        env.start();
+
         gurobiModel = std::make_shared<GRBModel>(env);
     }
     catch(GRBException& e)
