@@ -26,8 +26,6 @@ namespace SHOT
 TaskSelectHyperplanesExternal::TaskSelectHyperplanesExternal(EnvironmentPtr envPtr, bool useCurrentIteration)
     : TaskBase(envPtr), useCurrentIteration(useCurrentIteration)
 {
-    env->timing->startTimer("CallbackExternalHyperplaneGeneration");
-    env->timing->stopTimer("CallbackExternalHyperplaneGeneration");
 }
 
 TaskSelectHyperplanesExternal::~TaskSelectHyperplanesExternal() = default;
