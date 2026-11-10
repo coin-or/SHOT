@@ -527,7 +527,7 @@ E_NLPSolutionStatus TaskSelectPrimalCandidatesFromNLP::solveFixedNLPCandidates(
             break;
         }
 
-        env->output->outputInfo(fmt::format(" NLP solve #{} (SHOT iteration {}), start {}/{}: {} ({} problem).",
+        env->output->outputDebug(fmt::format("        NLP solve #{} (SHOT iteration {}), start {}/{}: {} ({} problem).",
             env->solutionStatistics.numberOfProblemsFixedNLP, currIter->iterationNumber, counter + 1, candidates.size(),
             candidateSource, sourceIsReformulatedProblem ? "reformulated" : "original"));
 

@@ -348,11 +348,15 @@ void Report::outputOptionsReport()
     env->output->outputInfo("");
 
     if(auto optionsFile = env->settings->getSetting<std::string>("Input.OptionsFile"); optionsFile == "")
+    {
         env->output->outputDebug(" No options file specified.");
+        env->output->outputDebug("");
+    }
     else
+    {
         env->output->outputInfo(fmt::format(" Options read from file:     {}", optionsFile));
-
-    env->output->outputInfo("");
+        env->output->outputInfo("");
+    }
 
     if(auto nonDefaultSettings = env->settings->getChangedSettings(); nonDefaultSettings.size() > 0)
     {
@@ -1241,10 +1245,6 @@ void Report::outputSolutionReport()
 
 void Report::outputInteriorPointPreReport()
 {
-    std::stringstream report;
-
-    env->output->outputInfo("");
-
 #ifdef SIMPLE_OUTPUT_CHARS
     env->output->outputInfo(
         "- Interior point search "
@@ -1257,8 +1257,6 @@ void Report::outputInteriorPointPreReport()
 
     env->output->outputInfo("");
     env->output->outputInfo(" Strategy selected:          cutting plane minimax");
-
-    env->output->outputInfo(report.str());
 }
 
 void Report::outputPreReport()
