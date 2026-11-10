@@ -11,7 +11,8 @@ for how to add entries. Changes in versions before 2.0 are described in the
 - The SHOTpy tutorial is a series of four notebooks in `docs/tutorial`, from
   getting started to solver features, Python workflows and advanced modeling,
   with their data files, written by Joakim Blomqvist. The documentation site
-  shows each notebook as a page and offers the folder as a download.
+  shows each notebook as a page and offers the folder as a download
+  ([#323]).
 
 ## 2.0.0 — 2026-11-10
 
@@ -410,6 +411,7 @@ Changes since SHOT 1.1.
 [#312]: https://github.com/coin-or/SHOT/pull/312
 [#317]: https://github.com/coin-or/SHOT/pull/317
 [#318]: https://github.com/coin-or/SHOT/pull/318
+[#323]: https://github.com/coin-or/SHOT/pull/323
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
