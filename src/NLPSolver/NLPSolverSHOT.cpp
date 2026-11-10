@@ -68,8 +68,7 @@ void NLPSolverSHOT::initializeMIPProblem()
 
     if(env->settings->getSetting<bool>("Output.Console.PrimalSolver.Show"))
     {
-        solver->updateSetting(
-            "Output.Console.LogLevel", env->settings->getSetting<int>("Output.Console.LogLevel"));
+        solver->updateSetting("Output.Console.LogLevel", env->settings->getSetting<int>("Output.Console.LogLevel"));
         solver->updateSetting(
             "Output.Console.DualSolver.Show", env->settings->getSetting<bool>("Output.Console.DualSolver.Show"));
     }
@@ -99,8 +98,7 @@ void NLPSolverSHOT::initializeMIPProblem()
     solver->updateSetting(
         "Termination.ConstraintTolerance", env->settings->getSetting<double>("Termination.ConstraintTolerance"));
 
-    solver->updateSetting(
-        "Termination.TimeLimit", env->settings->getSetting<double>("Primal.FixedInteger.TimeLimit"));
+    solver->updateSetting("Termination.TimeLimit", env->settings->getSetting<double>("Primal.FixedInteger.TimeLimit"));
     // Without an iteration limit, the nested solver uses its default Termination.IterationLimit
     if(int iterationLimit = env->settings->getSetting<int>("Primal.FixedInteger.IterationLimit"); iterationLimit > 0)
         solver->updateSetting("Termination.IterationLimit", iterationLimit);

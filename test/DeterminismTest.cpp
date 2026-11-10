@@ -134,8 +134,7 @@ bool testGradientsAreOrderedOnVariableIndex()
     std::vector<VariablePtr> allocated;
 
     for(int i = 0; i < numberOfVariables; i++)
-        allocated.push_back(
-            std::make_shared<Variable>("x" + std::to_string(i), E_VariableType::Real, 0.1, 10.0));
+        allocated.push_back(std::make_shared<Variable>("x" + std::to_string(i), E_VariableType::Real, 0.1, 10.0));
 
     for(auto it = allocated.rbegin(); it != allocated.rend(); it++)
         problem->add(*it);
@@ -333,8 +332,8 @@ bool testTheSameSeedGivesTheSameSolve(ES_MIPSolver mipSolver)
 
     if(std::abs(std::get<2>(*solverDefault) - optimalValue) > 1e-4 * std::max(1.0, std::abs(optimalValue)))
     {
-        std::cout << "  FAILED: " << name(mipSolver) << " returned " << std::get<2>(*solverDefault)
-                  << " instead of " << optimalValue << " when the seed was left at the default of the solver.\n";
+        std::cout << "  FAILED: " << name(mipSolver) << " returned " << std::get<2>(*solverDefault) << " instead of "
+                  << optimalValue << " when the seed was left at the default of the solver.\n";
         return false;
     }
 

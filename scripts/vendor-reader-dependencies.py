@@ -4,6 +4,7 @@
 Usage: python3 scripts/vendor-reader-dependencies.py {ampl,mc++} archive.tar.gz
 Downloads are deliberately separate; source URLs/checksums are in versions.json.
 """
+
 import argparse
 import hashlib
 import json
@@ -19,13 +20,17 @@ import tempfile
 # intervals. For large bounds a double cannot resolve the period anyway, so cos() returns [-1, 1] and tan() throws, as
 # for an interval that contains a pole.
 MCPP_PATCHES = [
-    ("  const int k    = std::ceil(-(1. + I._l / PI) / 2.);  // -pi <= xL+2*k*pi < pi\n",
-     "  if (!(std::fabs(I._l) <= 1e8 && std::fabs(I._u) <= 1e8)) return Interval(-1., 1.);  // SHOT\n"
-     "  const double k = std::ceil(-(1. + I._l / PI) / 2.);  // -pi <= xL+2*k*pi < pi\n"),
-    ("  const int k    = std::ceil(-0.5 - I._l / PI);  // -pi/2 <= xL+k*pi < pi/2\n",
-     "  if (!(std::fabs(I._l) <= 1e8 && std::fabs(I._u) <= 1e8))  // SHOT\n"
-     "    throw Interval::Exceptions(Interval::Exceptions::TAN);\n"
-     "  const double k = std::ceil(-0.5 - I._l / PI);  // -pi/2 <= xL+k*pi < pi/2\n"),
+    (
+        "  const int k    = std::ceil(-(1. + I._l / PI) / 2.);  // -pi <= xL+2*k*pi < pi\n",
+        "  if (!(std::fabs(I._l) <= 1e8 && std::fabs(I._u) <= 1e8)) return Interval(-1., 1.);  // SHOT\n"
+        "  const double k = std::ceil(-(1. + I._l / PI) / 2.);  // -pi <= xL+2*k*pi < pi\n",
+    ),
+    (
+        "  const int k    = std::ceil(-0.5 - I._l / PI);  // -pi/2 <= xL+k*pi < pi/2\n",
+        "  if (!(std::fabs(I._l) <= 1e8 && std::fabs(I._u) <= 1e8))  // SHOT\n"
+        "    throw Interval::Exceptions(Interval::Exceptions::TAN);\n"
+        "  const double k = std::ceil(-0.5 - I._l / PI);  // -pi/2 <= xL+k*pi < pi/2\n",
+    ),
 ]
 
 
@@ -53,7 +58,7 @@ def main():
         work = Path(temporary)
         # Only the exact trusted upstream archive passes the checksum above.
         subprocess.run(["tar", "-xzf", str(args.archive.resolve()), "-C", str(work)], check=True)
-        source, = work.iterdir()
+        (source,) = work.iterdir()
         stage = work / "vendor"
         stage.mkdir()
         if args.dependency == "mc++":
@@ -64,11 +69,20 @@ def main():
             shutil.copytree(source / "LICENSES", stage / "LICENSES")
             patch_mcpp(stage / "include")
         else:
-            seeds = ["src/" + name for name in (
-                "expr-info.cc", "format.cc", "nl-reader.cc", "posix.cc",
-                "problem.cc", "os.cc", "expr.cc", "sol.cc")]
-            seeds += ["include/mp/" + name for name in (
-                "nl.h", "problem.h", "nl-reader.h", "sol.h")]
+            seeds = [
+                "src/" + name
+                for name in (
+                    "expr-info.cc",
+                    "format.cc",
+                    "nl-reader.cc",
+                    "posix.cc",
+                    "problem.cc",
+                    "os.cc",
+                    "expr.cc",
+                    "sol.cc",
+                )
+            ]
+            seeds += ["include/mp/" + name for name in ("nl.h", "problem.h", "nl-reader.h", "sol.h")]
             pending = [source / name for name in seeds]
             seen = set()
             while pending:

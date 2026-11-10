@@ -176,9 +176,8 @@ SolutionStrategyMIQCQP::SolutionStrategyMIQCQP(EnvironmentPtr envPtr)
         env->tasks->addTask(tSelectPrimFixedNLPSolPool, "SelectPrimFixedNLPSolPool");
         std::dynamic_pointer_cast<TaskSequential>(tFinalizeSolution)->addTask(tSelectPrimFixedNLPSolPool);
 
-        auto NLPProblemSource
-            = static_cast<ES_PrimalNLPProblemSource>(
-                env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"));
+        auto NLPProblemSource = static_cast<ES_PrimalNLPProblemSource>(
+            env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"));
 
         if(NLPProblemSource == ES_PrimalNLPProblemSource::Both
             || NLPProblemSource == ES_PrimalNLPProblemSource::OriginalProblem)

@@ -1142,9 +1142,9 @@ bool MIPSolverGurobi::repairInfeasibility()
         // Saves the relaxation model to file
         if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
-            auto filename = fmt::format("{}/dualiter{}_infeasrelax",
-                env->settings->getSetting<std::string>("Output.Debug.Path"),
-                env->results->getCurrentIteration()->iterationNumber - 1);
+            auto filename
+                = fmt::format("{}/dualiter{}_infeasrelax", env->settings->getSetting<std::string>("Output.Debug.Path"),
+                    env->results->getCurrentIteration()->iterationNumber - 1);
 
             try
             {
@@ -1205,9 +1205,9 @@ bool MIPSolverGurobi::repairInfeasibility()
 
         if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
-            auto filename = fmt::format("{}/dualiter{}_infeasrelax",
-                env->settings->getSetting<std::string>("Output.Debug.Path"),
-                env->results->getCurrentIteration()->iterationNumber - 1);
+            auto filename
+                = fmt::format("{}/dualiter{}_infeasrelax", env->settings->getSetting<std::string>("Output.Debug.Path"),
+                    env->results->getCurrentIteration()->iterationNumber - 1);
 
             writeProblemToDebugFiles(filename);
         }

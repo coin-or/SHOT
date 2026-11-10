@@ -56,15 +56,16 @@ std::shared_ptr<InteriorPoint> TaskFindInteriorPoint::retreatToUsableInteriorPoi
             ? Utilities::getPointOnSegment(candidatePoint, center, fraction)
             : center;
 
-        auto maxDev
-            = env->reformulatedProblem->getMaxNumericConstraintValue(point, env->reformulatedProblem->nonlinearConstraints);
+        auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
+            point, env->reformulatedProblem->nonlinearConstraints);
 
         if(InteriorPoint::isUsableDeviation(maxDev.normalizedValue)
             && (!deepestPoint || maxDev.normalizedValue < deepestPoint->maxDeviatingConstraint.value))
         {
             deepestPoint = std::make_shared<InteriorPoint>();
             deepestPoint->point = point;
-            deepestPoint->maxDeviatingConstraint = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
+            deepestPoint->maxDeviatingConstraint
+                = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
         }
 
         if(candidatePoint.size() != center.size())
@@ -137,7 +138,6 @@ void TaskFindInteriorPoint::run()
 
             env->solutionStatistics.numberOfOriginalInteriorPoints++;
         }
-
     }
 
     if(env->dualSolver->interiorPts.size() > 0)
@@ -146,8 +146,7 @@ void TaskFindInteriorPoint::run()
         return;
     }
 
-    if(static_cast<ES_ESHInteriorPointStrategy>(
-           env->settings->getSetting<int>("Dual.ESH.InteriorPoint.Strategy"))
+    if(static_cast<ES_ESHInteriorPointStrategy>(env->settings->getSetting<int>("Dual.ESH.InteriorPoint.Strategy"))
         == ES_ESHInteriorPointStrategy::OnlyExternal)
     {
         if(!env->callbacks->isActive(E_CallbackLocation::InteriorPointSearch))
@@ -210,9 +209,8 @@ void TaskFindInteriorPoint::run()
             // minimax problem was solved but did not reach a point inside the constraints, which is a different
             // situation: the point is then the best one known, and moving toward the center of the box gives a
             // worse interior point than the one the search would find in a later iteration.
-            if(auto retreatedPoint = std::isfinite(maxDev.normalizedValue)
-                    ? nullptr
-                    : retreatToUsableInteriorPoint(tmpIP->point))
+            if(auto retreatedPoint
+                = std::isfinite(maxDev.normalizedValue) ? nullptr : retreatToUsableInteriorPoint(tmpIP->point))
             {
                 env->output->outputInfo("");
                 env->output->outputInfo(" Maximum deviation in interior point is not usable: "
@@ -248,8 +246,8 @@ void TaskFindInteriorPoint::run()
 
             if(env->settings->getSetting<bool>("Output.Debug.Enable"))
             {
-                std::string filename = env->settings->getSetting<std::string>("Output.Debug.Path")
-                    + "/interiorpoint_" + std::to_string(i) + ".txt";
+                std::string filename = env->settings->getSetting<std::string>("Output.Debug.Path") + "/interiorpoint_"
+                    + std::to_string(i) + ".txt";
                 Utilities::saveVariablePointVectorToFile(tmpIP->point, variableNames, filename);
             }
         }

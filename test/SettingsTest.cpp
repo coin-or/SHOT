@@ -175,8 +175,8 @@ bool TestHistoryRetrieval()
     double atOptions = settings->getSettingAtPriority<double>("Test.HistDouble", E_SettingPriority::OptionsFile);
     if(atOptions != 5.0)
     {
-        std::cout << "  FAIL: getSettingAtPriority<double> at OptionsFile returned " << atOptions
-                  << " (expected 5.0)." << std::endl;
+        std::cout << "  FAIL: getSettingAtPriority<double> at OptionsFile returned " << atOptions << " (expected 5.0)."
+                  << std::endl;
         passed = false;
     }
 
@@ -201,7 +201,8 @@ bool TestHistoryRetrieval()
         passed = false;
     }
 
-    // getSettingPriorityHistory — should contain Default(0), OptionsFile(20), SolverInternal(40), SolverCompatibility(50)
+    // getSettingPriorityHistory — should contain Default(0), OptionsFile(20), SolverInternal(40),
+    // SolverCompatibility(50)
     auto history = settings->getSettingPriorityHistory("Test.HistDouble");
     if(history.size() != 4)
     {
@@ -357,8 +358,8 @@ bool TestSolverWrapperPriorityRouting()
     auto prio = solver->getSettingPriority("Termination.TimeLimit");
     if(prio != E_SettingPriority::UserAPI)
     {
-        std::cout << "  FAIL: Solver::updateSetting should route to UserAPI priority, got "
-                  << static_cast<int>(prio) << "." << std::endl;
+        std::cout << "  FAIL: Solver::updateSetting should route to UserAPI priority, got " << static_cast<int>(prio)
+                  << "." << std::endl;
         passed = false;
     }
 
@@ -446,8 +447,7 @@ bool TestUserOverridesConvexityRecommendation()
     //    that solveProblem/verifySettings may have triggered internally.
     if(solver->getSettingPriority("Dual.Relaxation.Use") != E_SettingPriority::UserAPI)
     {
-        std::cout << "  FAIL: Relaxation.Use should still be at UserAPI priority after solveProblem."
-                  << std::endl;
+        std::cout << "  FAIL: Relaxation.Use should still be at UserAPI priority after solveProblem." << std::endl;
         passed = false;
     }
 
@@ -459,8 +459,7 @@ bool TestUserOverridesConvexityRecommendation()
     }
     else if(env->results->iterations[0]->isDualProblemDiscrete)
     {
-        std::cout << "  FAIL: First iteration should be relaxed (LP/QP), but isDualProblemDiscrete=true."
-                  << std::endl;
+        std::cout << "  FAIL: First iteration should be relaxed (LP/QP), but isDualProblemDiscrete=true." << std::endl;
         passed = false;
     }
     else
@@ -469,8 +468,7 @@ bool TestUserOverridesConvexityRecommendation()
     }
 
     if(passed)
-        std::cout << "  PASS: User API override of convexity-based recommendation works correctly."
-                  << std::endl;
+        std::cout << "  PASS: User API override of convexity-based recommendation works correctly." << std::endl;
     std::cout << "Finished user-override-of-convexity-recommendation test." << std::endl;
     return passed;
 #endif

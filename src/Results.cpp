@@ -197,8 +197,7 @@ bool Results::isRelativeObjectiveGapToleranceMet()
     if(isPrimalSolutionAtArtificialBound())
         return (false);
 
-    if(this->getRelativeGlobalObjectiveGap()
-        <= env->settings->getSetting<double>("Termination.ObjectiveGap.Relative"))
+    if(this->getRelativeGlobalObjectiveGap() <= env->settings->getSetting<double>("Termination.ObjectiveGap.Relative"))
     {
         return (true);
     }
@@ -213,8 +212,7 @@ bool Results::isAbsoluteObjectiveGapToleranceMet()
     if(isPrimalSolutionAtArtificialBound())
         return (false);
 
-    if(this->getAbsoluteGlobalObjectiveGap()
-        <= env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute"))
+    if(this->getAbsoluteGlobalObjectiveGap() <= env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute"))
     {
         return (true);
     }
@@ -1679,14 +1677,13 @@ void Results::setPrimalBound(double value, bool resetStagnationCounters)
     // solution is reported as optimal, it is reported.
     double crossoverTolerance = 1e-10 * std::max(1.0, std::abs(value));
 
-    auto hasPassed = [&isMinimize](double primalBound, double dualBound) {
-        return (isMinimize ? (primalBound < dualBound) : (primalBound > dualBound));
-    };
+    auto hasPassed = [&isMinimize](double primalBound, double dualBound)
+    { return (isMinimize ? (primalBound < dualBound) : (primalBound > dualBound)); };
 
     if(hasPassed(value, this->currentDualBound))
     {
-        if(hasPassed(value, isMinimize ? this->currentDualBound - crossoverTolerance
-                                       : this->currentDualBound + crossoverTolerance))
+        if(hasPassed(value,
+               isMinimize ? this->currentDualBound - crossoverTolerance : this->currentDualBound + crossoverTolerance))
         {
             env->output->outputDebug(
                 fmt::format("        Dual bound {} set to the primal bound {}, which has passed it.",
@@ -1808,16 +1805,14 @@ void Results::resetDualBounds(bool resetGlobal)
     notifyBoundsUpdated(previousPrimalBound, previousDualBound, previousGlobalDualBound);
 }
 
-void Results::notifyBoundsUpdated(
-    double previousPrimalBound, double previousDualBound, double previousGlobalDualBound)
+void Results::notifyBoundsUpdated(double previousPrimalBound, double previousDualBound, double previousGlobalDualBound)
 {
     // setProblem() initializes the bounds before the first iteration. That is not a solve event.
-    if(getNumberOfIterations() == 0 || !env->callbacks
-        || !env->callbacks->isActive(E_CallbackLocation::BoundsUpdated))
+    if(getNumberOfIterations() == 0 || !env->callbacks || !env->callbacks->isActive(E_CallbackLocation::BoundsUpdated))
         return;
 
-    auto context = std::make_shared<BoundsUpdatedContext>(
-        env, previousPrimalBound, previousDualBound, previousGlobalDualBound);
+    auto context
+        = std::make_shared<BoundsUpdatedContext>(env, previousPrimalBound, previousDualBound, previousGlobalDualBound);
     if(context->hasChanged())
         env->callbacks->invoke(*context);
     context->invalidate();

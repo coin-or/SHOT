@@ -24,7 +24,7 @@
 namespace SHOT
 {
 
-TaskPrintIterationReport::TaskPrintIterationReport(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
+TaskPrintIterationReport::TaskPrintIterationReport(EnvironmentPtr envPtr) : TaskBase(envPtr) { }
 
 TaskPrintIterationReport::~TaskPrintIterationReport() = default;
 

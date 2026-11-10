@@ -81,8 +81,12 @@ class TestBinaryMonomials:
     @pytest.mark.parametrize("constraints", [UNIT_COEFFICIENTS, MIXED_COEFFICIENTS], ids=["unit", "mixed"])
     def test_optimal_value(self, formulation, partitioning, constraints):
         """With partitioning always, the binary monomials of a constraint with several continuous ones were lost."""
-        solver = make_solver({"Model.Reformulation.Monomials.Formulation": formulation,
-                              "Model.Reformulation.Constraint.PartitionNonlinearTerms": partitioning})
+        solver = make_solver(
+            {
+                "Model.Reformulation.Monomials.Formulation": formulation,
+                "Model.Reformulation.Constraint.PartitionNonlinearTerms": partitioning,
+            }
+        )
         problem = self.make_problem(solver, constraints)
 
         assert solver.setProblem(problem)
@@ -111,10 +115,16 @@ class TestBinaryMonomials:
     @pytest.mark.parametrize("partitioning", PARTITIONING_STRATEGIES.values(), ids=PARTITIONING_STRATEGIES.keys())
     def test_auxiliary_variables(self, partitioning):
         """Each binary monomial gets one product variable, or one product variable and a weight for each vertex."""
-        for formulation, expected in ((1, {"s_monb": 3, "s_monw": 0, "s_monlam": 0}),
-                                      (2, {"s_monb": 0, "s_monw": 3, "s_monlam": 3 * 8})):
-            solver = make_solver({"Model.Reformulation.Monomials.Formulation": formulation,
-                                  "Model.Reformulation.Constraint.PartitionNonlinearTerms": partitioning})
+        for formulation, expected in (
+            (1, {"s_monb": 3, "s_monw": 0, "s_monlam": 0}),
+            (2, {"s_monb": 0, "s_monw": 3, "s_monlam": 3 * 8}),
+        ):
+            solver = make_solver(
+                {
+                    "Model.Reformulation.Monomials.Formulation": formulation,
+                    "Model.Reformulation.Constraint.PartitionNonlinearTerms": partitioning,
+                }
+            )
             problem = self.make_problem(solver, self.MIXED_COEFFICIENTS)
             assert solver.setProblem(problem)
 
@@ -130,18 +140,26 @@ class TestBinaryProducts:
     INTEGER_BOUNDS = {"i1": (-2, 3), "i2": (-3, -1), "i3": (1, 4)}
     CONTINUOUS_BOUNDS = {"x1": (-10.0, 1.0), "x2": (2.0, 5.0), "x3": (-4.0, -1.0)}
 
-    SETTINGS = {"Model.Reformulation.Quadratics.Strategy": 0,
-                "Model.Reformulation.Bilinear.IntegerFormulation": 2}
+    SETTINGS = {"Model.Reformulation.Quadratics.Strategy": 0, "Model.Reformulation.Bilinear.IntegerFormulation": 2}
 
     @staticmethod
     def objective(b1, b2, i1, i2, i3, x1, x2, x3):
-        return (x1 - 3 * b1 * x1 + 2 * b2 * x1 - b1 * x2 + 1.5 * b2 * x3 + x3
-                + i1 * b1 - 2 * b2 * i1 + b1 * i2 + 0.5 * i1 * i3)
+        return (
+            x1
+            - 3 * b1 * x1
+            + 2 * b2 * x1
+            - b1 * x2
+            + 1.5 * b2 * x3
+            + x3
+            + i1 * b1
+            - 2 * b2 * i1
+            + b1 * i2
+            + 0.5 * i1 * i3
+        )
 
     @staticmethod
     def constraints(b1, b2, i1, i2, i3):
-        return {"c1": b1 * i1 + b1 * i2 + b2 * i1 >= -3,
-                "c2": i1 * b2 - b2 * i3 + i1 * i3 <= 4}
+        return {"c1": b1 * i1 + b1 * i2 + b2 * i1 >= -3, "c2": i1 * b2 - b2 * i3 + i1 * i3 <= 4}
 
     def make_problem(self, solver):
         import SHOTpy
@@ -149,10 +167,14 @@ class TestBinaryProducts:
         problem = SHOTpy.Problem(solver)
         b1 = problem.addVariable("b1", SHOTpy.VariableType.Binary)
         b2 = problem.addVariable("b2", SHOTpy.VariableType.Binary)
-        i1, i2, i3 = (problem.addVariable(name, SHOTpy.VariableType.Integer, *bounds)
-                      for name, bounds in self.INTEGER_BOUNDS.items())
-        x1, x2, x3 = (problem.addVariable(name, SHOTpy.VariableType.Real, *bounds)
-                      for name, bounds in self.CONTINUOUS_BOUNDS.items())
+        i1, i2, i3 = (
+            problem.addVariable(name, SHOTpy.VariableType.Integer, *bounds)
+            for name, bounds in self.INTEGER_BOUNDS.items()
+        )
+        x1, x2, x3 = (
+            problem.addVariable(name, SHOTpy.VariableType.Real, *bounds)
+            for name, bounds in self.CONTINUOUS_BOUNDS.items()
+        )
 
         # The same products appear in both operand orders, e.g., i1*b2 and b2*i1, and i1 is in several products
         problem.setObjective(self.objective(b1, b2, i1, i2, i3, x1, x2, x3))
@@ -213,14 +235,20 @@ class TestFixedVariablesInQuadraticTerms:
     # The quadratic terms are handled as nonlinear, and either partitioned with the bilinear terms extracted, or the
     # convex ones decomposed
     VARIANTS = {
-        "Partitioned": {"Model.Reformulation.Quadratics.Strategy": 0,
-                        "Model.Reformulation.Constraint.PartitionQuadraticTerms": 0,
-                        "Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms": 0,
-                        "Model.Reformulation.Quadratics.ExtractStrategy": 2},
-        "EigenValueDecomposition": {"Model.Reformulation.Quadratics.Strategy": 0,
-                                    "Model.Reformulation.Quadratics.Decomposition.Method": 1},
-        "LDLDecomposition": {"Model.Reformulation.Quadratics.Strategy": 0,
-                             "Model.Reformulation.Quadratics.Decomposition.Method": 2},
+        "Partitioned": {
+            "Model.Reformulation.Quadratics.Strategy": 0,
+            "Model.Reformulation.Constraint.PartitionQuadraticTerms": 0,
+            "Model.Reformulation.ObjectiveFunction.PartitionQuadraticTerms": 0,
+            "Model.Reformulation.Quadratics.ExtractStrategy": 2,
+        },
+        "EigenValueDecomposition": {
+            "Model.Reformulation.Quadratics.Strategy": 0,
+            "Model.Reformulation.Quadratics.Decomposition.Method": 1,
+        },
+        "LDLDecomposition": {
+            "Model.Reformulation.Quadratics.Strategy": 0,
+            "Model.Reformulation.Quadratics.Decomposition.Method": 2,
+        },
     }
 
     def make_problem(self, solver, fixed, maximize):
@@ -271,8 +299,9 @@ class TestFixedVariablesInQuadraticTerms:
 
         assert not any(name == "s_sq_x" or name.startswith("s_bl_x_") or name.endswith("_x") for name in names), names
         assert len(names) == len(constantNames), (names, constantNames)
-        assert sorted(name for name in names if not name[-1].isdigit()) \
-            == sorted(name for name in constantNames if not name[-1].isdigit())
+        assert sorted(name for name in names if not name[-1].isdigit()) == sorted(
+            name for name in constantNames if not name[-1].isdigit()
+        )
 
         assert solver.getPrimalBound() == pytest.approx(constantSolver.getPrimalBound(), abs=1e-5)
 
@@ -328,7 +357,6 @@ class TestAbsoluteValues:
 
             names = auxiliary_variable_names(solver)
             assert sum(1 for name in names if name.startswith("s_abs_")) == expected, (shift, names)
-
 
 
 class TestMinimumAndMaximum:
@@ -405,13 +433,18 @@ class TestMinimumAndMaximum:
         with pytest.raises(TypeError):
             SHOTpy.min(1.0, "x")
 
+
 class TestSharedAuxiliaryVariables:
     """Equal partitioned terms share their auxiliary variable."""
 
-    ALWAYS = {"Model.Reformulation.Constraint.PartitionNonlinearTerms": 0,
-              "Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms": 0}
-    NEVER = {"Model.Reformulation.Constraint.PartitionNonlinearTerms": 2,
-             "Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms": 2}
+    ALWAYS = {
+        "Model.Reformulation.Constraint.PartitionNonlinearTerms": 0,
+        "Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms": 0,
+    }
+    NEVER = {
+        "Model.Reformulation.Constraint.PartitionNonlinearTerms": 2,
+        "Model.Reformulation.ObjectiveFunction.PartitionNonlinearTerms": 2,
+    }
 
     def make_convex_problem(self, solver, perturbed=False):
         """exp(x), exp(y) and the signomial x^-1*y^-0.5 are in two constraints or the objective each."""
@@ -659,8 +692,9 @@ class TestQuadraticDecompositions:
         import SHOTpy
 
         problem = SHOTpy.Problem(solver)
-        x1, x2, x3, x4, x5 = (problem.addVariable(name, SHOTpy.VariableType.Real, -2.0, 3.0)
-                              for name in ("x1", "x2", "x3", "x4", "x5"))
+        x1, x2, x3, x4, x5 = (
+            problem.addVariable(name, SHOTpy.VariableType.Real, -2.0, 3.0) for name in ("x1", "x2", "x3", "x4", "x5")
+        )
         b = problem.addVariable("b", SHOTpy.VariableType.Binary)
 
         problem.setObjective(-x1 - x2 - x3 - x4 - x5 - 2 * b)
@@ -670,9 +704,13 @@ class TestQuadraticDecompositions:
         return problem
 
     def solve(self, method, formulation):
-        solver = make_solver({"Model.Reformulation.Quadratics.Strategy": 0,
-                              "Model.Reformulation.Quadratics.Decomposition.Method": method,
-                              "Model.Reformulation.Quadratics.Decomposition.Formulation": formulation})
+        solver = make_solver(
+            {
+                "Model.Reformulation.Quadratics.Strategy": 0,
+                "Model.Reformulation.Quadratics.Decomposition.Method": method,
+                "Model.Reformulation.Quadratics.Decomposition.Formulation": formulation,
+            }
+        )
         problem = self.make_problem(solver)
         assert solver.setProblem(problem)
         names = auxiliary_variable_names(solver)
@@ -728,8 +766,9 @@ class TestIntegerProducts:
 
         solver = make_solver({"Dual.MIP.Solver": {"Cbc": 2, "Highs": 3}[mipSolver]})
         problem = SHOTpy.Problem(solver)
-        i1, i2, i3 = (problem.addVariable(name, SHOTpy.VariableType.Integer, *bounds)
-                      for name, bounds in self.BOUNDS.items())
+        i1, i2, i3 = (
+            problem.addVariable(name, SHOTpy.VariableType.Integer, *bounds) for name, bounds in self.BOUNDS.items()
+        )
 
         # The products share their variables, and i1*i2 is in the objective and a constraint
         problem.setObjective(self.objective(i1, i2, i3))
@@ -745,8 +784,9 @@ class TestIntegerProducts:
         assert solver.solveProblem()
 
         ranges = [range(lower, upper + 1) for lower, upper in self.BOUNDS.values()]
-        expected = min(self.objective(*point) for point in itertools.product(*ranges)
-                       if all(self.constraints(*point).values()))
+        expected = min(
+            self.objective(*point) for point in itertools.product(*ranges) if all(self.constraints(*point).values())
+        )
 
         assert solver.getPrimalBound() == pytest.approx(expected, abs=1e-6)
         assert solver.getCurrentDualBound() >= expected - 1e-6

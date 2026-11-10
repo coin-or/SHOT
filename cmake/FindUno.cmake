@@ -22,22 +22,28 @@ include(FindPackageHandleStandardArgs)
 
 # If UNO_DIR is explicitly set, prioritize it
 if(UNO_DIR)
-    find_path(UNO_INCLUDE_DIR
-              NAMES "Uno_C_API.h"
-              HINTS "${UNO_DIR}/include/uno" "${UNO_DIR}/include"
-              NO_DEFAULT_PATH)
+    find_path(
+        UNO_INCLUDE_DIR
+        NAMES "Uno_C_API.h"
+        HINTS "${UNO_DIR}/include/uno" "${UNO_DIR}/include"
+        NO_DEFAULT_PATH
+    )
 
-    find_library(UNO_LIBRARY
-                 NAMES uno libuno uno.dll libuno.dll
-                 HINTS "${UNO_DIR}/lib" "${UNO_DIR}/lib64"
-                 NO_DEFAULT_PATH)
+    find_library(
+        UNO_LIBRARY
+        NAMES uno libuno uno.dll libuno.dll
+        HINTS "${UNO_DIR}/lib" "${UNO_DIR}/lib64"
+        NO_DEFAULT_PATH
+    )
 endif()
 
 # If not found via UNO_DIR, search the standard locations
 if(NOT UNO_INCLUDE_DIR)
-    find_path(UNO_INCLUDE_DIR
-              NAMES "Uno_C_API.h"
-              PATH_SUFFIXES "uno")
+    find_path(
+        UNO_INCLUDE_DIR
+        NAMES "Uno_C_API.h"
+        PATH_SUFFIXES "uno"
+    )
 endif()
 
 if(NOT UNO_LIBRARY)
@@ -49,18 +55,30 @@ endif()
 # never link the bundled MinGW static library into an MSVC target.
 if(MSVC AND (NOT UNO_LIBRARY OR UNO_LIBRARY MATCHES "\\.a$"))
     set(UNO_LIBRARY UNO_LIBRARY-NOTFOUND)
-    find_file(UNO_RUNTIME_DLL NAMES libuno.dll uno.dll
-        HINTS "${UNO_DIR}/bin" "${UNO_DIR}/lib" "${UNO_DIR}")
+    find_file(
+        UNO_RUNTIME_DLL
+        NAMES libuno.dll uno.dll
+        HINTS "${UNO_DIR}/bin" "${UNO_DIR}/lib" "${UNO_DIR}"
+    )
     if(UNO_RUNTIME_DLL)
         get_filename_component(_uno_linker_dir "${CMAKE_LINKER}" DIRECTORY)
-        find_program(UNO_DUMPBIN NAMES dumpbin HINTS "${_uno_linker_dir}")
+        find_program(
+            UNO_DUMPBIN
+            NAMES dumpbin
+            HINTS "${_uno_linker_dir}"
+        )
         if(NOT UNO_DUMPBIN)
             message(FATAL_ERROR "Uno: dumpbin is required to generate an MSVC import library.")
         endif()
-        execute_process(COMMAND "${UNO_DUMPBIN}" /exports "${UNO_RUNTIME_DLL}"
-            OUTPUT_VARIABLE _uno_exports RESULT_VARIABLE _uno_dump_result)
-        string(REGEX MATCHALL "[ \t]+[0-9]+[ \t]+[0-9A-Fa-f]+[ \t]+[0-9A-Fa-f]+[ \t]+uno_[A-Za-z0-9_]+"
-            _uno_export_lines "${_uno_exports}")
+        execute_process(
+            COMMAND "${UNO_DUMPBIN}" /exports "${UNO_RUNTIME_DLL}"
+            OUTPUT_VARIABLE _uno_exports
+            RESULT_VARIABLE _uno_dump_result
+        )
+        string(
+            REGEX MATCHALL "[ \t]+[0-9]+[ \t]+[0-9A-Fa-f]+[ \t]+[0-9A-Fa-f]+[ \t]+uno_[A-Za-z0-9_]+" _uno_export_lines
+                  "${_uno_exports}"
+        )
         if(NOT _uno_dump_result EQUAL 0 OR NOT _uno_export_lines)
             message(FATAL_ERROR "Uno: could not read the DLL's C API exports.")
         endif()
@@ -82,11 +100,15 @@ if(MSVC AND (NOT UNO_LIBRARY OR UNO_LIBRARY MATCHES "\\.a$"))
         else()
             set(_uno_machine X86)
         endif()
-        if(NOT EXISTS "${UNO_LIBRARY}" OR "${UNO_RUNTIME_DLL}" IS_NEWER_THAN "${UNO_LIBRARY}"
-                OR "${_uno_import_dir}/uno.def" IS_NEWER_THAN "${UNO_LIBRARY}")
-            execute_process(COMMAND "${CMAKE_AR}" "/def:${_uno_import_dir}/uno.def"
-                "/out:${UNO_LIBRARY}" "/machine:${_uno_machine}"
-                RESULT_VARIABLE _uno_import_result OUTPUT_QUIET)
+        if(NOT EXISTS "${UNO_LIBRARY}"
+           OR "${UNO_RUNTIME_DLL}" IS_NEWER_THAN "${UNO_LIBRARY}"
+           OR "${_uno_import_dir}/uno.def" IS_NEWER_THAN "${UNO_LIBRARY}"
+        )
+            execute_process(
+                COMMAND "${CMAKE_AR}" "/def:${_uno_import_dir}/uno.def" "/out:${UNO_LIBRARY}" "/machine:${_uno_machine}"
+                RESULT_VARIABLE _uno_import_result
+                OUTPUT_QUIET
+            )
             if(NOT _uno_import_result EQUAL 0)
                 message(FATAL_ERROR "Uno: could not generate the MSVC import library.")
             endif()
@@ -120,8 +142,10 @@ if(UNO_LIBRARY AND UNO_LIBRARY MATCHES "\\.a$")
     if(UNO_GFORTRAN_LIBRARY)
         list(APPEND UNO_LIBRARIES ${UNO_GFORTRAN_LIBRARY})
     else()
-        message(STATUS "Uno: libgfortran not found; a static Uno may fail to link. "
-                       "Consider building Uno with -DBUILD_SHARED_LIBS=ON.")
+        message(
+            STATUS "Uno: libgfortran not found; a static Uno may fail to link. "
+                   "Consider building Uno with -DBUILD_SHARED_LIBS=ON."
+        )
     endif()
 
     mark_as_advanced(UNO_GFORTRAN_LIBRARY)
@@ -129,9 +153,6 @@ endif()
 
 # Handle the QUIETLY and REQUIRED arguments and set UNO_FOUND to TRUE if all
 # listed variables are TRUE.
-find_package_handle_standard_args(Uno
-                                  DEFAULT_MSG
-                                  UNO_LIBRARY
-                                  UNO_INCLUDE_DIR)
+find_package_handle_standard_args(Uno DEFAULT_MSG UNO_LIBRARY UNO_INCLUDE_DIR)
 
 mark_as_advanced(UNO_LIBRARY UNO_INCLUDE_DIR)

@@ -42,8 +42,7 @@ void TaskSelectPrimalFixedNLPPointsFromSolutionPool::run()
     {
         for(auto it = env->results->iterations.rbegin(); it != env->results->iterations.rend(); ++it)
         {
-            if(!(*it)->solutionPoints.empty()
-                && ((*it)->isMIP() || !env->reformulatedProblem->properties.isDiscrete))
+            if(!(*it)->solutionPoints.empty() && ((*it)->isMIP() || !env->reformulatedProblem->properties.isDiscrete))
             {
                 sourceIter = *it;
                 break;

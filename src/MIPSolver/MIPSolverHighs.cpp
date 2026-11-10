@@ -388,10 +388,10 @@ void MIPSolverHighs::initializeSolverSettings()
 {
     highsInstance.setOptionValue("mip_rel_gap", env->settings->getSetting<double>("Termination.ObjectiveGap.Relative"));
     highsInstance.setOptionValue("mip_abs_gap", env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute"));
-    // HiGHS does not only use mip_feasibility_tolerance for integrality, but as the feasibility tolerance of the rows and
-    // cuts in the whole MIP solver, e.g. in the domain propagation. A larger value than its default can therefore make
-    // HiGHS report a solution as optimal that is not (e.g. with RPOPwCaTC5_100, whose rows have coefficients up to 1e5),
-    // so the integer tolerance is only used when it is smaller than the default.
+    // HiGHS does not only use mip_feasibility_tolerance for integrality, but as the feasibility tolerance of the rows
+    // and cuts in the whole MIP solver, e.g. in the domain propagation. A larger value than its default can therefore
+    // make HiGHS report a solution as optimal that is not (e.g. with RPOPwCaTC5_100, whose rows have coefficients up to
+    // 1e5), so the integer tolerance is only used when it is smaller than the default.
     highsInstance.setOptionValue("mip_feasibility_tolerance",
         std::min(getToleranceForSolver(
                      "Primal.Tolerance.Integer", kMinimumMipTolerance, SHOT_DBL_MAX, "mip_feasibility_tolerance"),
@@ -796,8 +796,7 @@ E_ProblemSolutionStatus MIPSolverHighs::solveProblem()
     // presolve and factorize from scratch, often succeeds.
     if(isFailedSolve(highsInstance.getModelStatus()) && !unsafeIntegerDomainWithoutPresolve && !interruptedByTimeLimit)
     {
-        env->output->outputDebug(
-            "        The MIP solver did not return a solution, solving again from a clean state.");
+        env->output->outputDebug("        The MIP solver did not return a solution, solving again from a clean state.");
         highsInstance.clearSolver();
         highsReturnStatus = runSolver();
     }
@@ -1160,9 +1159,9 @@ bool MIPSolverHighs::repairInfeasibility()
         // Saves the relaxation model to file (after relaxation)
         if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
-            auto filename = fmt::format("{}/dualiter{}_infeasrelax",
-                env->settings->getSetting<std::string>("Output.Debug.Path"),
-                env->results->getCurrentIteration()->iterationNumber - 1);
+            auto filename
+                = fmt::format("{}/dualiter{}_infeasrelax", env->settings->getSetting<std::string>("Output.Debug.Path"),
+                    env->results->getCurrentIteration()->iterationNumber - 1);
 
             try
             {
@@ -1285,8 +1284,8 @@ void MIPSolverHighs::setCutOff(double cutOff)
     // cutoff given already includes the tolerance Dual.MIP.CutOff.Tolerance
     highsInstance.setOptionValue("objective_bound", isMinimizationProblem ? cutOff : -cutOff);
 
-    env->output->outputDebug(fmt::format("        Setting cutoff value to {} for {}.", cutOff,
-        isMinimizationProblem ? "minimization" : "maximization"));
+    env->output->outputDebug(fmt::format(
+        "        Setting cutoff value to {} for {}.", cutOff, isMinimizationProblem ? "minimization" : "maximization"));
 }
 
 void MIPSolverHighs::setCutOffAsConstraint(double cutOff)

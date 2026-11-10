@@ -11,42 +11,42 @@ class TestConstants:
     def test_shot_dbl_max(self):
         """Test that SHOT_DBL_MAX is defined and is a large number."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'SHOT_DBL_MAX')
         assert SHOTpy.SHOT_DBL_MAX > 1e100
 
     def test_shot_dbl_min(self):
         """Test that SHOT_DBL_MIN is defined and is a very negative number."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'SHOT_DBL_MIN')
         assert SHOTpy.SHOT_DBL_MIN < -1e100
 
     def test_has_osil_constant(self):
         """Test that HAS_OSIL is defined and is True (always available)."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'HAS_OSIL')
         assert SHOTpy.HAS_OSIL == True
 
     def test_has_gams_constant(self):
         """Test that HAS_GAMS is defined and is a boolean."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'HAS_GAMS')
         assert isinstance(SHOTpy.HAS_GAMS, bool)
 
     def test_has_ampl_constant(self):
         """Test that HAS_AMPL is defined and is a boolean."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'HAS_AMPL')
         assert isinstance(SHOTpy.HAS_AMPL, bool)
 
     def test_get_supported_modeling_systems(self):
         """Test that getSupportedModelingSystems function exists and returns a list of enum values."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'getSupportedModelingSystems')
         systems = SHOTpy.getSupportedModelingSystems()
         assert isinstance(systems, list)
@@ -58,35 +58,35 @@ class TestConstants:
     def test_has_cplex_constant(self):
         """Test that HAS_CPLEX is defined and is a boolean."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'HAS_CPLEX')
         assert isinstance(SHOTpy.HAS_CPLEX, bool)
 
     def test_has_gurobi_constant(self):
         """Test that HAS_GUROBI is defined and is a boolean."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'HAS_GUROBI')
         assert isinstance(SHOTpy.HAS_GUROBI, bool)
 
     def test_has_cbc_constant(self):
         """Test that HAS_CBC is defined and is a boolean."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'HAS_CBC')
         assert isinstance(SHOTpy.HAS_CBC, bool)
 
     def test_has_highs_constant(self):
         """Test that HAS_HIGHS is defined and is a boolean."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'HAS_HIGHS')
         assert isinstance(SHOTpy.HAS_HIGHS, bool)
 
     def test_highs_available(self):
         """Test that HiGHS solver is available if compiled in."""
         import SHOTpy
-        
+
         # This test will pass if HiGHS is available, otherwise it will fail
         # The actual availability depends on whether HAS_HIGHS was defined during compilation
         if SHOTpy.HAS_HIGHS:
@@ -95,7 +95,7 @@ class TestConstants:
     def test_get_supported_mip_solvers(self):
         """Test that getSupportedMIPSolvers function exists and returns a list of enum values."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'getSupportedMIPSolvers')
         solvers = SHOTpy.getSupportedMIPSolvers()
         assert isinstance(solvers, list)
@@ -108,9 +108,9 @@ class TestConstants:
     def test_mip_solver_constants_match_function(self):
         """Test that MIP solver constants are consistent with getSupportedMIPSolvers."""
         import SHOTpy
-        
+
         solvers = SHOTpy.getSupportedMIPSolvers()
-        
+
         if SHOTpy.HAS_CPLEX:
             assert SHOTpy.MIPSolver.Cplex in solvers
         if SHOTpy.HAS_GUROBI:
@@ -121,28 +121,28 @@ class TestConstants:
     def test_has_ipopt_constant(self):
         """Test that HAS_IPOPT is defined and is a boolean."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'HAS_IPOPT')
         assert isinstance(SHOTpy.HAS_IPOPT, bool)
 
     def test_has_shot_nlp_constant(self):
         """Test that HAS_SHOT_NLP is defined and is True (always available)."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'HAS_SHOT_NLP')
         assert SHOTpy.HAS_SHOT_NLP == True
 
     def test_has_gams_nlp_constant(self):
         """Test that HAS_GAMS_NLP is defined and is a boolean."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'HAS_GAMS_NLP')
         assert isinstance(SHOTpy.HAS_GAMS_NLP, bool)
 
     def test_get_supported_nlp_solvers(self):
         """Test that getSupportedNLPSolvers function exists and returns a list of enum values."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'getSupportedNLPSolvers')
         solvers = SHOTpy.getSupportedNLPSolvers()
         assert isinstance(solvers, list)
@@ -155,12 +155,12 @@ class TestConstants:
     def test_nlp_solver_constants_match_function(self):
         """Test that NLP solver constants are consistent with getSupportedNLPSolvers."""
         import SHOTpy
-        
+
         solvers = SHOTpy.getSupportedNLPSolvers()
-        
+
         # SHOT is always available
         assert SHOTpy.PrimalNLPSolver.SHOT in solvers
-        
+
         if SHOTpy.HAS_IPOPT:
             assert SHOTpy.PrimalNLPSolver.Ipopt in solvers
         if SHOTpy.HAS_GAMS_NLP:
@@ -170,13 +170,16 @@ class TestConstants:
 class TestMIPSolverCapabilities:
     """Capability queries do not require a solver instance or a license."""
 
-    @pytest.mark.parametrize("backend, available", [
-        ("Cplex", "HAS_CPLEX"),
-        ("Gurobi", "HAS_GUROBI"),
-        ("Cbc", "HAS_CBC"),
-        ("Highs", "HAS_HIGHS"),
-        ("NotUsed", None),
-    ])
+    @pytest.mark.parametrize(
+        "backend, available",
+        [
+            ("Cplex", "HAS_CPLEX"),
+            ("Gurobi", "HAS_GUROBI"),
+            ("Cbc", "HAS_CBC"),
+            ("Highs", "HAS_HIGHS"),
+            ("NotUsed", None),
+        ],
+    )
     def test_lookup(self, backend, available):
         import SHOTpy
 
@@ -191,24 +194,30 @@ class TestMIPSolverCapabilities:
         assert caps.SOS2 is (backend != "Highs")
         assert caps.singleTree is (backend in ("Cplex", "Gurobi"))
         assert caps.unboundedVariableBound == (1e50 if backend == "Cbc" else 1e20)
-        expected = (SHOTpy.SemiVariableSupport.NonnegativeInterval
-                    if backend in ("Cplex", "Highs") else SHOTpy.SemiVariableSupport.SignedInterval)
+        expected = (
+            SHOTpy.SemiVariableSupport.NonnegativeInterval
+            if backend in ("Cplex", "Highs")
+            else SHOTpy.SemiVariableSupport.SignedInterval
+        )
         assert caps.semicontinuous == expected
         assert caps.semiinteger == expected
 
-    @pytest.mark.parametrize("field", [
-        "convexQuadraticObjective",
-        "nonconvexQuadraticObjective",
-        "convexQuadraticConstraints",
-        "nonconvexQuadraticConstraints",
-        "nonconvexObjectiveExcludesQuadraticConstraints",
-        "SOS1",
-        "SOS2",
-        "singleTree",
-        "semicontinuous",
-        "semiinteger",
-        "unboundedVariableBound",
-    ])
+    @pytest.mark.parametrize(
+        "field",
+        [
+            "convexQuadraticObjective",
+            "nonconvexQuadraticObjective",
+            "convexQuadraticConstraints",
+            "nonconvexQuadraticConstraints",
+            "nonconvexObjectiveExcludesQuadraticConstraints",
+            "SOS1",
+            "SOS2",
+            "singleTree",
+            "semicontinuous",
+            "semiinteger",
+            "unboundedVariableBound",
+        ],
+    )
     def test_fields_are_read_only(self, field):
         import SHOTpy
 
@@ -250,7 +259,7 @@ class TestEnums:
     def test_variable_type_enum(self):
         """Test VariableType enumeration."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'VariableType')
         assert hasattr(SHOTpy.VariableType, 'Real')
         assert hasattr(SHOTpy.VariableType, 'Binary')
@@ -261,7 +270,7 @@ class TestEnums:
     def test_objective_direction_enum(self):
         """Test ObjectiveDirection enumeration."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'ObjectiveDirection')
         assert hasattr(SHOTpy.ObjectiveDirection, 'Minimize')
         assert hasattr(SHOTpy.ObjectiveDirection, 'Maximize')
@@ -269,7 +278,7 @@ class TestEnums:
     def test_convexity_enum(self):
         """Test Convexity enumeration."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'Convexity')
         assert hasattr(SHOTpy.Convexity, 'Linear')
         assert hasattr(SHOTpy.Convexity, 'Convex')
@@ -279,7 +288,7 @@ class TestEnums:
     def test_problem_convexity_enum(self):
         """Test ProblemConvexity enumeration."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'ProblemConvexity')
         assert hasattr(SHOTpy.ProblemConvexity, 'Convex')
         assert hasattr(SHOTpy.ProblemConvexity, 'Nonconvex')
@@ -287,7 +296,7 @@ class TestEnums:
     def test_modeling_system_enum(self):
         """Test ModelingSystem enumeration."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'ModelingSystem')
         assert hasattr(SHOTpy.ModelingSystem, 'OSiL')
         assert hasattr(SHOTpy.ModelingSystem, 'GAMS')
@@ -297,7 +306,7 @@ class TestEnums:
     def test_hyperplane_cut_strategy_enum(self):
         """Test HyperplaneCutStrategy enumeration."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'HyperplaneCutStrategy')
         assert hasattr(SHOTpy.HyperplaneCutStrategy, 'ESH')
         assert hasattr(SHOTpy.HyperplaneCutStrategy, 'ECP')
@@ -305,7 +314,7 @@ class TestEnums:
     def test_iteration_output_detail_enum(self):
         """Test IterationOutputDetail enumeration."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'IterationOutputDetail')
         assert hasattr(SHOTpy.IterationOutputDetail, 'Full')
         assert hasattr(SHOTpy.IterationOutputDetail, 'ObjectiveGapUpdates')
@@ -314,7 +323,7 @@ class TestEnums:
     def test_mip_solver_enum(self):
         """Test MIPSolver enumeration."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'MIPSolver')
         assert hasattr(SHOTpy.MIPSolver, 'Cplex')
         assert hasattr(SHOTpy.MIPSolver, 'Gurobi')
@@ -324,7 +333,7 @@ class TestEnums:
     def test_primal_nlp_fixed_point_enum(self):
         """Test PrimalNLPFixedPoint enumeration."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'PrimalNLPFixedPoint')
         assert hasattr(SHOTpy.PrimalNLPFixedPoint, 'AllSolutions')
         assert hasattr(SHOTpy.PrimalNLPFixedPoint, 'FirstSolution')
@@ -335,7 +344,7 @@ class TestEnums:
     def test_primal_nlp_problem_source_enum(self):
         """Test PrimalNLPProblemSource enumeration."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'PrimalNLPProblemSource')
         assert hasattr(SHOTpy.PrimalNLPProblemSource, 'OriginalProblem')
         assert hasattr(SHOTpy.PrimalNLPProblemSource, 'ReformulatedProblem')
@@ -344,7 +353,7 @@ class TestEnums:
     def test_primal_nlp_solver_enum(self):
         """Test PrimalNLPSolver enumeration."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'PrimalNLPSolver')
         assert hasattr(SHOTpy.PrimalNLPSolver, 'Ipopt')
         assert hasattr(SHOTpy.PrimalNLPSolver, 'GAMS')
@@ -354,7 +363,7 @@ class TestEnums:
     def test_primal_nlp_strategy_enum(self):
         """Test PrimalNLPStrategy enumeration."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'PrimalNLPStrategy')
         assert hasattr(SHOTpy.PrimalNLPStrategy, 'AlwaysUse')
         assert hasattr(SHOTpy.PrimalNLPStrategy, 'IterationOrTime')
@@ -363,7 +372,7 @@ class TestEnums:
     def test_quadratic_problem_strategy_enum(self):
         """Test QuadraticProblemStrategy enumeration."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'QuadraticProblemStrategy')
         assert hasattr(SHOTpy.QuadraticProblemStrategy, 'Nonlinear')
         assert hasattr(SHOTpy.QuadraticProblemStrategy, 'QuadraticObjective')
@@ -373,7 +382,7 @@ class TestEnums:
     def test_tree_strategy_enum(self):
         """Test TreeStrategy enumeration."""
         import SHOTpy
-        
+
         assert hasattr(SHOTpy, 'TreeStrategy')
         assert hasattr(SHOTpy.TreeStrategy, 'MultiTree')
         assert hasattr(SHOTpy.TreeStrategy, 'SingleTree')
@@ -385,31 +394,37 @@ class TestClassesExist:
     def test_solver_class(self):
         """Test Solver class exists."""
         import SHOTpy
+
         assert hasattr(SHOTpy, 'Solver')
 
     def test_problem_class(self):
         """Test Problem class exists."""
         import SHOTpy
+
         assert hasattr(SHOTpy, 'Problem')
 
     def test_variable_class(self):
         """Test Variable class exists."""
         import SHOTpy
+
         assert hasattr(SHOTpy, 'Variable')
 
     def test_linear_term_class(self):
         """Test LinearTerm class exists."""
         import SHOTpy
+
         assert hasattr(SHOTpy, 'LinearTerm')
 
     def test_quadratic_term_class(self):
         """Test QuadraticTerm class exists."""
         import SHOTpy
+
         assert hasattr(SHOTpy, 'QuadraticTerm')
 
     def test_constraint_classes(self):
         """Test constraint classes exist."""
         import SHOTpy
+
         assert hasattr(SHOTpy, 'LinearConstraint')
         assert hasattr(SHOTpy, 'QuadraticConstraint')
         assert hasattr(SHOTpy, 'NonlinearConstraint')
@@ -417,6 +432,7 @@ class TestClassesExist:
     def test_objective_classes(self):
         """Test objective function classes exist."""
         import SHOTpy
+
         assert hasattr(SHOTpy, 'LinearObjectiveFunction')
         assert hasattr(SHOTpy, 'QuadraticObjectiveFunction')
         assert hasattr(SHOTpy, 'NonlinearObjectiveFunction')
@@ -428,34 +444,41 @@ class TestMathFunctions:
     def test_log_function(self):
         """Test log function exists."""
         import SHOTpy
+
         assert hasattr(SHOTpy, 'log')
 
     def test_exp_function(self):
         """Test exp function exists."""
         import SHOTpy
+
         assert hasattr(SHOTpy, 'exp')
 
     def test_sqrt_function(self):
         """Test sqrt function exists."""
         import SHOTpy
+
         assert hasattr(SHOTpy, 'sqrt')
 
     def test_sin_function(self):
         """Test sin function exists."""
         import SHOTpy
+
         assert hasattr(SHOTpy, 'sin')
 
     def test_cos_function(self):
         """Test cos function exists."""
         import SHOTpy
+
         assert hasattr(SHOTpy, 'cos')
 
     def test_abs_function(self):
         """Test abs function exists."""
         import SHOTpy
+
         assert hasattr(SHOTpy, 'abs')
 
     def test_square_function(self):
         """Test square function exists."""
         import SHOTpy
+
         assert hasattr(SHOTpy, 'square')

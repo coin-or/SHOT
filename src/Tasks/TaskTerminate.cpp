@@ -13,11 +13,11 @@
 namespace SHOT
 {
 
-TaskTerminate::TaskTerminate(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
+TaskTerminate::TaskTerminate(EnvironmentPtr envPtr) : TaskBase(envPtr) { }
 
 TaskTerminate::~TaskTerminate() = default;
 
-void TaskTerminate::run() {}
+void TaskTerminate::run() { }
 
 std::string TaskTerminate::getType()
 {

@@ -170,8 +170,8 @@ ProblemPtr createProblemWithSeveralNonlinearConstraints(EnvironmentPtr env)
         std::make_shared<ExpressionExp>(expressionVariable_x), expressionVariable_y);
     problem->add(std::make_shared<NonlinearConstraint>("c1", linearTerms1, expression1, SHOT_DBL_MIN, 10.0));
 
-    NonlinearExpressionPtr expression2
-        = std::make_shared<ExpressionProduct>(expressionVariable_x, std::make_shared<ExpressionSin>(expressionVariable_z));
+    NonlinearExpressionPtr expression2 = std::make_shared<ExpressionProduct>(
+        expressionVariable_x, std::make_shared<ExpressionSin>(expressionVariable_z));
     problem->add(std::make_shared<NonlinearConstraint>("c2", expression2, 0.5, SHOT_DBL_MAX));
 
     LinearTerms linearTerms3;
@@ -265,8 +265,7 @@ bool UnoTest2()
 
     if(!isSolved(status))
     {
-        std::cout << "FAILED: Uno did not solve the maximization problem, status " << static_cast<int>(status)
-                  << '\n';
+        std::cout << "FAILED: Uno did not solve the maximization problem, status " << static_cast<int>(status) << '\n';
         return (false);
     }
 
@@ -349,8 +348,8 @@ bool UnoTest3()
 
     if(!isSolved(status))
     {
-        std::cout << "FAILED: Uno did not solve the problem with a fixed variable, status "
-                  << static_cast<int>(status) << '\n';
+        std::cout << "FAILED: Uno did not solve the problem with a fixed variable, status " << static_cast<int>(status)
+                  << '\n';
         return (false);
     }
 
@@ -382,8 +381,8 @@ bool UnoTest3()
 
     if(std::abs(NLPSolver->getObjectiveValue()) > 1e-6)
     {
-        std::cout << "FAILED: expected the objective value 0 after unfixing, got "
-                  << NLPSolver->getObjectiveValue() << '\n';
+        std::cout << "FAILED: expected the objective value 0 after unfixing, got " << NLPSolver->getObjectiveValue()
+                  << '\n';
         passed = false;
     }
 
@@ -460,8 +459,8 @@ bool UnoTest4()
     {
         if(std::abs(hessian[i] - expectedHessian[i]) > 1e-10)
         {
-            std::cout << "FAILED: Hessian element " << i << " is " << hessian[i] << " instead of "
-                      << expectedHessian[i] << '\n';
+            std::cout << "FAILED: Hessian element " << i << " is " << hessian[i] << " instead of " << expectedHessian[i]
+                      << '\n';
             passed = false;
         }
     }

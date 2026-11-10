@@ -181,8 +181,8 @@ public:
         upperBound = SHOT_DBL_MAX;
     }
 
-    Variable(std::string variableName, E_VariableType variableType, double LB, double UB,
-        double variableSemiBound = NAN)
+    Variable(
+        std::string variableName, E_VariableType variableType, double LB, double UB, double variableSemiBound = NAN)
     {
         name = variableName;
 
@@ -263,8 +263,8 @@ struct VariableIndexComparator
         return (firstKey.second < secondKey.second);
     }
 
-    bool operator()(
-        const std::tuple<VariablePtr, VariablePtr>& firstKey, const std::tuple<VariablePtr, VariablePtr>& secondKey) const
+    bool operator()(const std::tuple<VariablePtr, VariablePtr>& firstKey,
+        const std::tuple<VariablePtr, VariablePtr>& secondKey) const
     {
         if(std::get<0>(firstKey)->getIndex() != std::get<0>(secondKey)->getIndex())
             return (std::get<0>(firstKey)->getIndex() < std::get<0>(secondKey)->getIndex());
@@ -272,8 +272,8 @@ struct VariableIndexComparator
         return (std::get<1>(firstKey)->getIndex() < std::get<1>(secondKey)->getIndex());
     }
 
-    bool operator()(const std::pair<VariablePtr, VariablePtr>& firstKey,
-        const std::pair<VariablePtr, VariablePtr>& secondKey) const
+    bool operator()(
+        const std::pair<VariablePtr, VariablePtr>& firstKey, const std::pair<VariablePtr, VariablePtr>& secondKey) const
     {
         if(firstKey.first->getIndex() != secondKey.first->getIndex())
             return (firstKey.first->getIndex() < secondKey.first->getIndex());
@@ -310,7 +310,7 @@ public:
             (*this).push_back(V);
     };
 
-    explicit Variables(std::vector<VariablePtr> variables) : std::vector<VariablePtr>(std::move(variables)) {};
+    explicit Variables(std::vector<VariablePtr> variables) : std::vector<VariablePtr>(std::move(variables)) { };
 
     inline void takeOwnership(ProblemPtr owner)
     {
@@ -324,9 +324,8 @@ public:
 
     inline void sortByIndex()
     {
-        std::sort(this->begin(), this->end(), [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
-            return (variableOne->getIndex() < variableTwo->getIndex());
-        });
+        std::sort(this->begin(), this->end(), [](const VariablePtr& variableOne, const VariablePtr& variableTwo)
+            { return (variableOne->getIndex() < variableTwo->getIndex()); });
     }
 };
 

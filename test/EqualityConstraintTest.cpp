@@ -150,8 +150,8 @@ bool isReformulationEquivalent(ProblemPtr original, ProblemPtr reformulated, int
     bool passed = true;
 
     for(auto& C : reformulated->nonlinearConstraints)
-        passed = expect(C->valueLHS == SHOT_DBL_MIN, "nonlinear constraint " + C->name + " has a lower bound")
-            && passed;
+        passed
+            = expect(C->valueLHS == SHOT_DBL_MIN, "nonlinear constraint " + C->name + " has a lower bound") && passed;
 
     for(auto& V : reformulated->auxiliaryVariables)
     {
@@ -174,9 +174,9 @@ bool isReformulationEquivalent(ProblemPtr original, ProblemPtr reformulated, int
                 if(T->variable != V || T->coefficient == 0.0)
                     continue;
 
-                passed = expect(C->valueLHS == SHOT_DBL_MIN,
-                             "constraint " + C->name + " with the partitioning variable " + V->name
-                                 + " has a lower bound")
+                passed
+                    = expect(C->valueLHS == SHOT_DBL_MIN,
+                          "constraint " + C->name + " with the partitioning variable " + V->name + " has a lower bound")
                     && passed;
 
                 if(T->coefficient < 0.0)
@@ -194,28 +194,30 @@ bool isReformulationEquivalent(ProblemPtr original, ProblemPtr reformulated, int
     int numberOfInfeasible = 0;
     int numberOfDifferent = 0;
 
-    forGridPoints(original, pointsPerVariable, [&](const VectorDouble& point) {
-        double originalError = maxError(original, point);
-
-        auto reformulatedPoint = point;
-        reformulated->augmentAuxiliaryVariableValues(reformulatedPoint);
-        double reformulatedError = maxError(reformulated, reformulatedPoint);
-
-        if(originalError <= 1e-9)
-            numberOfFeasible++;
-        else
-            numberOfInfeasible++;
-
-        // The constraints are scaled differently in the problems, so only whether there is an error is compared
-        if((originalError > 1e-6 && reformulatedError < 1e-9) || (originalError < 1e-9 && reformulatedError > 1e-6))
+    forGridPoints(original, pointsPerVariable,
+        [&](const VectorDouble& point)
         {
-            if(numberOfDifferent == 0)
-                std::cout << "  FAILED: the error is " << originalError << " in the original problem and "
-                          << reformulatedError << " in the reformulated one in a point\n";
+            double originalError = maxError(original, point);
 
-            numberOfDifferent++;
-        }
-    });
+            auto reformulatedPoint = point;
+            reformulated->augmentAuxiliaryVariableValues(reformulatedPoint);
+            double reformulatedError = maxError(reformulated, reformulatedPoint);
+
+            if(originalError <= 1e-9)
+                numberOfFeasible++;
+            else
+                numberOfInfeasible++;
+
+            // The constraints are scaled differently in the problems, so only whether there is an error is compared
+            if((originalError > 1e-6 && reformulatedError < 1e-9) || (originalError < 1e-9 && reformulatedError > 1e-6))
+            {
+                if(numberOfDifferent == 0)
+                    std::cout << "  FAILED: the error is " << originalError << " in the original problem and "
+                              << reformulatedError << " in the reformulated one in a point\n";
+
+                numberOfDifferent++;
+            }
+        });
 
     std::cout << "  " << numberOfFeasible << " feasible and " << numberOfInfeasible << " infeasible grid points, "
               << numberOfDifferent << " with different feasibility in the problems\n";
@@ -231,7 +233,8 @@ bool EqualityConstraintTestPreserved()
 {
     bool passed = true;
 
-    auto createProblem = [](EnvironmentPtr env) {
+    auto createProblem = [](EnvironmentPtr env)
+    {
         auto problem = std::make_shared<Problem>(env);
 
         auto x = std::make_shared<Variable>("x", E_VariableType::Real, -2.0, 2.0);
@@ -272,7 +275,8 @@ bool EqualityConstraintTestPreserved()
         return (problem);
     };
 
-    auto checkOriginal = [&](ProblemPtr problem, const std::string& description) {
+    auto checkOriginal = [&](ProblemPtr problem, const std::string& description)
+    {
         bool isOk = true;
 
         std::cout << " The original problem " << description << ":\n";
@@ -293,8 +297,8 @@ bool EqualityConstraintTestPreserved()
         // The errors of x^2 = 1
         auto square = getConstraint(problem, "square");
 
-        for(auto& [value, error] : std::vector<std::pair<double, double>> { { 0.0, 1.0 }, { 1.0, 0.0 },
-                { -1.0, 0.0 }, { 1.5, 1.25 } })
+        for(auto& [value, error] :
+            std::vector<std::pair<double, double>> { { 0.0, 1.0 }, { 1.0, 0.0 }, { -1.0, 0.0 }, { 1.5, 1.25 } })
         {
             double calculated = square->calculateNumericValue({ value, 0.0, 1.0 }).error;
             isOk = expect(std::abs(calculated - error) < 1e-12,
@@ -310,8 +314,8 @@ bool EqualityConstraintTestPreserved()
 
         // The function of an equality constraint can be convex, while the constraint is not
         auto exp = getConstraint(problem, "exp");
-        isOk = expect(exp->properties.functionConvexity == E_Convexity::Convex, "exp(x) + exp(y) is not convex")
-            && isOk;
+        isOk
+            = expect(exp->properties.functionConvexity == E_Convexity::Convex, "exp(x) + exp(y) is not convex") && isOk;
         isOk = expect(exp->properties.convexity == E_Convexity::Nonconvex, "exp(x) + exp(y) = 4 is not nonconvex")
             && isOk;
         isOk = expect(square->properties.functionConvexity == E_Convexity::Convex, "x^2 is not convex") && isOk;
@@ -363,8 +367,8 @@ bool EqualityConstraintTestPreserved()
 #endif
 
 #ifdef HAS_CPLEX
-    configurations.push_back({ "Cplex with quadratics as nonlinear", ES_MIPSolver::Cplex,
-        ES_QuadraticProblemStrategy::Nonlinear, false });
+    configurations.push_back(
+        { "Cplex with quadratics as nonlinear", ES_MIPSolver::Cplex, ES_QuadraticProblemStrategy::Nonlinear, false });
     configurations.push_back({ "Cplex with convex quadratic constraints", ES_MIPSolver::Cplex,
         ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained, false });
     configurations.push_back({ "Cplex with nonconvex quadratic constraints", ES_MIPSolver::Cplex,
@@ -372,8 +376,8 @@ bool EqualityConstraintTestPreserved()
 #endif
 
 #ifdef HAS_GUROBI
-    configurations.push_back({ "Gurobi with quadratics as nonlinear", ES_MIPSolver::Gurobi,
-        ES_QuadraticProblemStrategy::Nonlinear, false });
+    configurations.push_back(
+        { "Gurobi with quadratics as nonlinear", ES_MIPSolver::Gurobi, ES_QuadraticProblemStrategy::Nonlinear, false });
     configurations.push_back({ "Gurobi with convex quadratic constraints", ES_MIPSolver::Gurobi,
         ES_QuadraticProblemStrategy::ConvexQuadraticallyConstrained, false });
     configurations.push_back({ "Gurobi with nonconvex quadratic constraints", ES_MIPSolver::Gurobi,
@@ -418,8 +422,8 @@ bool EqualityConstraintTestPreserved()
 
         for(auto& name : { "square_rf", "range_rf" })
             passed = expect((getConstraint(reformulated, name) != nullptr) == !C.hasNativeQuadraticEqualities,
-                         std::string("the constraint ") + name + " is "
-                             + (C.hasNativeQuadraticEqualities ? "" : "not ") + "in the reformulated problem")
+                         std::string("the constraint ") + name + " is " + (C.hasNativeQuadraticEqualities ? "" : "not ")
+                             + "in the reformulated problem")
                 && passed;
 
         for(auto& name : { "lower_rf", "linear_rf" })
@@ -577,10 +581,10 @@ bool EqualityConstraintTestSides()
                 double sourceValue = source->calculateFunctionValue(point);
                 double createdValue = created->calculateFunctionValue(point);
 
-                passed = expect(
-                             std::abs(createdValue - sign * sourceValue) < 1e-10 * std::max(1.0, std::abs(sourceValue)),
-                             "the function of the " + description + " is " + std::to_string(createdValue)
-                                 + " where the one of the constraint is " + std::to_string(sourceValue))
+                passed
+                    = expect(std::abs(createdValue - sign * sourceValue) < 1e-10 * std::max(1.0, std::abs(sourceValue)),
+                          "the function of the " + description + " is " + std::to_string(createdValue)
+                              + " where the one of the constraint is " + std::to_string(sourceValue))
                     && passed;
 
                 // A point is feasible for both sides exactly when it is for the constraint
@@ -597,10 +601,10 @@ bool EqualityConstraintTestSides()
                             createdElement = CG.second;
                     }
 
-                    passed = expect(
-                                 std::abs(createdElement - sign * G.second) < 1e-9 * std::max(1.0, std::abs(G.second)),
-                                 "the gradient of the " + description + " is " + std::to_string(createdElement)
-                                     + " for " + G.first->name + " instead of " + std::to_string(sign * G.second))
+                    passed
+                        = expect(std::abs(createdElement - sign * G.second) < 1e-9 * std::max(1.0, std::abs(G.second)),
+                              "the gradient of the " + description + " is " + std::to_string(createdElement) + " for "
+                                  + G.first->name + " instead of " + std::to_string(sign * G.second))
                         && passed;
                 }
 
@@ -618,10 +622,10 @@ bool EqualityConstraintTestSides()
                             createdElement = CH.second;
                     }
 
-                    passed = expect(
-                                 std::abs(createdElement - sign * H.second) < 1e-9 * std::max(1.0, std::abs(H.second)),
-                                 "the Hessian of the " + description + " is " + std::to_string(createdElement)
-                                     + " instead of " + std::to_string(sign * H.second))
+                    passed
+                        = expect(std::abs(createdElement - sign * H.second) < 1e-9 * std::max(1.0, std::abs(H.second)),
+                              "the Hessian of the " + description + " is " + std::to_string(createdElement)
+                                  + " instead of " + std::to_string(sign * H.second))
                         && passed;
                 }
             }
@@ -793,9 +797,8 @@ bool EqualityConstraintTestSimplifications()
 
     // sin(x) has both signs, log(p + 2) is positive and log(q) is negative
     auto sinX = [&]() { return (std::make_shared<ExpressionSin>(variable(x))); };
-    auto logP = [&]() {
-        return (std::make_shared<ExpressionLog>(sum(variable(p), std::make_shared<ExpressionConstant>(2.0))));
-    };
+    auto logP = [&]()
+    { return (std::make_shared<ExpressionLog>(sum(variable(p), std::make_shared<ExpressionConstant>(2.0)))); };
     auto logQ = [&]() { return (logarithm(q)); };
 
     struct Case
@@ -811,7 +814,8 @@ bool EqualityConstraintTestSimplifications()
     std::vector<Case> cases;
 
     auto add = [&](const std::string& name, NonlinearExpressionPtr expression, double valueLHS, double valueRHS,
-                   int variableIndex, std::function<double(double)> function, std::vector<double> solutions) {
+                   int variableIndex, std::function<double(double)> function, std::vector<double> solutions)
+    {
         problem->add(std::make_shared<NonlinearConstraint>(name, expression, valueLHS, valueRHS));
         cases.push_back({ name, variableIndex, function, valueLHS, valueRHS, solutions });
     };
@@ -842,12 +846,12 @@ bool EqualityConstraintTestSimplifications()
     add("root_range", squareRoot(variable(s)), 1.0, 2.0, 3, valueRootS, { 2.0 });
     add("root_negative_lower", squareRoot(variable(s)), -1.0, 2.0, 3, valueRootS, { 0.0, 0.5 });
     add("root_upper", squareRoot(variable(s)), SHOT_DBL_MIN, 2.0, 3, valueRootS, { 0.5 });
-    add("root_infeasible", squareRoot(variable(s)), SHOT_DBL_MIN, -1.0, 3, valueRootS, {});
+    add("root_infeasible", squareRoot(variable(s)), SHOT_DBL_MIN, -1.0, 3, valueRootS, { });
 
     problem->finalize();
 
-    passed = expect(problem->numericConstraints.size() == cases.size(), "the number of constraints has changed")
-        && passed;
+    passed
+        = expect(problem->numericConstraints.size() == cases.size(), "the number of constraints has changed") && passed;
 
     for(auto& C : cases)
     {
@@ -919,7 +923,8 @@ bool EqualityConstraintTestConvexRelaxation()
 
     bool passed = true;
 
-    auto createProblem = [](EnvironmentPtr env) {
+    auto createProblem = [](EnvironmentPtr env)
+    {
         auto problem = std::make_shared<Problem>(env);
 
         auto x = std::make_shared<Variable>("x", E_VariableType::Real, -2.0, 2.0);
@@ -939,8 +944,8 @@ bool EqualityConstraintTestConvexRelaxation()
         // 1 <= exp(x) + exp(2y) <= 6: convex function, the upper side is convex
         problem->add(std::make_shared<NonlinearConstraint>("convex_range",
             sum(exponential(x),
-                std::make_shared<ExpressionExp>(std::make_shared<ExpressionProduct>(
-                    std::make_shared<ExpressionConstant>(2.0), variable(y)))),
+                std::make_shared<ExpressionExp>(
+                    std::make_shared<ExpressionProduct>(std::make_shared<ExpressionConstant>(2.0), variable(y)))),
             1.0, 6.0));
 
         // log(u) + log(v) = 0.5: concave function, the lower side is convex
@@ -1012,8 +1017,8 @@ bool EqualityConstraintTestConvexRelaxation()
         VectorDouble point = { 0.3, -0.4, 1.7, 2.1 };
 
         // The kept side is the function of the constraint, or the negated function
-        for(auto& [name, sign] : std::vector<std::pair<std::string, double>> { { "convex_eq", 1.0 },
-                { "convex_range", 1.0 }, { "concave_eq", -1.0 }, { "concave_range", -1.0 } })
+        for(auto& [name, sign] : std::vector<std::pair<std::string, double>> {
+                { "convex_eq", 1.0 }, { "convex_range", 1.0 }, { "concave_eq", -1.0 }, { "concave_range", -1.0 } })
         {
             double value = getConstraint(problem, name)->calculateFunctionValue(point);
             double relaxedValue = getConstraint(relaxed, name)->calculateFunctionValue(point);
@@ -1053,7 +1058,7 @@ bool EqualityConstraintTestConvexRelaxation()
     };
 
     std::vector<Case> cases = {
-        { "the reformulated problem with partitioning", true, false, {}, { "nonconvex_eq", "nonconvex_eq_rf" } },
+        { "the reformulated problem with partitioning", true, false, { }, { "nonconvex_eq", "nonconvex_eq_rf" } },
         { "the reformulated problem without partitioning", false, false, { "convex_eq", "concave_eq_rf" },
             { "convex_eq_rf", "concave_eq", "convex_range_rf", "concave_range", "nonconvex_eq", "nonconvex_eq_rf" } },
         { "the original problem", false, true, { "convex_eq", "concave_eq" }, { "nonconvex_eq" } },
@@ -1199,8 +1204,8 @@ bool EqualityConstraintTestBilinear(ES_MIPSolver mipSolver, ES_QuadraticProblemS
     solver->updateSetting("Model.Reformulation.Quadratics.Strategy", static_cast<int>(quadraticStrategy));
 
     // The bilinear terms are otherwise kept in the constraints
-    solver->updateSetting("Model.Reformulation.Constraint.PartitionQuadraticTerms",
-        static_cast<int>(ES_PartitionNonlinearSums::Always));
+    solver->updateSetting(
+        "Model.Reformulation.Constraint.PartitionQuadraticTerms", static_cast<int>(ES_PartitionNonlinearSums::Always));
     solver->updateSetting("Model.Reformulation.Quadratics.ExtractStrategy",
         static_cast<int>(ES_QuadraticTermsExtractStrategy::ExtractToEqualityConstraintIfNonconvex));
 
@@ -1228,8 +1233,7 @@ bool EqualityConstraintTestBilinear(ES_MIPSolver mipSolver, ES_QuadraticProblemS
     equalityTerms.add(std::make_shared<QuadraticTerm>(1.0, y, z));
     LinearTerms equalityLinearTerms;
     equalityLinearTerms.add(std::make_shared<LinearTerm>(-1.0, b));
-    problem->add(
-        std::make_shared<QuadraticConstraint>("equality", equalityLinearTerms, equalityTerms, 4.0, 4.0));
+    problem->add(std::make_shared<QuadraticConstraint>("equality", equalityLinearTerms, equalityTerms, 4.0, 4.0));
 
     // 1 <= y*z - x*z <= 2
     QuadraticTerms rangeTerms;
@@ -1387,9 +1391,9 @@ bool EqualityConstraintTestBilinear(ES_MIPSolver mipSolver, ES_QuadraticProblemS
     passed = expect(solution.objValue >= bestValue - 1e-2, "the solution is better than the optimal one") && passed;
 
     if(isNative)
-        passed = expect(std::abs(solution.objValue - bestValue) < 1e-2
-                         && solver->getCurrentDualBound() > bestValue - 2e-2,
-                     "the problem was not solved to global optimality")
+        passed
+            = expect(std::abs(solution.objValue - bestValue) < 1e-2 && solver->getCurrentDualBound() > bestValue - 2e-2,
+                  "the problem was not solved to global optimality")
             && passed;
 
     return (passed);
@@ -1435,8 +1439,8 @@ bool EqualityConstraintTestNLPSources(ES_PrimalNLPSolver nlpSolver)
         // exp(x) + exp(y) = 6 + 2 i
         LinearTerms firstTerms;
         firstTerms.add(std::make_shared<LinearTerm>(-2.0, i));
-        problem->add(std::make_shared<NonlinearConstraint>(
-            "exp_eq", firstTerms, sum(exponential(x), exponential(y)), 6.0, 6.0));
+        problem->add(
+            std::make_shared<NonlinearConstraint>("exp_eq", firstTerms, sum(exponential(x), exponential(y)), 6.0, 6.0));
 
         // log(y) + log(z) = 0.2 - b, which is z = exp(0.2 - b) / y
         LinearTerms secondTerms;
@@ -1473,11 +1477,11 @@ bool EqualityConstraintTestNLPSources(ES_PrimalNLPSolver nlpSolver)
         passed = expectBounds(env->problem, "range", 1.0, 4.0) && passed;
 
         // The bounds of the integer variables are restored after the NLP problems
-        passed = expect(env->problem->getVariable(3)->lowerBound == 0.0
-                         && env->problem->getVariable(3)->upperBound == 3.0
-                         && env->problem->getVariable(4)->lowerBound == 0.0
-                         && env->problem->getVariable(4)->upperBound == 1.0,
-                     "the bounds of the integer variables were changed")
+        passed
+            = expect(env->problem->getVariable(3)->lowerBound == 0.0 && env->problem->getVariable(3)->upperBound == 3.0
+                      && env->problem->getVariable(4)->lowerBound == 0.0
+                      && env->problem->getVariable(4)->upperBound == 1.0,
+                  "the bounds of the integer variables were changed")
             && passed;
 
         if(!solver->hasPrimalSolution())
@@ -1511,8 +1515,8 @@ bool EqualityConstraintTestNLPSources(ES_PrimalNLPSolver nlpSolver)
                   << ", z = " << solution.point[2] << ", i = " << solution.point[3] << ", b = " << solution.point[4]
                   << "\n";
 
-        passed = expect(solver->getCurrentDualBound() <= solution.objValue + 1e-6,
-                     "the dual bound is above the solution")
+        passed
+            = expect(solver->getCurrentDualBound() <= solution.objValue + 1e-6, "the dual bound is above the solution")
             && passed;
     }
 
@@ -1523,8 +1527,8 @@ bool EqualityConstraintTestSquareNLP(ES_PrimalNLPSolver nlpSolver)
 {
     // The instance ex9_1_8 from MINLPLib, with the optimal objective value -3.25. It has complementarity constraints
     // x_i * x_j = 0, and with these as equality constraints, i.e. with the original problem as the source of the NLP
-    // problem, the NLP problem solved for it gets as many equality constraints as free variables. Ipopt solves such a problem as a system of equations, and returns that a feasible
-    // point was found instead of an optimal one.
+    // problem, the NLP problem solved for it gets as many equality constraints as free variables. Ipopt solves such a
+    // problem as a system of equations, and returns that a feasible point was found instead of an optimal one.
 
     bool passed = true;
 
@@ -1546,7 +1550,8 @@ bool EqualityConstraintTestSquareNLP(ES_PrimalNLPSolver nlpSolver)
         problem->add(x[i]);
     }
 
-    auto linearTerms = [&](std::vector<std::pair<double, int>> terms) {
+    auto linearTerms = [&](std::vector<std::pair<double, int>> terms)
+    {
         LinearTerms result;
 
         for(auto& [coefficient, index] : terms)
@@ -1570,18 +1575,17 @@ bool EqualityConstraintTestSquareNLP(ES_PrimalNLPSolver nlpSolver)
     // The complementarity constraints e7, ..., e11
     int constraintNumber = 7;
 
-    for(auto& [first, second] : std::vector<std::pair<int, int>> { { 11, 6 }, { 12, 7 }, { 13, 8 }, { 14, 9 },
-            { 15, 10 } })
+    for(auto& [first, second] :
+        std::vector<std::pair<int, int>> { { 11, 6 }, { 12, 7 }, { 13, 8 }, { 14, 9 }, { 15, 10 } })
     {
         QuadraticTerms terms;
         terms.add(std::make_shared<QuadraticTerm>(1.0, x[first], x[second]));
-        problem->add(
-            std::make_shared<QuadraticConstraint>("e" + std::to_string(constraintNumber++), terms, 0.0, 0.0));
+        problem->add(std::make_shared<QuadraticConstraint>("e" + std::to_string(constraintNumber++), terms, 0.0, 0.0));
     }
 
     problem->add(std::make_shared<LinearConstraint>("e12", linearTerms({ { 1.0, 11 }, { -1.0, 13 } }), 4.0, 4.0));
-    problem->add(std::make_shared<LinearConstraint>(
-        "e13", linearTerms({ { 1.0, 11 }, { 1.0, 12 }, { -1.0, 14 } }), -1.0, -1.0));
+    problem->add(
+        std::make_shared<LinearConstraint>("e13", linearTerms({ { 1.0, 11 }, { 1.0, 12 }, { -1.0, 14 } }), -1.0, -1.0));
 
     problem->finalize();
 

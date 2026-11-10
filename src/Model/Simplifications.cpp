@@ -30,9 +30,8 @@ void checkAndConvertObjectivesAndConstraints(
             auto nonlinearExpression = simplify(nonlinearObjective->nonlinearExpression);
 
             auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
-                tmpConstant]
-                = extractTermsAndConstant(
-                    nonlinearExpression, extractMonomials, extractSignomials, extractQuadratics, true, true);
+                tmpConstant] = extractTermsAndConstant(nonlinearExpression, extractMonomials, extractSignomials,
+                extractQuadratics, true, true);
 
             // The extracted terms are merged with the terms the objective function already has before its type is
             // decided, since they may cancel each other
@@ -130,9 +129,8 @@ void checkAndConvertObjectivesAndConstraints(
         auto nonlinearExpression = simplify(nonlinearConstraint->nonlinearExpression);
 
         auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
-            tmpConstant]
-            = extractTermsAndConstant(
-                nonlinearExpression, extractMonomials, extractSignomials, extractQuadratics, true, true);
+            tmpConstant] = extractTermsAndConstant(nonlinearExpression, extractMonomials, extractSignomials,
+            extractQuadratics, true, true);
 
         bool isQuadratic = (tmpQuadraticTerms.size() > 0 || nonlinearConstraint->quadraticTerms.size() > 0);
 
@@ -398,7 +396,8 @@ void simplifyNonlinearExpressions(
                         auto firstVariable = std::dynamic_pointer_cast<ExpressionVariable>(child0)->variable;
                         auto secondVariable = std::dynamic_pointer_cast<ExpressionVariable>(child1)->variable;
 
-                        extractedQuadraticTerms.push_back(std::make_shared<QuadraticTerm>(1.0, firstVariable, secondVariable));
+                        extractedQuadraticTerms.push_back(
+                            std::make_shared<QuadraticTerm>(1.0, firstVariable, secondVariable));
                         T = std::make_shared<ExpressionConstant>(0.0); // Will be removed during simplification later on
                     }
                 }

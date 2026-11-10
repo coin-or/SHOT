@@ -94,7 +94,7 @@ public:
     };
 
     explicit AuxiliaryVariables(std::vector<AuxiliaryVariablePtr> variables)
-        : std::vector<AuxiliaryVariablePtr>(std::move(variables)) {};
+        : std::vector<AuxiliaryVariablePtr>(std::move(variables)) { };
 
     inline void takeOwnership(ProblemPtr owner)
     {
@@ -108,9 +108,8 @@ public:
 
     inline void sortByIndex()
     {
-        std::sort(this->begin(), this->end(), [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
-            return (variableOne->getIndex() < variableTwo->getIndex());
-        });
+        std::sort(this->begin(), this->end(), [](const VariablePtr& variableOne, const VariablePtr& variableTwo)
+            { return (variableOne->getIndex() < variableTwo->getIndex()); });
     }
 };
 

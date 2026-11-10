@@ -44,8 +44,18 @@ def _build_problem(problem):
     z = problem.addVariable("z", SHOTpy.VariableType.Real, 0.1, 5.0)
 
     def function():
-        return (2 * x - y + x * y + 3 * y * z + 2 * x * y * z - x * z * z + 1.5 * z**0.5 * y
-                + SHOTpy.exp(x) * y + SHOTpy.log(z) + SHOTpy.sin(x * z))
+        return (
+            2 * x
+            - y
+            + x * y
+            + 3 * y * z
+            + 2 * x * y * z
+            - x * z * z
+            + 1.5 * z**0.5 * y
+            + SHOTpy.exp(x) * y
+            + SHOTpy.log(z)
+            + SHOTpy.sin(x * z)
+        )
 
     problem.addConstraint(function() <= 10, "nl")
     problem.addConstraint(x + 2 * y <= 10, "lin")
@@ -125,8 +135,11 @@ class TestEnclosure:
             derivatives = function.calculateIntervalDerivatives(box)
 
             for point in points:
-                value = (function.calculateFunctionValue(point) if hasattr(function, "calculateFunctionValue")
-                         else function.calculateValue(point))
+                value = (
+                    function.calculateFunctionValue(point)
+                    if hasattr(function, "calculateFunctionValue")
+                    else function.calculateValue(point)
+                )
                 _assert_contains(derivatives.value, value)
 
                 for index, g in function.calculateGradient(point).items():
@@ -185,7 +198,6 @@ class TestProducts:
                 assert tuple(derivatives.hessian[(i, j)]) == pytest.approx((product_except(i, j),) * 2)
 
         assert all(i != j for i, j in derivatives.hessian)
-
 
     def test_shared_subexpressions(self, problem):
         """e = xy is used twice in (e e) z and three times in e + e + sin(e), while Python also holds e."""

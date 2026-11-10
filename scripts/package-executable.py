@@ -48,7 +48,7 @@ def package(wheel, platform, output, msvc_runtime=None):
                     continue
                 # Keep wheel license files, including licenses added by repair tools.
                 license_file = any(part.endswith(".dist-info") for part in path.parts) and "licenses" in path.parts
-                library = (".so" in path.name or path.suffix.lower() in (".dll", ".dylib"))
+                library = ".so" in path.name or path.suffix.lower() in (".dll", ".dylib")
                 if path.name.lower().startswith("shotpy."):
                     library = False  # The Python extension is not needed by the CLI.
                 if license_file:

@@ -57,8 +57,8 @@ NLPSolverIpoptRelaxed::NLPSolverIpoptRelaxed(EnvironmentPtr envPtr, ProblemPtr s
 
 void NLPSolverIpoptRelaxed::setSolverSpecificInitialSettings()
 {
-    ipoptApplication->Options()->SetNumericValue("constr_viol_tol",
-        env->settings->getSetting<double>("Subsolver.Ipopt.ConstraintViolationTolerance") + 1e-12);
+    ipoptApplication->Options()->SetNumericValue(
+        "constr_viol_tol", env->settings->getSetting<double>("Subsolver.Ipopt.ConstraintViolationTolerance") + 1e-12);
 
     ipoptApplication->Options()->SetNumericValue(
         "tol", env->settings->getSetting<double>("Subsolver.Ipopt.RelativeConvergenceTolerance") + 1e-12);

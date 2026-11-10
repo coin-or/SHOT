@@ -8,6 +8,7 @@ Any other build is a development build <version>.dev<run number>; the .dev
 part is appended to the 'result' of the regex version provider in
 pyproject.toml.
 """
+
 import os
 from pathlib import Path
 import re
@@ -43,8 +44,13 @@ def main():
     else:
         dev = f".dev{os.environ['GITHUB_RUN_NUMBER']}"
         pyproject = root / "pyproject.toml"
-        text, count = re.subn(r'^result = "\{value\}\{suffix\}"$', f'result = "{{value}}{{suffix}}{dev}"',
-            pyproject.read_text(), count=1, flags=re.MULTILINE)
+        text, count = re.subn(
+            r'^result = "\{value\}\{suffix\}"$',
+            f'result = "{{value}}{{suffix}}{dev}"',
+            pyproject.read_text(),
+            count=1,
+            flags=re.MULTILINE,
+        )
         if count != 1:
             print('No result = "{value}{suffix}" in pyproject.toml', file=sys.stderr)
             return 1

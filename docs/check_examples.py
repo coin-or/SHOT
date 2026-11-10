@@ -4,6 +4,7 @@
 Use the SHOTpy module built from the same checkout, as for build.py.
 The tutorial notebook has its own execution test in test/python/test_tutorial.py.
 """
+
 import contextlib
 import io
 import json
@@ -15,8 +16,13 @@ import SHOTpy
 from build import GUIDES, ROOT
 
 
-PYTHON_GUIDES = ('site/getting-started.md', 'site/concepts.md', 'Configuration.md', 'Modeling.md',
-                 'MIPSolverCapabilities.md')
+PYTHON_GUIDES = (
+    'site/getting-started.md',
+    'site/concepts.md',
+    'Configuration.md',
+    'Modeling.md',
+    'MIPSolverCapabilities.md',
+)
 SETTING_NAME = re.compile(
     r'(?<![\w.])(?:Dual|Primal|Termination|Output|Strategy|Model|Subsolver)'
     r'(?:\.[A-Za-z][A-Za-z0-9]*)+'
@@ -42,8 +48,12 @@ def main():
             # Prose also names setting groups, e.g., Model.Reformulation.
             if name not in registered and not any(key.startswith(name + '.') for key in registered):
                 # Internal paths mentioned in the file reference are omitted from public markup.
-                for getter in (solver.getBoolSetting, solver.getIntSetting,
-                               solver.getDoubleSetting, solver.getStringSetting):
+                for getter in (
+                    solver.getBoolSetting,
+                    solver.getIntSetting,
+                    solver.getDoubleSetting,
+                    solver.getStringSetting,
+                ):
                     try:
                         getter(name)
                         break
@@ -59,7 +69,7 @@ def main():
         path = ROOT / 'docs' / guide
         content = path.read_text()
         for match in re.finditer(r'^```python\n(.*?)^```', content, re.MULTILINE | re.DOTALL):
-            line = content[:match.start()].count('\n') + 2
+            line = content[: match.start()].count('\n') + 2
             source = '\n' * (line - 1) + match[1]
             output = io.StringIO()
             try:

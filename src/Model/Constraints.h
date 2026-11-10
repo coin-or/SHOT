@@ -237,7 +237,6 @@ public:
 
     SparseVariableVector calculateGradient(const VectorDouble& point, bool eraseZeroes) override;
 
-
     // Returns the upper triagonal part of the Hessian matrix is sparse representation
     SparseVariableMatrix calculateHessian(const VectorDouble& point, bool eraseZeroes) override;
 
@@ -262,7 +261,7 @@ class QuadraticConstraint : public LinearConstraint
 public:
     QuadraticTerms quadraticTerms;
 
-    QuadraticConstraint() : LinearConstraint() {};
+    QuadraticConstraint() : LinearConstraint() { };
 
     QuadraticConstraint(std::string constraintName, double LHS, double RHS)
     {
@@ -281,8 +280,8 @@ public:
         properties.hasQuadraticTerms = quadraticTerms.size() > 0 ? true : false;
     };
 
-    QuadraticConstraint(std::string constraintName, LinearTerms linTerms, QuadraticTerms quadTerms, double LHS,
-        double RHS)
+    QuadraticConstraint(
+        std::string constraintName, LinearTerms linTerms, QuadraticTerms quadTerms, double LHS, double RHS)
     {
         name = constraintName;
         linearTerms = linTerms;
@@ -388,8 +387,8 @@ public:
         properties.hasNonlinearExpression = true;
     };
 
-    NonlinearConstraint(std::string constraintName, QuadraticTerms quadTerms, NonlinearExpressionPtr expression,
-        double LHS, double RHS)
+    NonlinearConstraint(
+        std::string constraintName, QuadraticTerms quadTerms, NonlinearExpressionPtr expression, double LHS, double RHS)
     {
         name = constraintName;
         quadraticTerms = quadTerms;
@@ -401,8 +400,8 @@ public:
         properties.hasNonlinearExpression = true;
     };
 
-    NonlinearConstraint(std::string constraintName, LinearTerms linTerms, NonlinearExpressionPtr expression,
-        double LHS, double RHS)
+    NonlinearConstraint(
+        std::string constraintName, LinearTerms linTerms, NonlinearExpressionPtr expression, double LHS, double RHS)
     {
         name = constraintName;
         linearTerms = linTerms;

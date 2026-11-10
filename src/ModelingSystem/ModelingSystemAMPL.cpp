@@ -102,8 +102,7 @@ public:
             // but the expression can make it nonlinear. The other kinds of terms are still checked for, so that
             // none of them would be dropped were that to change.
             if(nonlinearConstraint && nonlinearConstraint->nonlinearExpression
-                && nonlinearConstraint->quadraticTerms.size() == 0
-                && nonlinearConstraint->monomialTerms.size() == 0
+                && nonlinearConstraint->quadraticTerms.size() == 0 && nonlinearConstraint->monomialTerms.size() == 0
                 && nonlinearConstraint->signomialTerms.size() == 0)
             {
                 // Simplifying the expression to see whether it is constant is not an option here, since that
@@ -462,8 +461,7 @@ public:
     {
         if(nonlinearExpression)
         {
-            std::dynamic_pointer_cast<NonlinearConstraint>(readConstraints[constraintIndex])
-                ->add(nonlinearExpression);
+            std::dynamic_pointer_cast<NonlinearConstraint>(readConstraints[constraintIndex])->add(nonlinearExpression);
         }
 
         reset();

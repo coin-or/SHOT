@@ -87,8 +87,7 @@ VectorDouble TaskSelectHyperplanesESH::selectHyperplanePoint(
 
     // The solution point can be the one the constraint is not finite in, e.g. when the root search could not be
     // performed and the solution point was used as the external point as well
-    if(auto value = nonlinearConstraint->calculateNumericValue(solutionPoint);
-        !std::isfinite(value.normalizedValue))
+    if(auto value = nonlinearConstraint->calculateNumericValue(solutionPoint); !std::isfinite(value.normalizedValue))
     {
         if(auto point = env->dualSolver->getHyperplaneGenerationPoint(solutionPoint, constraint))
             return (*point);
@@ -701,8 +700,8 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
                     {
                         // The check is made for the point the hyperplane is generated in, which is not always the
                         // point from the root search
-                        auto hyperplanePoint = selectHyperplanePoint(externalPoint,
-                            solPoints.at(solutionPtIndex).point, externalConstraintValue.constraint);
+                        auto hyperplanePoint = selectHyperplanePoint(
+                            externalPoint, solPoints.at(solutionPtIndex).point, externalConstraintValue.constraint);
 
                         if(env->dualSolver->hasHyperplaneBeenAdded(
                                hyperplanePoint, externalConstraintValue.constraint->getIndex()))

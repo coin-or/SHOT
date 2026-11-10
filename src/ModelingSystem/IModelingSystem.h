@@ -31,7 +31,7 @@ enum class E_ProblemCreationStatus
 class IModelingSystem
 {
 public:
-    IModelingSystem(EnvironmentPtr envPtr) : env(envPtr) {};
+    IModelingSystem(EnvironmentPtr envPtr) : env(envPtr) { };
     virtual ~IModelingSystem() = default;
 
     // Adds modeling system specific private settings; public settings are defined in SolverSettings.cpp
@@ -45,7 +45,7 @@ public:
 
     // The starting point given in the model, e.g., the levels of the variables in GAMS, or an empty vector if there
     // is none. Solver::setProblem() passes it to Solver::setStartingPoint()
-    virtual VectorDouble getStartingPoint() { return {}; }
+    virtual VectorDouble getStartingPoint() { return { }; }
 
 protected:
     EnvironmentPtr env;

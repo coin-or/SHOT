@@ -118,9 +118,8 @@ std::shared_ptr<Variables> NumericConstraint::getGradientSparsityPattern()
 
     // Sorts the variables
     std::sort(gradientSparsityPattern->begin(), gradientSparsityPattern->end(),
-        [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
-            return (variableOne->getIndex() < variableTwo->getIndex());
-        });
+        [](const VariablePtr& variableOne, const VariablePtr& variableTwo)
+        { return (variableOne->getIndex() < variableTwo->getIndex()); });
 
     // Remove duplicates
     auto last = std::unique(gradientSparsityPattern->begin(), gradientSparsityPattern->end());
@@ -143,8 +142,8 @@ std::shared_ptr<std::vector<std::pair<VariablePtr, VariablePtr>>> NumericConstra
 
     // Sorts the elements
     std::sort(hessianSparsityPattern->begin(), hessianSparsityPattern->end(),
-        [](const std::pair<VariablePtr, VariablePtr>& elementOne,
-            const std::pair<VariablePtr, VariablePtr>& elementTwo) {
+        [](const std::pair<VariablePtr, VariablePtr>& elementOne, const std::pair<VariablePtr, VariablePtr>& elementTwo)
+        {
             if(elementOne.first->getIndex() != elementTwo.first->getIndex())
                 return (elementOne.first->getIndex() < elementTwo.first->getIndex());
 
@@ -405,10 +404,7 @@ SparseVariableMatrix QuadraticConstraint::calculateHessian(
 }
 
 // The Hessian of a quadratic constraint is constant, and is cached by the terms
-const SparseVariableMatrix* QuadraticConstraint::getConstantHessian()
-{
-    return (&quadraticTerms.getHessian());
-}
+const SparseVariableMatrix* QuadraticConstraint::getConstantHessian() { return (&quadraticTerms.getHessian()); }
 
 void QuadraticConstraint::initializeHessianSparsityPattern()
 {
@@ -865,8 +861,8 @@ SparseVariableMatrix NonlinearConstraint::calculateHessian(const VectorDouble& p
                 auto values = sharedOwnerProblem->ADFunctions.Hessian(pointNonlinearSubset, weights);
 
                 for(size_t k = 0; k < pattern.nnz(); ++k)
-                    addHessianElement(pattern.row()[k], pattern.col()[k],
-                        values[pattern.row()[k] * dimension + pattern.col()[k]]);
+                    addHessianElement(
+                        pattern.row()[k], pattern.col()[k], values[pattern.row()[k] * dimension + pattern.col()[k]]);
             }
             else
             {
@@ -977,8 +973,8 @@ void NonlinearConstraint::initializeHessianSparsityPattern()
             else
             {
                 // For larger expressions, avoid storing the square of the number of variables as possible entries.
-                auto nonlinearVariablesInExpressionMap = std::vector<bool>(
-                    sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions, true);
+                auto nonlinearVariablesInExpressionMap
+                    = std::vector<bool>(sharedOwnerProblem->properties.numberOfVariablesInNonlinearExpressions, true);
                 auto nonlinearFunctionMap
                     = std::vector<bool>(sharedOwnerProblem->properties.numberOfNonlinearExpressions, false);
                 nonlinearFunctionMap[this->nonlinearExpressionIndex] = true;
@@ -1139,9 +1135,8 @@ void NonlinearConstraint::updateProperties()
             = Utilities::combineMonotonicity(properties.monotonicity, nonlinearExpression->getMonotonicity());
 
     std::sort(variablesInNonlinearExpression.begin(), variablesInNonlinearExpression.end(),
-        [](const VariablePtr& variableOne, const VariablePtr& variableTwo) {
-            return (variableOne->getIndex() < variableTwo->getIndex());
-        });
+        [](const VariablePtr& variableOne, const VariablePtr& variableTwo)
+        { return (variableOne->getIndex() < variableTwo->getIndex()); });
 }
 
 std::ostream& operator<<(std::ostream& stream, NumericConstraintPtr constraint)

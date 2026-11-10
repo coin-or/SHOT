@@ -67,9 +67,8 @@ void TaskSolveIteration::run()
     // in the reformulated problem's sense, while DualSolver/Results interpret DualSolution values in the
     // original problem's sense, so they need to be translated here.
     double objectiveSignFactor
-        = (env->reformulatedProblem->objectiveFunction->direction == env->problem->objectiveFunction->direction)
-        ? 1.0
-        : -1.0;
+        = (env->reformulatedProblem->objectiveFunction->direction == env->problem->objectiveFunction->direction) ? 1.0
+                                                                                                                 : -1.0;
 
     env->dualSolver->relaxCutsViolatedByPrimalSolutions();
 
@@ -391,8 +390,7 @@ void TaskSolveIteration::run()
                     ? E_DualSolutionSource::MIPSolutionOptimal
                     : E_DualSolutionSource::MIPSolverBound;
 
-                DualSolution sol
-                    = { sols.at(0).point, source, currentDualBound, currIter->iterationNumber, false };
+                DualSolution sol = { sols.at(0).point, source, currentDualBound, currIter->iterationNumber, false };
                 env->dualSolver->addDualSolutionCandidate(sol);
             }
             else

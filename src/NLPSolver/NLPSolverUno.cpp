@@ -278,8 +278,7 @@ void NLPSolverUno::createModel()
         assert(E.first->getIndex() <= E.second->getIndex());
 
         lagrangianHessianCounterPlacement.emplace(
-            std::make_pair(E.first->getIndex(), E.second->getIndex()),
-            static_cast<int>(hessianRows.size()));
+            std::make_pair(E.first->getIndex(), E.second->getIndex()), static_cast<int>(hessianRows.size()));
 
         hessianRows.push_back(E.first->getIndex());
         hessianColumns.push_back(E.second->getIndex());
@@ -329,8 +328,7 @@ void NLPSolverUno::createModel()
         }
 
         std::sort(expressionHessianEntries.begin(), expressionHessianEntries.end());
-        expressionHessianEntries.erase(
-            std::unique(expressionHessianEntries.begin(), expressionHessianEntries.end()),
+        expressionHessianEntries.erase(std::unique(expressionHessianEntries.begin(), expressionHessianEntries.end()),
             expressionHessianEntries.end());
 
         nonlinearConstraintHessianPattern.resize(dimension, dimension, expressionHessianEntries.size());
@@ -624,7 +622,8 @@ bool NLPSolverUno::evaluateLagrangianHessian(int numberOfVariables, [[maybe_unus
 
         for(auto& E : (constantHessian ? *constantHessian : calculatedHessian))
         {
-            int location = lagrangianHessianCounterPlacement[std::make_pair(E.first.first->getIndex(), E.first.second->getIndex())];
+            int location = lagrangianHessianCounterPlacement[std::make_pair(
+                E.first.first->getIndex(), E.first.second->getIndex())];
 
             assert(location < numberOfNonzeros);
             assert(location >= 0);
@@ -656,7 +655,8 @@ bool NLPSolverUno::evaluateLagrangianHessian(int numberOfVariables, [[maybe_unus
 
         for(auto& E : (constantHessian ? *constantHessian : calculatedHessian))
         {
-            int location = lagrangianHessianCounterPlacement[std::make_pair(E.first.first->getIndex(), E.first.second->getIndex())];
+            int location = lagrangianHessianCounterPlacement[std::make_pair(
+                E.first.first->getIndex(), E.first.second->getIndex())];
 
             assert(location < numberOfNonzeros);
             assert(location >= 0);

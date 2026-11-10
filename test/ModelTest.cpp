@@ -12571,8 +12571,8 @@ bool ModelTestBilinearInverseReformulation()
         auto env = solver->getEnvironment();
         solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
         solver->updateSetting("Model.Reformulation.Bilinear.InverseFormulation", static_cast<int>(strategy));
-        solver->updateSetting("Model.Reformulation.Quadratics.Strategy",
-            static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
+        solver->updateSetting(
+            "Model.Reformulation.Quadratics.Strategy", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
 
         if(!solver->setProblem(buildProblem(env, false)))
         {
@@ -12640,8 +12640,8 @@ bool ModelTestBilinearInverseReformulation()
         auto solveEnv = solveSolver->getEnvironment();
         solveSolver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Error));
         solveSolver->updateSetting("Model.Reformulation.Bilinear.InverseFormulation", static_cast<int>(strategy));
-        solveSolver->updateSetting("Model.Reformulation.Quadratics.Strategy",
-            static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
+        solveSolver->updateSetting(
+            "Model.Reformulation.Quadratics.Strategy", static_cast<int>(ES_QuadraticProblemStrategy::Nonlinear));
 
         if(!solveSolver->setProblem(buildProblem(solveEnv, true)) || !solveSolver->solveProblem())
         {

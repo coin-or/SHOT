@@ -16,7 +16,7 @@
 namespace SHOT
 {
 
-TaskClearFixedPrimalCandidates::TaskClearFixedPrimalCandidates(EnvironmentPtr envPtr) : TaskBase(envPtr) {}
+TaskClearFixedPrimalCandidates::TaskClearFixedPrimalCandidates(EnvironmentPtr envPtr) : TaskBase(envPtr) { }
 
 TaskClearFixedPrimalCandidates::~TaskClearFixedPrimalCandidates() = default;
 

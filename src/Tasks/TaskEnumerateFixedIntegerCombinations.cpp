@@ -291,7 +291,9 @@ void TaskEnumerateFixedIntegerCombinations::enumerateCombinations()
                 // The auxiliary discrete variables are fixed in the NLP problem of the reformulated problem
                 if(T->usesReformulatedProblem()
                     && std::any_of(env->reformulatedProblem->allVariables.begin(),
-                        env->reformulatedProblem->allVariables.end(), [&candidate](auto& V) {
+                        env->reformulatedProblem->allVariables.end(),
+                        [&candidate](auto& V)
+                        {
                             return ((V->properties.type == E_VariableType::Binary
                                         || V->properties.type == E_VariableType::Integer)
                                 && !std::isfinite(candidate.point[V->getIndex()]));
@@ -361,11 +363,13 @@ void TaskEnumerateFixedIntegerCombinations::enumerateCombinations()
         + statistics.numberOfFixedIntegerEnumerationCombinationsInfeasible
         + statistics.numberOfFixedIntegerEnumerationCombinationsUnresolved;
 
-    env->output->outputInfo(fmt::format("        Exhaustive fixed-integer search{}: {} of {} combinations solved in {:.2f} "
-                                        "s ({} feasible, {} infeasible, {} unresolved, {} skipped). {}",
-        isFallback ? " (fallback)" : "", numberSolved, numberOfCombinations, timeUsed, statistics.numberOfFixedIntegerEnumerationCombinationsFeasible,
-        statistics.numberOfFixedIntegerEnumerationCombinationsInfeasible,
-        statistics.numberOfFixedIntegerEnumerationCombinationsUnresolved,
-        statistics.numberOfFixedIntegerEnumerationCombinationsSkipped, endReason));
+    env->output->outputInfo(
+        fmt::format("        Exhaustive fixed-integer search{}: {} of {} combinations solved in {:.2f} "
+                    "s ({} feasible, {} infeasible, {} unresolved, {} skipped). {}",
+            isFallback ? " (fallback)" : "", numberSolved, numberOfCombinations, timeUsed,
+            statistics.numberOfFixedIntegerEnumerationCombinationsFeasible,
+            statistics.numberOfFixedIntegerEnumerationCombinationsInfeasible,
+            statistics.numberOfFixedIntegerEnumerationCombinationsUnresolved,
+            statistics.numberOfFixedIntegerEnumerationCombinationsSkipped, endReason));
 }
 } // namespace SHOT

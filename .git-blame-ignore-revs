@@ -1,0 +1,3 @@
+# Mechanical formatting revisions (one full, merged commit SHA per line).
+# After the baseline formatting PR is squash merged, add its final SHA here
+# in a separate follow-up change. A pre-merge SHA will not survive squash merging.

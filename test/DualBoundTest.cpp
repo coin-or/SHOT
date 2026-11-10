@@ -195,15 +195,14 @@ bool testUnsuccessfulSolveGivesNoBound(ES_MIPSolver mipSolver, ModelKind kind)
 
         if(status == E_ProblemSolutionStatus::Optimal || status == E_ProblemSolutionStatus::Feasible)
         {
-            std::cout << name(mipSolver) << ": expected an unsuccessful solve, got status "
-                      << static_cast<int>(status) << '\n';
+            std::cout << name(mipSolver) << ": expected an unsuccessful solve, got status " << static_cast<int>(status)
+                      << '\n';
             passed = false;
         }
         else if(bound != noBound)
         {
-            std::cout << name(mipSolver) << (minimize ? " (min)" : " (max)")
-                      << ": reported dual bound " << bound << " for a relaxation with status "
-                      << static_cast<int>(status) << ", expected no bound\n";
+            std::cout << name(mipSolver) << (minimize ? " (min)" : " (max)") << ": reported dual bound " << bound
+                      << " for a relaxation with status " << static_cast<int>(status) << ", expected no bound\n";
             passed = false;
         }
     }
@@ -406,12 +405,12 @@ bool testDualBoundWithLooseGapTolerance(ES_MIPSolver mipSolver)
     double tolerance = 1e-4 * std::max(1.0, std::abs(optimalValue));
 
     bool passed = env->problem->objectiveFunction->properties.isMinimize ? dualBound <= optimalValue + tolerance
-                                                                        : dualBound >= optimalValue - tolerance;
+                                                                         : dualBound >= optimalValue - tolerance;
 
     if(!passed)
     {
-        std::cout << name(mipSolver) << ": dual bound " << dualBound << " has passed the optimal value "
-                  << optimalValue << '\n';
+        std::cout << name(mipSolver) << ": dual bound " << dualBound << " has passed the optimal value " << optimalValue
+                  << '\n';
     }
 
     return passed;
@@ -449,13 +448,15 @@ bool testDualBoundCandidatePastPrimalBound(ES_MIPSolver mipSolver)
 
         env->results->addPrimalSolution(primalSolution);
 
-        auto addCandidate = [&](double objValue) {
-            DualSolution candidate = { VectorDouble {}, E_DualSolutionSource::MIPSolverBound, objValue, 0, false };
+        auto addCandidate = [&](double objValue)
+        {
+            DualSolution candidate = { VectorDouble { }, E_DualSolutionSource::MIPSolverBound, objValue, 0, false };
             env->dualSolver->addDualSolutionCandidate(candidate);
             env->dualSolver->checkDualSolutionCandidates();
         };
 
-        auto check = [&](const std::string& description, double expected) {
+        auto check = [&](const std::string& description, double expected)
+        {
             double dualBound = env->results->getCurrentDualBound();
 
             if(std::abs(dualBound - expected) > 1e-8)
@@ -515,7 +516,8 @@ bool testHyperplanesDifferingInSmallVariables(ES_MIPSolver mipSolver)
 
     bool passed = true;
 
-    auto check = [&](bool condition, const std::string& description) {
+    auto check = [&](bool condition, const std::string& description)
+    {
         if(!condition)
         {
             std::cout << name(mipSolver) << ": " << description << '\n';
@@ -538,8 +540,9 @@ bool testHyperplanesDifferingInSmallVariables(ES_MIPSolver mipSolver)
     int secondIndex = constraints[1]->getIndex();
 
     check(env->dualSolver->hasHyperplaneBeenAdded(point, firstIndex), "the same point was not detected");
-    check(!env->dualSolver->hasHyperplaneBeenAdded(point, secondIndex), "the point was detected for another "
-                                                                       "constraint");
+    check(!env->dualSolver->hasHyperplaneBeenAdded(point, secondIndex),
+        "the point was detected for another "
+        "constraint");
 
     // Changing the variable of large magnitude by an amount that is insignificant for it keeps the same point
     VectorDouble rounded = point;
@@ -590,7 +593,8 @@ bool testDualBoundPastPrimalBoundIsNotUsed(ES_MIPSolver mipSolver)
 
         env->results->addPrimalSolution(primalSolution);
 
-        auto check = [&](const std::string& description, double expected) {
+        auto check = [&](const std::string& description, double expected)
+        {
             double dualBound = env->results->getCurrentDualBound();
 
             if(std::abs(dualBound - expected) > 1e-8)
@@ -650,9 +654,8 @@ bool testGlobalDualBoundIsCappedByThePrimalBound(ES_MIPSolver mipSolver)
 
         if(std::abs(globalDualBound - primalValue) > 1e-8)
         {
-            std::cout << name(mipSolver) << (minimize ? " (min)" : " (max)")
-                      << ": the global dual bound is " << globalDualBound << " although the primal bound "
-                      << primalValue << " has passed it\n";
+            std::cout << name(mipSolver) << (minimize ? " (min)" : " (max)") << ": the global dual bound is "
+                      << globalDualBound << " although the primal bound " << primalValue << " has passed it\n";
             passed = false;
         }
 
@@ -690,7 +693,8 @@ bool testPrimalBoundPassingGlobalDualBoundIsReported(ES_MIPSolver mipSolver)
             env->results->createIteration();
             env->results->solutionIsGlobal = isGlobal;
 
-            auto check = [&](const std::string& description, bool expected) {
+            auto check = [&](const std::string& description, bool expected)
+            {
                 if(env->results->hasPrimalBoundPassedGlobalDualBound != expected)
                 {
                     std::cout << name(mipSolver) << (minimize ? " (min)" : " (max)")
@@ -731,7 +735,8 @@ bool testIntegerCutsDifferingInSmallVariables(ES_MIPSolver mipSolver)
 
     bool passed = true;
 
-    auto check = [&](bool condition, const std::string& description) {
+    auto check = [&](bool condition, const std::string& description)
+    {
         if(!condition)
         {
             std::cout << name(mipSolver) << ": " << description << '\n';
@@ -798,7 +803,8 @@ bool testFixedNLPCandidatesRoundDiscreteValues(ES_MIPSolver mipSolver)
 
     bool passed = true;
 
-    auto check = [&](bool condition, const std::string& description) {
+    auto check = [&](bool condition, const std::string& description)
+    {
         if(!condition)
         {
             std::cout << name(mipSolver) << ": " << description << '\n';

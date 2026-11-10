@@ -40,7 +40,7 @@ private:
     bool LPFinished;
 
     // The time of the LP step, which is compared with the time limit for it
-    Timer LPStepTimer{"LPStep"};
+    Timer LPStepTimer { "LPStep" };
 };
 
 } // namespace SHOT

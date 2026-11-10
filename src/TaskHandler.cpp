@@ -88,7 +88,7 @@ void TaskHandler::clearTasks()
 
 TaskPtr TaskHandler::getTask(std::string taskID)
 {
-    for(auto & it : taskIDMap)
+    for(auto& it : taskIDMap)
     {
         if(it.first == taskID)
         {

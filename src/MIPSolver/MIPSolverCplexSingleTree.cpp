@@ -58,8 +58,8 @@ CplexCallback::CplexCallback(EnvironmentPtr envPtr, const IloNumVarArray& vars, 
 
     taskCalculateSolutionChangeNorm = std::make_shared<TaskCalculateSolutionChangeNorm>(env);
 
-    auto NLPProblemSource = static_cast<ES_PrimalNLPProblemSource>(
-        env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"));
+    auto NLPProblemSource
+        = static_cast<ES_PrimalNLPProblemSource>(env->settings->getSetting<int>("Primal.FixedInteger.SourceProblem"));
 
     // The tasks create the NLP problem, which is not needed when the fixed-integer NLP strategy is not used
     bool useFixedNLP = env->settings->getSetting<bool>("Primal.FixedInteger.Use");
@@ -1128,8 +1128,7 @@ void CplexCallback::addExternalDualBoundLazyConstraint(const IloCplex::Callback:
     }
     catch(IloException& e)
     {
-        env->output->outputError(
-            "        Cplex error when adding external dual bound lazy constraint", e.getMessage());
+        env->output->outputError("        Cplex error when adding external dual bound lazy constraint", e.getMessage());
     }
 }
 

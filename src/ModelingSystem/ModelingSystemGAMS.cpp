@@ -91,10 +91,12 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
     if(GAMScheckIpoptLicense(auditLicensing, false))
     {
         GamsHSLInit();
-        env->settings->updateSetting("Subsolver.Ipopt.LinearSolver", static_cast<int>(ES_IpoptSolver::ma27), E_SettingPriority::Default);
+        env->settings->updateSetting(
+            "Subsolver.Ipopt.LinearSolver", static_cast<int>(ES_IpoptSolver::ma27), E_SettingPriority::Default);
     }
     else
-        env->settings->updateSetting("Subsolver.Ipopt.LinearSolver", static_cast<int>(ES_IpoptSolver::mumps), E_SettingPriority::Default);
+        env->settings->updateSetting(
+            "Subsolver.Ipopt.LinearSolver", static_cast<int>(ES_IpoptSolver::mumps), E_SettingPriority::Default);
 #endif
 
     // Process GAMS options.
@@ -102,14 +104,16 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
     if(!createdgmo)
     {
         // Sets time limit
-        env->settings->updateSetting("Termination.TimeLimit", gevGetDblOpt(modelingEnvironment, gevResLim), E_SettingPriority::OptionsFile);
-        env->output->outputDebug(fmt::format(
-            " Time limit set to {} by GAMS", env->settings->getSetting<double>("Termination.TimeLimit")));
+        env->settings->updateSetting(
+            "Termination.TimeLimit", gevGetDblOpt(modelingEnvironment, gevResLim), E_SettingPriority::OptionsFile);
+        env->output->outputDebug(
+            fmt::format(" Time limit set to {} by GAMS", env->settings->getSetting<double>("Termination.TimeLimit")));
 
         // Sets iteration limit, if different than SHOT default
         if(gevGetIntOpt(modelingEnvironment, gevIterLim) < INT_MAX)
         {
-            env->settings->updateSetting("Termination.IterationLimit", gevGetIntOpt(modelingEnvironment, gevIterLim), E_SettingPriority::OptionsFile);
+            env->settings->updateSetting("Termination.IterationLimit", gevGetIntOpt(modelingEnvironment, gevIterLim),
+                E_SettingPriority::OptionsFile);
             env->output->outputDebug(fmt::format(
                 " Iteration limit set to {} by GAMS", env->settings->getSetting<int>("Termination.IterationLimit")));
         }
@@ -119,12 +123,14 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         }
 
         // Sets absolute objective gap tolerance
-        env->settings->updateSetting("Termination.ObjectiveGap.Absolute", gevGetDblOpt(modelingEnvironment, gevOptCA), E_SettingPriority::OptionsFile);
+        env->settings->updateSetting("Termination.ObjectiveGap.Absolute", gevGetDblOpt(modelingEnvironment, gevOptCA),
+            E_SettingPriority::OptionsFile);
         env->output->outputDebug(fmt::format(" Absolute termination tolerance set to {} by GAMS",
             env->settings->getSetting<double>("Termination.ObjectiveGap.Absolute")));
 
         // Sets relative objective gap tolerance
-        env->settings->updateSetting("Termination.ObjectiveGap.Relative", gevGetDblOpt(modelingEnvironment, gevOptCR), E_SettingPriority::OptionsFile);
+        env->settings->updateSetting("Termination.ObjectiveGap.Relative", gevGetDblOpt(modelingEnvironment, gevOptCR),
+            E_SettingPriority::OptionsFile);
         env->output->outputDebug(fmt::format(" Relative termination tolerance set to {} by GAMS",
             env->settings->getSetting<double>("Termination.ObjectiveGap.Relative")));
 
@@ -132,7 +138,8 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         if(gevGetIntOpt(modelingEnvironment, gevUseCutOff) == 1)
         {
             env->settings->updateSetting("Dual.MIP.CutOff.UseInitialValue", true);
-            env->settings->updateSetting("Dual.MIP.CutOff.InitialValue", gevGetDblOpt(modelingEnvironment, gevCutOff), E_SettingPriority::OptionsFile);
+            env->settings->updateSetting("Dual.MIP.CutOff.InitialValue", gevGetDblOpt(modelingEnvironment, gevCutOff),
+                E_SettingPriority::OptionsFile);
         }
 
         // Sets node limit for dual solver
@@ -146,21 +153,23 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         // gevThreadsRaw >= 0 from GAMS have the same meaning in SHOT
         // for gevThreadsRaw < 0, use gevThreads() to translate to number of processors to use
         int nthreads = gevGetIntOpt(modelingEnvironment, gevThreadsRaw);
-        if( nthreads < 0 )
-           nthreads = gevThreads(modelingEnvironment);
+        if(nthreads < 0)
+            nthreads = gevThreads(modelingEnvironment);
         env->settings->updateSetting("Dual.MIP.NumberOfThreads", nthreads, E_SettingPriority::OptionsFile);
         env->output->outputDebug(fmt::format(
             " MIP number of threads set to {} by GAMS", env->settings->getSetting<int>("Dual.MIP.NumberOfThreads")));
 
         // Uses NLP solver in GAMS by default, Ipopt can be used directly if value set by user in options file (read
         // below)
-        env->settings->updateSetting("Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::GAMS), E_SettingPriority::Default);
+        env->settings->updateSetting(
+            "Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::GAMS), E_SettingPriority::Default);
 
 #ifdef GAMS_BUILD
         // Change default MIP solver to CPLEX, which may then be changed to CBC below if no license is available
         // The original default of Gurobi would lead to SHOT stopping with a license error if no Gurobi license is
         // available
-        env->settings->updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex), E_SettingPriority::Default);
+        env->settings->updateSetting(
+            "Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex), E_SettingPriority::Default);
 #endif
     }
 
@@ -199,7 +208,8 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         {
             env->output->outputInfo(
                 " CPLEX chosen as MIP solver, but no GAMS/CPLEX license available. Changing to CBC.");
-            env->settings->updateSetting("Dual.MIP.Solver", (int)ES_MIPSolver::Cbc, E_SettingPriority::SolverCompatibility);
+            env->settings->updateSetting(
+                "Dual.MIP.Solver", (int)ES_MIPSolver::Cbc, E_SettingPriority::SolverCompatibility);
         }
     }
 #endif
@@ -278,8 +288,10 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
     gmoQExtractAlgSet(modelingObject, qextractalg);
 #endif
 #if GMOAPIVERSION >= 28
-    gmoQExtractDenseSwitchFactorSet(modelingObject, env->settings->getSetting<double>("ModelingSystem.GAMS.QExtractDenseSwitchFactor"));
-    gmoQExtractDenseSwitchLogSet(modelingObject, (int)env->settings->getSetting<bool>("ModelingSystem.GAMS.QExtractDenseSwitchLog"));
+    gmoQExtractDenseSwitchFactorSet(
+        modelingObject, env->settings->getSetting<double>("ModelingSystem.GAMS.QExtractDenseSwitchFactor"));
+    gmoQExtractDenseSwitchLogSet(
+        modelingObject, (int)env->settings->getSetting<bool>("ModelingSystem.GAMS.QExtractDenseSwitchLog"));
 #endif
     gmoUseQSet(modelingObject, 1);
 #if GMOAPIVERSION >= 25
@@ -289,8 +301,10 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
     INT64 qwin_dblfwd;
     gmoGetQMakerStats(modelingObject, buffer, &qtime, &qwin_3pass, &qwin_dblfwd);
     snprintf(msg, sizeof(msg), " Extraction of quadratics (%s algorithm): %.2fs", buffer, qtime);
-    if( qextractalg == 3 )
-       snprintf(msg + strlen(msg), sizeof(msg) - strlen(msg), " (ThreePass fastest on %ld equations, DoubleForward fastest on %ld equations)", (long)qwin_3pass, (long)qwin_dblfwd);
+    if(qextractalg == 3)
+        snprintf(msg + strlen(msg), sizeof(msg) - strlen(msg),
+            " (ThreePass fastest on %ld equations, DoubleForward fastest on %ld equations)", (long)qwin_3pass,
+            (long)qwin_dblfwd);
     env->output->outputDebug(msg);
 #endif
 
@@ -312,11 +326,12 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
 #endif
 
 #if GEVAPIVERSION >= 10
-   if( gevGetIntOpt(modelingEnvironment, gevRequestMarginals) == 2 )
-   {
-      gevLogStat(modelingEnvironment, "Capability error: SHOT does not provide dual solutions, but requestMarginals has been set to 2.");
-      return (E_ProblemCreationStatus::CapabilityProblem);
-   }
+    if(gevGetIntOpt(modelingEnvironment, gevRequestMarginals) == 2)
+    {
+        gevLogStat(modelingEnvironment,
+            "Capability error: SHOT does not provide dual solutions, but requestMarginals has been set to 2.");
+        return (E_ProblemCreationStatus::CapabilityProblem);
+    }
 #endif
 
     try
@@ -609,7 +624,7 @@ void ModelingSystemGAMS::createAuditLicensing()
 VectorDouble ModelingSystemGAMS::getStartingPoint()
 {
     if(modelingObject == nullptr)
-        return {};
+        return { };
 
     // The levels of the variables
     VectorDouble point(gmoN(modelingObject));
@@ -1003,8 +1018,8 @@ bool ModelingSystemGAMS::copyVariables(ProblemPtr destination)
             }
             else
             {
-                auto variable = std::make_shared<SHOT::Variable>(
-                    variableName, variableType, variableLBs[i], variableUBs[i]);
+                auto variable
+                    = std::make_shared<SHOT::Variable>(variableName, variableType, variableLBs[i], variableUBs[i]);
                 variable->properties.hasArtificialLowerBound = hasArtificialLowerBound;
                 variable->properties.hasArtificialUpperBound = hasArtificialUpperBound;
                 destination->add(std::move(variable));
@@ -1227,11 +1242,11 @@ bool ModelingSystemGAMS::rowHasNonfixedQuadraticTerms(ProblemPtr destination, in
     std::vector<double> quadraticCoefficients(numQuadraticTerms);
 
 #if GMOAPIVERSION <= 19
-    gmoGetRowQ(modelingObject, rowIndex, variableOneIndexes.data(), variableTwoIndexes.data(),
-        quadraticCoefficients.data());
+    gmoGetRowQ(
+        modelingObject, rowIndex, variableOneIndexes.data(), variableTwoIndexes.data(), quadraticCoefficients.data());
 #else
-    gmoGetRowQMat(modelingObject, rowIndex, variableOneIndexes.data(), variableTwoIndexes.data(),
-        quadraticCoefficients.data());
+    gmoGetRowQMat(
+        modelingObject, rowIndex, variableOneIndexes.data(), variableTwoIndexes.data(), quadraticCoefficients.data());
 #endif
 
     for(int j = 0; j < numQuadraticTerms; ++j)
@@ -1556,9 +1571,9 @@ bool ModelingSystemGAMS::copyNonlinearExpressions(ProblemPtr destination)
 
                 if(!constraint)
                 {
-                    env->output->outputError(fmt::format(
-                        " Constraint {} has nonlinear terms but is not a NonlinearConstraint (order: {})",
-                        i, gmoGetEquOrderOne(modelingObject, i)));
+                    env->output->outputError(
+                        fmt::format(" Constraint {} has nonlinear terms but is not a NonlinearConstraint (order: {})",
+                            i, gmoGetEquOrderOne(modelingObject, i)));
                     delete[] opcodes;
                     delete[] fields;
                     delete[] constants;
@@ -2428,7 +2443,8 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             {
                 debugout << "nr. " << address + 1 << " - unsupported. Error." << std::endl;
                 char buffer[256];
-                snprintf(buffer, sizeof(buffer), "Error: Unsupported GAMS function %s.\n", GamsFuncCodeName[address + 1]);
+                snprintf(
+                    buffer, sizeof(buffer), "Error: Unsupported GAMS function %s.\n", GamsFuncCodeName[address + 1]);
                 gevLogStatPChar(modelingEnvironment, buffer);
                 throw OperationNotImplementedException(
                     fmt::format("Error: Unsupported GAMS function {}", GamsFuncCodeName[address + 1]));

@@ -255,8 +255,7 @@ void QuadraticTerms::updateConvexity()
 
     // The eigenvectors are only needed by the eigenvalue decomposition of the reformulation, and computing them
     // takes a large part of the time for a dense matrix, so they are computed on demand in computeEigenvectors()
-    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigenSolver(
-        matrix, Eigen::DecompositionOptions::EigenvaluesOnly);
+    Eigen::SelfAdjointEigenSolver<Eigen::MatrixXd> eigenSolver(matrix, Eigen::DecompositionOptions::EigenvaluesOnly);
 
     if(eigenSolver.info() != Eigen::Success)
     {

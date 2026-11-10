@@ -85,9 +85,9 @@ private:
     // Per-priority history: for each setting key, a map of priority (int) → stored value.
     // All writes at any priority level are recorded here; the active *Settings maps hold the current winning value.
     std::map<PairString, std::map<int, std::string>> stringSettingHistory;
-    std::map<PairString, std::map<int, double>>      doubleSettingHistory;
-    std::map<PairString, std::map<int, int>>         integerSettingHistory;
-    std::map<PairString, std::map<int, bool>>        booleanSettingHistory;
+    std::map<PairString, std::map<int, double>> doubleSettingHistory;
+    std::map<PairString, std::map<int, int>> integerSettingHistory;
+    std::map<PairString, std::map<int, bool>> booleanSettingHistory;
 
     // The highest priority at which the active value was written (0 = default).
     std::map<PairString, int> settingActivePriority;
@@ -137,8 +137,7 @@ public:
 
     // Single-string form: updateSetting("Category.Name", value [, priority])
     template <typename T>
-    void updateSetting(std::string settingName, T value,
-        E_SettingPriority priority = E_SettingPriority::SolverInternal)
+    void updateSetting(std::string settingName, T value, E_SettingPriority priority = E_SettingPriority::SolverInternal)
     {
         auto [cat, name] = splitKey(settingName);
         updateSetting(name, cat, value, priority);
@@ -224,14 +223,14 @@ public:
 
     void createSetting(std::string settingName, std::string value, std::string description, bool isPrivate = false);
 
-    void createSetting(std::string settingName, int value, std::string description,
-        double minVal = 0, double maxVal = SHOT_INT_MAX, bool isPrivate = false);
+    void createSetting(std::string settingName, int value, std::string description, double minVal = 0,
+        double maxVal = SHOT_INT_MAX, bool isPrivate = false);
 
-    void createSetting(std::string settingName, double value, std::string description,
-        double minVal = SHOT_DBL_MIN, double maxVal = SHOT_DBL_MAX, bool isPrivate = false);
+    void createSetting(std::string settingName, double value, std::string description, double minVal = SHOT_DBL_MIN,
+        double maxVal = SHOT_DBL_MAX, bool isPrivate = false);
 
-    void createSetting(std::string settingName, int value, std::string description,
-        VectorString enumDesc, int startValue = 0, bool isPrivate = false);
+    void createSetting(std::string settingName, int value, std::string description, VectorString enumDesc,
+        int startValue = 0, bool isPrivate = false);
 
     void createSetting(std::string settingName, bool value, std::string description, bool isPrivate = false);
 
@@ -357,6 +356,5 @@ public:
 
     bool readSettingsFromOSoL(std::string osol);
     bool readSettingsFromString(std::string options);
-
 };
 } // namespace SHOT

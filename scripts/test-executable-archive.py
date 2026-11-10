@@ -22,20 +22,38 @@ def main():
         raise ValueError("Archive checksum mismatch")
     data = Path(__file__).resolve().parents[1] / "test/data"
     # Remove paths that might expose build dependencies or a Python installation.
-    env = {key: value for key, value in os.environ.items()
-           if key.upper() not in {"PATH", "LD_LIBRARY_PATH", "LD_PRELOAD", "DYLD_LIBRARY_PATH",
-                                  "DYLD_FALLBACK_LIBRARY_PATH", "PYTHONPATH", "PYTHONHOME"}}
+    env = {
+        key: value
+        for key, value in os.environ.items()
+        if key.upper()
+        not in {
+            "PATH",
+            "LD_LIBRARY_PATH",
+            "LD_PRELOAD",
+            "DYLD_LIBRARY_PATH",
+            "DYLD_FALLBACK_LIBRARY_PATH",
+            "PYTHONPATH",
+            "PYTHONHOME",
+        }
+    }
     env["PATH"] = str(Path(os.environ["SystemRoot"]) / "System32") if os.name == "nt" else "/usr/bin:/bin"
     with tempfile.TemporaryDirectory(prefix="shot release test ") as temporary:
         root = Path(temporary)
         shutil.unpack_archive(archive, root)
-        bundle, = root.iterdir()
+        (bundle,) = root.iterdir()
         executable = bundle / ("SHOT.exe" if os.name == "nt" else "SHOT")
 
         def run(arguments, expected_code=0):
-            result = subprocess.run([str(executable), *arguments], cwd=root, env=env,
-                                    capture_output=True, text=True, encoding="utf-8",
-                                    errors="replace", timeout=180)
+            result = subprocess.run(
+                [str(executable), *arguments],
+                cwd=root,
+                env=env,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=180,
+            )
             print(result.stdout)
             print(result.stderr)
             if result.returncode != expected_code:
@@ -47,8 +65,16 @@ def main():
         run([str(root / "missing.osil")], expected_code=2)
         for solver in ("highs", "cbc"):
             result_file = root / f"{solver}.osrl"
-            run([str(data / "alan.osil"), f"--mip={solver}", "--nlp=ipopt",
-                 "Termination.TimeLimit=60", "--osrl", str(result_file)])
+            run(
+                [
+                    str(data / "alan.osil"),
+                    f"--mip={solver}",
+                    "--nlp=ipopt",
+                    "Termination.TimeLimit=60",
+                    "--osrl",
+                    str(result_file),
+                ]
+            )
             result = ET.parse(result_file)
             objective = result.find(".//{*}objectives/{*}values/{*}obj")
             if objective is None or not math.isclose(float(objective.text), 2.925, abs_tol=1e-3):

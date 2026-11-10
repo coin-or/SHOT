@@ -496,7 +496,7 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSinh>
     if(child->getType() == E_NonlinearExpressionTypes::Constant)
     {
         expression->child = child;
-        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant = expression->calculate(VectorDouble {});
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant = expression->calculate(VectorDouble { });
 
         return (child);
     }
@@ -512,7 +512,7 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionCosh>
     if(child->getType() == E_NonlinearExpressionTypes::Constant)
     {
         expression->child = child;
-        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant = expression->calculate(VectorDouble {});
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant = expression->calculate(VectorDouble { });
 
         return (child);
     }
@@ -528,7 +528,7 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionTanh>
     if(child->getType() == E_NonlinearExpressionTypes::Constant)
     {
         expression->child = child;
-        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant = expression->calculate(VectorDouble {});
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant = expression->calculate(VectorDouble { });
 
         return (child);
     }
@@ -544,7 +544,7 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionError
     if(child->getType() == E_NonlinearExpressionTypes::Constant)
     {
         expression->child = child;
-        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant = expression->calculate(VectorDouble {});
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant = expression->calculate(VectorDouble { });
 
         return (child);
     }
@@ -560,7 +560,7 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionSignP
     if(child->getType() == E_NonlinearExpressionTypes::Constant)
     {
         expression->child = child;
-        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant = expression->calculate(VectorDouble {});
+        std::dynamic_pointer_cast<ExpressionConstant>(child)->constant = expression->calculate(VectorDouble { });
 
         return (child);
     }
@@ -1800,7 +1800,7 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
             quadraticTerms.add(optional.value());
         }
         else if(auto optional = convertSquareToUnivariateQuadraticExpression(square);
-                optional && extractQuadratics && extractLinears)
+            optional && extractQuadratics && extractLinears)
         {
             quadraticTerms.add(std::get<0>(optional.value()));
             linearTerms.add(std::get<1>(optional.value()));
@@ -1963,9 +1963,8 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
         for(auto& C : std::dynamic_pointer_cast<ExpressionSum>(expression)->children)
         {
             auto [tmpLinearTerms, tmpQuadraticTerms, tmpMonomialTerms, tmpSignomialTerms, tmpNonlinearExpression,
-                tmpConstant]
-                = extractTermsAndConstant(
-                    C, extractMonomials, extractSignomials, extractQuadratics, extractLinears, alreadySimplified);
+                tmpConstant] = extractTermsAndConstant(C, extractMonomials, extractSignomials, extractQuadratics,
+                extractLinears, alreadySimplified);
 
             // The terms are not merged here, since building the index of the terms added so far for every child
             // is quadratic in the number of terms. They are merged in the pass over all terms below.

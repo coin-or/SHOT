@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 import pytest
 
+
 def _has_shotpy(directory):
     """Whether the directory contains a built SHOTpy module."""
     return directory.is_dir() and (any(directory.glob("SHOTpy*.so")) or any(directory.glob("SHOTpy*.pyd")))
@@ -51,13 +52,12 @@ def _setup_path():
         if importlib.util.find_spec("SHOTpy") is not None:
             return None
 
-        raise ImportError(
-            "Could not find a SHOTpy module. Build SHOT with -DHAS_PYTHON=on, or install the package."
-        )
+        raise ImportError("Could not find a SHOTpy module. Build SHOT with -DHAS_PYTHON=on, or install the package.")
 
     build_dir = str(candidates[0].resolve())
     sys.path.insert(0, build_dir)
     return build_dir
+
 
 BUILD_DIR = _setup_path()
 
@@ -66,6 +66,7 @@ import SHOTpy
 
 class SHOTContext:
     """Container to hold solver, env, and problem together to manage lifetimes."""
+
     def __init__(self):
         self.solver = SHOTpy.Solver()
         self.env = self.solver.getEnvironment()
@@ -75,7 +76,7 @@ class SHOTContext:
 def set_default_objective(problem, variables=None):
     """
     Set a default linear objective function on the problem.
-        
+
     Args:
         problem: The Problem object
         variables: Optional list of variables to include in the objective.
@@ -123,4 +124,3 @@ def data_dir():
 def SHOTpy_module():
     """Provide the SHOTpy module."""
     return SHOTpy
-

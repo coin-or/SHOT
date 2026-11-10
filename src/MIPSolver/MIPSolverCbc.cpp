@@ -536,8 +536,8 @@ E_ProblemSolutionStatus MIPSolverCbc::getSolutionStatus()
     if(cbcModel->isProvenInfeasible() || (cbcModel->status() == 0 && cbcModel->secondaryStatus() == 1))
     {
         if(auto clpInterface = dynamic_cast<OsiClpSolverInterface*>(cbcModel->solver()))
-            isInfeasibleDueToTimeLimit = !clpInterface->isProvenPrimalInfeasible()
-                && clpInterface->getModelPtr()->hitMaximumIterations();
+            isInfeasibleDueToTimeLimit
+                = !clpInterface->isProvenPrimalInfeasible() && clpInterface->getModelPtr()->hitMaximumIterations();
     }
 
     if(cbcModel->isProvenOptimal() && cbcModel->numberSavedSolutions() > 0)
@@ -1092,9 +1092,9 @@ bool MIPSolverCbc::repairInfeasibility()
 
         if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
-            auto filename = fmt::format("{}/dualiter{}_infeasrelax",
-                env->settings->getSetting<std::string>("Output.Debug.Path"),
-                env->results->getCurrentIteration()->iterationNumber - 1);
+            auto filename
+                = fmt::format("{}/dualiter{}_infeasrelax", env->settings->getSetting<std::string>("Output.Debug.Path"),
+                    env->results->getCurrentIteration()->iterationNumber - 1);
 
             try
             {
@@ -1317,9 +1317,9 @@ bool MIPSolverCbc::repairInfeasibility()
 
         if(env->settings->getSetting<bool>("Output.Debug.Enable"))
         {
-            auto filename = fmt::format("{}/dualiter{}_infeasrelax",
-                env->settings->getSetting<std::string>("Output.Debug.Path"),
-                env->results->getCurrentIteration()->iterationNumber - 1);
+            auto filename
+                = fmt::format("{}/dualiter{}_infeasrelax", env->settings->getSetting<std::string>("Output.Debug.Path"),
+                    env->results->getCurrentIteration()->iterationNumber - 1);
 
             writeProblemToDebugFiles(filename);
         }
@@ -1383,8 +1383,8 @@ void MIPSolverCbc::setCutOff(double cutOff)
     // on the objective it minimizes. The cutoff given already includes the tolerance Dual.MIP.CutOff.Tolerance
     this->cutOff = isMinimizationProblem ? cutOff : -cutOff;
 
-    env->output->outputDebug(fmt::format("        Setting cutoff value to {} for {}.", cutOff,
-        isMinimizationProblem ? "minimization" : "maximization"));
+    env->output->outputDebug(fmt::format(
+        "        Setting cutoff value to {} for {}.", cutOff, isMinimizationProblem ? "minimization" : "maximization"));
 }
 
 void MIPSolverCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)

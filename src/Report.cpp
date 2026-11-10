@@ -62,8 +62,7 @@ void Report::outputIterationDetail(int iterationNumber, std::string iterationDes
             printLine = true;
         }
 
-        switch(
-            static_cast<ES_IterationOutputDetail>(env->settings->getSetting<int>("Output.Console.Iteration.Detail")))
+        switch(static_cast<ES_IterationOutputDetail>(env->settings->getSetting<int>("Output.Console.Iteration.Detail")))
         {
         case ES_IterationOutputDetail::Full:
             printLine = true;
@@ -1060,8 +1059,7 @@ void Report::outputSolutionReport()
             env->settings->getSetting<double>("Termination.ObjectiveGap.Relative")));
     }
 
-    if(static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("Dual.TreeStrategy"))
-        != ES_TreeStrategy::SingleTree)
+    if(static_cast<ES_TreeStrategy>(env->settings->getSetting<int>("Dual.TreeStrategy")) != ES_TreeStrategy::SingleTree)
     {
         if(env->results->getCurrentIteration()->maxDeviation
             <= env->settings->getSetting<double>("Termination.ConstraintTolerance"))

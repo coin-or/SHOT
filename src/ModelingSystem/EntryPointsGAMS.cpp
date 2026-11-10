@@ -76,22 +76,22 @@ extern "C"
 #ifdef _WIN32
     BOOL WINAPI DllMain(HINSTANCE hInst, DWORD reason, LPVOID reserved)
     {
-       switch( reason )
-       {
-          case DLL_PROCESS_ATTACH:
-             shtInit();
-             break;
-          case DLL_PROCESS_DETACH:
-             shtFini();
-             break;
-          case DLL_THREAD_ATTACH:
-             /* ignored */
-             break;
-          case DLL_THREAD_DETACH:
-             /* ignored */
-             break;
-       }
-       return TRUE;
+        switch(reason)
+        {
+        case DLL_PROCESS_ATTACH:
+            shtInit();
+            break;
+        case DLL_PROCESS_DETACH:
+            shtFini();
+            break;
+        case DLL_THREAD_ATTACH:
+            /* ignored */
+            break;
+        case DLL_THREAD_DETACH:
+            /* ignored */
+            break;
+        }
+        return TRUE;
     }
 #endif
 

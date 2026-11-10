@@ -48,21 +48,24 @@ def fulfilled(problem, name, point):
 class TestConstraintExpression:
     """The exact bounds of the ConstraintExpression created by each comparison, before it is added."""
 
-    @pytest.mark.parametrize("comparison, lower, upper", [
-        (lambda x, y: x <= 3, None, 3.0),
-        (lambda x, y: x >= 3, 3.0, None),
-        (lambda x, y: x == 3, 3.0, 3.0),
-        (lambda x, y: 2 <= x, 2.0, None),
-        (lambda x, y: 2 >= x, None, 2.0),
-        (lambda x, y: 2 == x, 2.0, 2.0),
-        (lambda x, y: x * y <= 5, None, 5.0),
-        (lambda x, y: x <= y, None, 0.0),
-        (lambda x, y: x >= y, 0.0, None),
-        (lambda x, y: x == y, 0.0, 0.0),
-        (lambda x, y: x * y <= x + 1, None, 0.0),
-        (lambda x, y: x * y >= y, 0.0, None),
-        (lambda x, y: x + 1 == x * y, 0.0, 0.0),
-    ])
+    @pytest.mark.parametrize(
+        "comparison, lower, upper",
+        [
+            (lambda x, y: x <= 3, None, 3.0),
+            (lambda x, y: x >= 3, 3.0, None),
+            (lambda x, y: x == 3, 3.0, 3.0),
+            (lambda x, y: 2 <= x, 2.0, None),
+            (lambda x, y: 2 >= x, None, 2.0),
+            (lambda x, y: 2 == x, 2.0, 2.0),
+            (lambda x, y: x * y <= 5, None, 5.0),
+            (lambda x, y: x <= y, None, 0.0),
+            (lambda x, y: x >= y, 0.0, None),
+            (lambda x, y: x == y, 0.0, 0.0),
+            (lambda x, y: x * y <= x + 1, None, 0.0),
+            (lambda x, y: x * y >= y, 0.0, None),
+            (lambda x, y: x + 1 == x * y, 0.0, 0.0),
+        ],
+    )
     def test_bounds(self, comparison, lower, upper):
         import SHOTpy
 
@@ -92,15 +95,18 @@ class TestConstraintExpression:
         constraint = SHOTpy.inequality(-math.inf, x * y, math.inf)
         assert (constraint.lowerBound, constraint.upperBound) == (SHOTpy.SHOT_DBL_MIN, SHOTpy.SHOT_DBL_MAX)
 
-    @pytest.mark.parametrize("comparison", [
-        lambda x, y: x <= math.nan,
-        lambda x, y: x >= math.nan,
-        lambda x, y: x == math.nan,
-        lambda x, y: x == math.inf,
-        lambda x, y: x * y == -math.inf,
-        lambda x, y: x <= -math.inf,
-        lambda x, y: x >= math.inf,
-    ])
+    @pytest.mark.parametrize(
+        "comparison",
+        [
+            lambda x, y: x <= math.nan,
+            lambda x, y: x >= math.nan,
+            lambda x, y: x == math.nan,
+            lambda x, y: x == math.inf,
+            lambda x, y: x * y == -math.inf,
+            lambda x, y: x <= -math.inf,
+            lambda x, y: x >= math.inf,
+        ],
+    )
     def test_invalid_bounds(self, comparison):
         _, _, x, y = make_problem()
         with pytest.raises(ValueError):
@@ -162,11 +168,14 @@ class TestAddConstraint:
         assert fulfilled(problem, "equal", [2.0, 2.0])
         assert not fulfilled(problem, "equal", [2.0, 2.1]) and not fulfilled(problem, "equal", [2.0, 1.9])
 
-    @pytest.mark.parametrize("expression, inside, below, above", [
-        (lambda x, y: x * y, [1.0, 3.0], [1.0, 0.9], [1.0, 5.1]),
-        (lambda x, y: x + 2 * y, [1.0, 1.0], [0.5, 0.2], [3.0, 1.1]),
-        (lambda x, y: x, [3.0, 1.0], [0.9, 1.0], [5.1, 1.0]),
-    ])
+    @pytest.mark.parametrize(
+        "expression, inside, below, above",
+        [
+            (lambda x, y: x * y, [1.0, 3.0], [1.0, 0.9], [1.0, 5.1]),
+            (lambda x, y: x + 2 * y, [1.0, 1.0], [0.5, 0.2], [3.0, 1.1]),
+            (lambda x, y: x, [3.0, 1.0], [0.9, 1.0], [5.1, 1.0]),
+        ],
+    )
     def test_range_both_sides(self, expression, inside, below, above):
         """inequality(1, f, 5) excludes points below 1 and above 5, also after finalize() splits it."""
         import SHOTpy
@@ -254,8 +263,9 @@ class TestAddConstraint:
 
         _, problem, x, y = make_problem()
         problem.addConstraint(x + y <= 4, "comparison")
-        problem.addConstraint(SHOTpy.LinearConstraint("linear", SHOTpy.LinearTerms([SHOTpy.LinearTerm(1.0, x)]),
-                                                      SHOTpy.SHOT_DBL_MIN, 3.0))
+        problem.addConstraint(
+            SHOTpy.LinearConstraint("linear", SHOTpy.LinearTerms([SHOTpy.LinearTerm(1.0, x)]), SHOTpy.SHOT_DBL_MIN, 3.0)
+        )
         problem.addConstraint(SHOTpy.NonlinearConstraint("nonlinear", SHOTpy.exp(y), SHOTpy.SHOT_DBL_MIN, 5.0))
         objective = SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize)
         objective.add(SHOTpy.LinearTerm(1.0, x))
@@ -501,8 +511,10 @@ class TestSolve:
 
         assert solver.solveProblem()
         # The model is convex, so SHOT closes the gap
-        assert solver.getTerminationReason() in (SHOTpy.TerminationReason.RelativeGap,
-                                                  SHOTpy.TerminationReason.AbsoluteGap)
+        assert solver.getTerminationReason() in (
+            SHOTpy.TerminationReason.RelativeGap,
+            SHOTpy.TerminationReason.AbsoluteGap,
+        )
         x_value, y_value = solver.getPrimalSolution().point
         return solver.getPrimalBound(), x_value, y_value
 
@@ -513,15 +525,21 @@ class TestSolve:
             problem.addConstraint(x**2 + y**2 <= 20, "c1")
             problem.addConstraint(SHOTpy.inequality(2, x + y, 8), "c2")
             problem.addConstraint(SHOTpy.exp(x) + 2 / y <= 10, "c3")
-            problem.setObjective((x - 3)**2 - x + 2 * (y - 2.5)**2)
+            problem.setObjective((x - 3) ** 2 - x + 2 * (y - 2.5) ** 2)
 
         def with_classes(problem, x, y):
             problem.addConstraint(SHOTpy.NonlinearConstraint("c1", x**2 + y**2, SHOTpy.SHOT_DBL_MIN, 20.0))
-            problem.addConstraint(SHOTpy.LinearConstraint(
-                "c2", SHOTpy.LinearTerms([SHOTpy.LinearTerm(1.0, x), SHOTpy.LinearTerm(1.0, y)]), 2.0, 8.0))
+            problem.addConstraint(
+                SHOTpy.LinearConstraint(
+                    "c2", SHOTpy.LinearTerms([SHOTpy.LinearTerm(1.0, x), SHOTpy.LinearTerm(1.0, y)]), 2.0, 8.0
+                )
+            )
             problem.addConstraint(SHOTpy.NonlinearConstraint("c3", SHOTpy.exp(x) + 2 / y, SHOTpy.SHOT_DBL_MIN, 10.0))
-            problem.setObjective(SHOTpy.NonlinearObjectiveFunction(
-                SHOTpy.ObjectiveDirection.Minimize, (x - 3)**2 - x + 2 * (y - 2.5)**2, 0.0))
+            problem.setObjective(
+                SHOTpy.NonlinearObjectiveFunction(
+                    SHOTpy.ObjectiveDirection.Minimize, (x - 3) ** 2 - x + 2 * (y - 2.5) ** 2, 0.0
+                )
+            )
 
         for build in (with_comparisons, with_classes):
             objective, x_value, y_value = self._solve(build)
@@ -534,15 +552,18 @@ class TestSolve:
 class TestErrors:
     """Comparisons that would silently lose a bound or compare objects raise."""
 
-    @pytest.mark.parametrize("action", [
-        lambda x, y: 1 <= x <= 5,
-        lambda x, y: 1 <= x * y <= 5,
-        lambda x, y: bool(x == y),
-        lambda x, y: x != y,
-        lambda x, y: x * y != 2,
-        lambda x, y: y in [x],
-        lambda x, y: (1 <= x) <= 5,
-    ])
+    @pytest.mark.parametrize(
+        "action",
+        [
+            lambda x, y: 1 <= x <= 5,
+            lambda x, y: 1 <= x * y <= 5,
+            lambda x, y: bool(x == y),
+            lambda x, y: x != y,
+            lambda x, y: x * y != 2,
+            lambda x, y: y in [x],
+            lambda x, y: (1 <= x) <= 5,
+        ],
+    )
     def test_type_error(self, action):
         _, _, x, y = make_problem()
         with pytest.raises(TypeError):

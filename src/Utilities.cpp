@@ -866,7 +866,7 @@ E_Monotonicity combineMonotonicity(const E_Monotonicity first, const E_Monotonic
 
 std::vector<std::string> splitStringByCharacter(const std::string& source, char character)
 {
-    auto result = std::vector<std::string> {};
+    auto result = std::vector<std::string> { };
     auto ss = std::stringstream { source };
 
     for(std::string line; std::getline(ss, line, character);)

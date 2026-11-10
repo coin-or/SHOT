@@ -111,7 +111,8 @@ private:
     // reason. It is regarded as nonlinear, and minimized.
     void copyObjectiveFunctionWithUserSpecifiedConvexity();
 
-    template <class T> void copyLinearTermsToConstraint(const LinearTerms& terms, T destination, bool reversedSigns = false);
+    template <class T> void copyLinearTermsToConstraint(
+        const LinearTerms& terms, T destination, bool reversedSigns = false);
 
     template <class T>
     void copyQuadraticTermsToConstraint(const QuadraticTerms& terms, T destination, bool reversedSigns = false);
@@ -240,8 +241,8 @@ private:
     {
         size_t operator()(const std::pair<int, int>& key) const noexcept
         {
-            size_t hash = std::hash<int> {}(key.first);
-            return hash * 1315423911U + std::hash<int> {}(key.second);
+            size_t hash = std::hash<int> { }(key.first);
+            return hash * 1315423911U + std::hash<int> { }(key.second);
         }
     };
 
@@ -261,7 +262,7 @@ private:
         {
             size_t hash = indexes.size();
             for(int index : indexes)
-                hash = hash * 1315423911U + std::hash<int> {}(index);
+                hash = hash * 1315423911U + std::hash<int> { }(index);
             return hash;
         }
     };

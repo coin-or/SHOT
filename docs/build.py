@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Build the public docs; run with the matching SHOTpy on PYTHONPATH."""
+
 import argparse
 import json
 import os
@@ -11,10 +12,18 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-GUIDES = ('CompilationInstructions.md', 'CommandLineUsage.md', 'Callbacks.md',
-          'UnderstandingOutput.md', 'Configuration.md', 'Modeling.md',
-          'DebuggingSHOT.md', 'DeveloperDebugging.md', 'MIPSolverCapabilities.md',
-          'SHOTpy_Tutorial.ipynb')
+GUIDES = (
+    'CompilationInstructions.md',
+    'CommandLineUsage.md',
+    'Callbacks.md',
+    'UnderstandingOutput.md',
+    'Configuration.md',
+    'Modeling.md',
+    'DebuggingSHOT.md',
+    'DeveloperDebugging.md',
+    'MIPSolverCapabilities.md',
+    'SHOTpy_Tutorial.ipynb',
+)
 
 
 def build_tutorial(notebook, source):
@@ -28,11 +37,16 @@ def build_tutorial(notebook, source):
         if sections:
             sections[-1][2].append(cell)
     labels = {
-        'getting-started': 'Getting started', 'creating-variables': 'Variables',
-        'linear-problems': 'Linear models', 'mixed-integer-problems': 'Integer variables',
-        'quadratic-problems': 'Quadratic models', 'nonlinear-problems': 'Nonlinear models',
-        'reading-from-files': 'Problem files', 'solver-settings': 'Solver settings',
-        'advanced-features': 'Advanced features', 'callbacks': 'Callbacks',
+        'getting-started': 'Getting started',
+        'creating-variables': 'Variables',
+        'linear-problems': 'Linear models',
+        'mixed-integer-problems': 'Integer variables',
+        'quadratic-problems': 'Quadratic models',
+        'nonlinear-problems': 'Nonlinear models',
+        'reading-from-files': 'Problem files',
+        'solver-settings': 'Solver settings',
+        'advanced-features': 'Advanced features',
+        'callbacks': 'Callbacks',
         'building-large-problems': 'Large models',
     }
     links = {slug: f'{slug}.ipynb' for slug, _, _ in sections}
@@ -58,8 +72,10 @@ def build_tutorial(notebook, source):
         '# SHOTpy tutorial\n\nLearn to model and solve MINLP problems with SHOTpy. '
         'The chapters follow the original notebook in order; examples may reuse imports or objects from earlier chapters.\n\n'
         '{download}`Download the complete notebook <_assets/SHOTpy_Tutorial.ipynb>`\n\n'
-        '```{toctree}\n:maxdepth: 1\n\n' +
-        '\n'.join(f'{labels.get(slug, title)} <tutorial/{slug}>' for slug, title, _ in sections) + '\n```\n')
+        '```{toctree}\n:maxdepth: 1\n\n'
+        + '\n'.join(f'{labels.get(slug, title)} <tutorial/{slug}>' for slug, title, _ in sections)
+        + '\n```\n'
+    )
 
 
 def main():
@@ -68,6 +84,7 @@ def main():
     parser.add_argument('--source-ref', default='master', help='Git ref for source links')
     args = parser.parse_args()
     import SHOTpy
+
     output = args.output.resolve()
     with tempfile.TemporaryDirectory(prefix='shot-docs-') as directory:
         work = Path(directory)
@@ -76,8 +93,9 @@ def main():
         for guide in GUIDES:
             content = (ROOT / 'docs' / guide).read_text()
             # Repository-only links must remain usable on the published site.
-            content = content.replace('](../ThirdParty/',
-                f'](https://github.com/coin-or/SHOT/blob/{args.source_ref}/ThirdParty/')
+            content = content.replace(
+                '](../ThirdParty/', f'](https://github.com/coin-or/SHOT/blob/{args.source_ref}/ThirdParty/'
+            )
             if guide.endswith('.ipynb'):
                 build_tutorial(json.loads(content), source)
             else:
@@ -89,21 +107,56 @@ def main():
             'These only have an effect if SHOT is built with them, as noted in the descriptions; a build without '
             'them warns when they are changed. Some settings have another default for nonconvex problems, applied '
             'unless `Strategy.UseRecommendedSettings` is false, and the default MIP solver depends on the build.\n'
-            + settings)
+            + settings
+        )
         doxy = work / 'Doxyfile'
-        headers = ['Solver.h', 'Settings.h', 'Results.h', 'Callback.h', 'Enums.h', 'Structs.h',
-                   'MIPSolver/MIPSolverCapabilities.h']
-        doxy.write_text('\n'.join([
-            'PROJECT_NAME = SHOT', f'OUTPUT_DIRECTORY = "{work / "doxygen"}"',
-            'INPUT = ' + ' '.join(f'"{ROOT / "src" / h}"' for h in headers),
-            'GENERATE_HTML = NO', 'GENERATE_LATEX = NO', 'GENERATE_XML = YES',
-            'EXTRACT_ALL = YES', 'EXTRACT_PRIVATE = NO', 'EXTRACT_STATIC = NO',
-            'QUIET = YES', 'WARN_IF_UNDOCUMENTED = NO',
-            'ENABLE_PREPROCESSING = YES', 'MACRO_EXPANSION = YES', 'PREDEFINED = DllExport=',
-        ]) + '\n')
+        headers = [
+            'Solver.h',
+            'Settings.h',
+            'Results.h',
+            'Callback.h',
+            'Enums.h',
+            'Structs.h',
+            'MIPSolver/MIPSolverCapabilities.h',
+        ]
+        doxy.write_text(
+            '\n'.join(
+                [
+                    'PROJECT_NAME = SHOT',
+                    f'OUTPUT_DIRECTORY = "{work / "doxygen"}"',
+                    'INPUT = ' + ' '.join(f'"{ROOT / "src" / h}"' for h in headers),
+                    'GENERATE_HTML = NO',
+                    'GENERATE_LATEX = NO',
+                    'GENERATE_XML = YES',
+                    'EXTRACT_ALL = YES',
+                    'EXTRACT_PRIVATE = NO',
+                    'EXTRACT_STATIC = NO',
+                    'QUIET = YES',
+                    'WARN_IF_UNDOCUMENTED = NO',
+                    'ENABLE_PREPROCESSING = YES',
+                    'MACRO_EXPANSION = YES',
+                    'PREDEFINED = DllExport=',
+                ]
+            )
+            + '\n'
+        )
         subprocess.run(['doxygen', str(doxy)], check=True)
-        subprocess.run([sys.executable, '-m', 'sphinx', '-b', 'html', '-W', '--keep-going', '-d', str(work / 'doctrees'),
-                        str(source), str(output)], check=True)
+        subprocess.run(
+            [
+                sys.executable,
+                '-m',
+                'sphinx',
+                '-b',
+                'html',
+                '-W',
+                '--keep-going',
+                '-d',
+                str(work / 'doctrees'),
+                str(source),
+                str(output),
+            ],
+            check=True,
+        )
     print(f'Documentation: {output / "index.html"}')
 
 

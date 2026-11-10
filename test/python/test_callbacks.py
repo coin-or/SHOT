@@ -22,6 +22,7 @@ import math
 # Helper: build the ex1223b MINLP problem (same as C++ SolverTest case 5)
 # ---------------------------------------------------------------------------
 
+
 def build_ex1223b(env):
     """Return a finalised ex1223b Problem object (uses Python operator API)."""
     import SHOTpy
@@ -29,9 +30,9 @@ def build_ex1223b(env):
     problem = SHOTpy.Problem(env)
     problem.name = "ex1223b"
 
-    x1 = SHOTpy.Variable("x1", SHOTpy.VariableType.Real,   0.0, 10.0)
-    x2 = SHOTpy.Variable("x2", SHOTpy.VariableType.Real,   0.0, 10.0)
-    x3 = SHOTpy.Variable("x3", SHOTpy.VariableType.Real,   0.0, 10.0)
+    x1 = SHOTpy.Variable("x1", SHOTpy.VariableType.Real, 0.0, 10.0)
+    x2 = SHOTpy.Variable("x2", SHOTpy.VariableType.Real, 0.0, 10.0)
+    x3 = SHOTpy.Variable("x3", SHOTpy.VariableType.Real, 0.0, 10.0)
     b4 = SHOTpy.Variable("b4", SHOTpy.VariableType.Binary, 0.0, 1.0)
     b5 = SHOTpy.Variable("b5", SHOTpy.VariableType.Binary, 0.0, 1.0)
     b6 = SHOTpy.Variable("b6", SHOTpy.VariableType.Binary, 0.0, 1.0)
@@ -41,9 +42,15 @@ def build_ex1223b(env):
 
     # minimize (-1+b4)^2 + (-2+b5)^2 + (-1+b6)^2 - log(1+b7)
     #        + (-1+x1)^2 + (-2+x2)^2 + (-3+x3)^2
-    obj_expr = ((b4 - 1.0)**2 + (b5 - 2.0)**2 + (b6 - 1.0)**2
-                - SHOTpy.log(1.0 + b7)
-                + (x1 - 1.0)**2 + (x2 - 2.0)**2 + (x3 - 3.0)**2)
+    obj_expr = (
+        (b4 - 1.0) ** 2
+        + (b5 - 2.0) ** 2
+        + (b6 - 1.0) ** 2
+        - SHOTpy.log(1.0 + b7)
+        + (x1 - 1.0) ** 2
+        + (x2 - 2.0) ** 2
+        + (x3 - 3.0) ** 2
+    )
     obj = SHOTpy.NonlinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize, obj_expr, 0.0)
     problem.setObjective(obj)
 
@@ -55,31 +62,34 @@ def build_ex1223b(env):
     problem.addConstraint(e1)
 
     # e2: b6^2+x1^2+x2^2+x3^2 <= 5.5
-    e2 = SHOTpy.NonlinearConstraint("e2", b6**2 + x1**2 + x2**2 + x3**2,
-                                     SHOTpy.SHOT_DBL_MIN, 5.5)
+    e2 = SHOTpy.NonlinearConstraint("e2", b6**2 + x1**2 + x2**2 + x3**2, SHOTpy.SHOT_DBL_MIN, 5.5)
     problem.addConstraint(e2)
 
     # e3: x1+b4 <= 1.2
     lt3 = SHOTpy.LinearTerms()
-    lt3.add(SHOTpy.LinearTerm(1.0, x1)); lt3.add(SHOTpy.LinearTerm(1.0, b4))
+    lt3.add(SHOTpy.LinearTerm(1.0, x1))
+    lt3.add(SHOTpy.LinearTerm(1.0, b4))
     e3 = SHOTpy.LinearConstraint("e3", lt3, SHOTpy.SHOT_DBL_MIN, 1.2)
     problem.addConstraint(e3)
 
     # e4: x2+b5 <= 1.8
     lt4 = SHOTpy.LinearTerms()
-    lt4.add(SHOTpy.LinearTerm(1.0, x2)); lt4.add(SHOTpy.LinearTerm(1.0, b5))
+    lt4.add(SHOTpy.LinearTerm(1.0, x2))
+    lt4.add(SHOTpy.LinearTerm(1.0, b5))
     e4 = SHOTpy.LinearConstraint("e4", lt4, SHOTpy.SHOT_DBL_MIN, 1.8)
     problem.addConstraint(e4)
 
     # e5: x3+b6 <= 2.5
     lt5 = SHOTpy.LinearTerms()
-    lt5.add(SHOTpy.LinearTerm(1.0, x3)); lt5.add(SHOTpy.LinearTerm(1.0, b6))
+    lt5.add(SHOTpy.LinearTerm(1.0, x3))
+    lt5.add(SHOTpy.LinearTerm(1.0, b6))
     e5 = SHOTpy.LinearConstraint("e5", lt5, SHOTpy.SHOT_DBL_MIN, 2.5)
     problem.addConstraint(e5)
 
     # e6: x1+b7 <= 1.2
     lt6 = SHOTpy.LinearTerms()
-    lt6.add(SHOTpy.LinearTerm(1.0, x1)); lt6.add(SHOTpy.LinearTerm(1.0, b7))
+    lt6.add(SHOTpy.LinearTerm(1.0, x1))
+    lt6.add(SHOTpy.LinearTerm(1.0, b7))
     e6 = SHOTpy.LinearConstraint("e6", lt6, SHOTpy.SHOT_DBL_MIN, 1.2)
     problem.addConstraint(e6)
 
@@ -107,6 +117,7 @@ def build_ex1223b(env):
 #   x1 in {0,1,2,3} (integer), x2 in {1,2,3} (integer)
 #   Optimal: x1=2, x2=3, obj=-8
 # ---------------------------------------------------------------------------
+
 
 def build_small_convex(env):
     """Return a finalised small convex MINLP for external-hyperplane tests."""
@@ -156,7 +167,7 @@ def build_shot_ex_jogo(env):
     problem = SHOTpy.Problem(env)
     problem.name = "shot_ex_jogo"
 
-    x1 = SHOTpy.Variable("x1", SHOTpy.VariableType.Real,    1.0, 20.0)
+    x1 = SHOTpy.Variable("x1", SHOTpy.VariableType.Real, 1.0, 20.0)
     x2 = SHOTpy.Variable("x2", SHOTpy.VariableType.Integer, 1.0, 20.0)
     problem.addVariable(x1)
     problem.addVariable(x2)
@@ -168,19 +179,19 @@ def build_shot_ex_jogo(env):
 
     # Constraint l (index 0): 2*x1 - 3*x2 <= 2
     lt_l = SHOTpy.LinearTerms()
-    lt_l.add(SHOTpy.LinearTerm( 2.0, x1))
+    lt_l.add(SHOTpy.LinearTerm(2.0, x1))
     lt_l.add(SHOTpy.LinearTerm(-3.0, x2))
     problem.addConstraint(SHOTpy.LinearConstraint("l", lt_l, SHOTpy.SHOT_DBL_MIN, 2.0))
 
     # Constraint c1 (index 1): 0.15*(x1-8)^2 + 0.1*(x2-6)^2 + 0.025*exp(x1)/x2^2 <= 5
     c1 = SHOTpy.NonlinearConstraint("c1", SHOTpy.SHOT_DBL_MIN, 5.0)
-    c1.add(0.15 * (x1 - 8.0)**2 + 0.1 * (x2 - 6.0)**2 + 0.025 * SHOTpy.exp(x1) / x2**2)
+    c1.add(0.15 * (x1 - 8.0) ** 2 + 0.1 * (x2 - 6.0) ** 2 + 0.025 * SHOTpy.exp(x1) / x2**2)
     problem.addConstraint(c1)
 
     # Constraint c2 (index 2): 1/x1 + 1/x2 - sqrt(x1)*sqrt(x2) <= -4
     c2 = SHOTpy.NonlinearConstraint("c2", SHOTpy.SHOT_DBL_MIN, -4.0)
-    c2.add(SHOTpy.SignomialTerm( 1.0, [(x1, -1.0)]))
-    c2.add(SHOTpy.SignomialTerm( 1.0, [(x2, -1.0)]))
+    c2.add(SHOTpy.SignomialTerm(1.0, [(x1, -1.0)]))
+    c2.add(SHOTpy.SignomialTerm(1.0, [(x2, -1.0)]))
     c2.add(SHOTpy.SignomialTerm(-1.0, [(x1, 0.5), (x2, 0.5)]))
     problem.addConstraint(c2)
 
@@ -189,14 +200,15 @@ def build_shot_ex_jogo(env):
 
 
 # Known solution of shot_ex_jogo
-JOGO_KNOWN_OBJ   = -20.903615014500517   # primal bound
-JOGO_KNOWN_DUAL  = -20.903647306104258   # dual bound
+JOGO_KNOWN_OBJ = -20.903615014500517  # primal bound
+JOGO_KNOWN_DUAL = -20.903647306104258  # dual bound
 JOGO_KNOWN_POINT = [8.903615014500554, 12.0]
 
 
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestCallbackLocationEnum:
     """CallbackLocation is exposed and its values can be combined into masks."""
@@ -215,12 +227,14 @@ class TestCallbackLocationEnum:
 
     def test_location_values(self):
         import SHOTpy
+
         assert hasattr(SHOTpy, "CallbackLocation")
         for name in self.LOCATIONS:
             assert hasattr(SHOTpy.CallbackLocation, name), f"Missing CallbackLocation.{name}"
 
     def test_locations_are_distinct_bits(self):
         import SHOTpy
+
         values = [int(getattr(SHOTpy.CallbackLocation, name)) for name in self.LOCATIONS]
         assert len(set(values)) == len(values)
         for value in values:
@@ -228,18 +242,21 @@ class TestCallbackLocationEnum:
 
     def test_or_of_two_locations(self):
         import SHOTpy
+
         L = SHOTpy.CallbackLocation
         mask = L.PrimalCandidateCheck | L.TerminationCheck
         assert mask == int(L.PrimalCandidateCheck) + int(L.TerminationCheck)
 
     def test_or_of_three_locations(self):
         import SHOTpy
+
         L = SHOTpy.CallbackLocation
         mask = L.PrimalCandidateCheck | L.TerminationCheck | L.NewPrimalSolution
         assert mask == int(L.PrimalCandidateCheck) + int(L.TerminationCheck) + int(L.NewPrimalSolution)
 
     def test_and_of_mask_and_location(self):
         import SHOTpy
+
         L = SHOTpy.CallbackLocation
         mask = L.PrimalCandidateCheck | L.TerminationCheck
         assert mask & L.TerminationCheck == int(L.TerminationCheck)
@@ -251,28 +268,64 @@ class TestContextClasses:
 
     def test_common_properties(self):
         import SHOTpy
-        for attr in ["location", "isValid", "isMinimization", "iterationNumber", "elapsedTime", "dualBound",
-                     "globalDualBound", "primalBound", "relativeGap", "absoluteGap", "solutionStatistics",
-                     "originalProblem", "reformulatedProblem", "hasPrimalSolution", "primalSolution",
-                     "isTerminationRequested", "isTerminationPending", "isFinalizing", "terminate"]:
+
+        for attr in [
+            "location",
+            "isValid",
+            "isMinimization",
+            "iterationNumber",
+            "elapsedTime",
+            "dualBound",
+            "globalDualBound",
+            "primalBound",
+            "relativeGap",
+            "absoluteGap",
+            "solutionStatistics",
+            "originalProblem",
+            "reformulatedProblem",
+            "hasPrimalSolution",
+            "primalSolution",
+            "isTerminationRequested",
+            "isTerminationPending",
+            "isFinalizing",
+            "terminate",
+        ]:
             assert hasattr(SHOTpy.CallbackContext, attr), f"CallbackContext is missing {attr}"
 
     def test_location_classes(self):
         import SHOTpy
+
         expected = {
-            "PrimalCandidateCheckContext": ["point", "objectiveValue", "source", "rejectCandidate",
-                                            "isCandidateRejected"],
+            "PrimalCandidateCheckContext": [
+                "point",
+                "objectiveValue",
+                "source",
+                "rejectCandidate",
+                "isCandidateRejected",
+            ],
             "NewPrimalSolutionContext": ["point", "objectiveValue", "source", "isIncumbent"],
             "DualBoundUpdateContext": ["setDualBound", "proposedDualBound"],
             "PrimalCandidateSearchContext": ["addPrimalSolution", "addedPrimalSolutions"],
             "HyperplaneSelectionContext": ["solutionPoints", "addHyperplane", "addedHyperplanes"],
             "InteriorPointSearchContext": ["interiorPoints", "setInteriorPoints", "replacementInteriorPoints"],
             "TerminationCheckContext": [],
-            "BoundsUpdatedContext": ["previousPrimalBound", "previousDualBound", "previousGlobalDualBound",
-                                     "primalBoundChanged", "dualBoundChanged", "globalDualBoundChanged"],
-            "BoundTighteningContext": ["problem", "isReformulatedProblem", "variableLowerBounds",
-                                       "variableUpperBounds", "setVariableBounds", "proposedVariableLowerBounds",
-                                       "proposedVariableUpperBounds"],
+            "BoundsUpdatedContext": [
+                "previousPrimalBound",
+                "previousDualBound",
+                "previousGlobalDualBound",
+                "primalBoundChanged",
+                "dualBoundChanged",
+                "globalDualBoundChanged",
+            ],
+            "BoundTighteningContext": [
+                "problem",
+                "isReformulatedProblem",
+                "variableLowerBounds",
+                "variableUpperBounds",
+                "setVariableBounds",
+                "proposedVariableLowerBounds",
+                "proposedVariableUpperBounds",
+            ],
         }
         for name, attrs in expected.items():
             cls = getattr(SHOTpy, name)
@@ -282,10 +335,12 @@ class TestContextClasses:
 
     def test_context_expired_exception(self):
         import SHOTpy
+
         assert issubclass(SHOTpy.CallbackContextExpired, RuntimeError)
 
     def test_solution_point_attrs(self):
         import SHOTpy
+
         sp = SHOTpy.SolutionPoint()
         assert hasattr(sp, "point")
         assert hasattr(sp, "objectiveValue")
@@ -296,6 +351,7 @@ class TestContextClasses:
 
     def test_external_hyperplane_attrs(self):
         import SHOTpy
+
         hp = SHOTpy.ExternalHyperplane()
         assert hasattr(hp, "variableIndexes")
         assert hasattr(hp, "variableCoefficients")
@@ -306,6 +362,7 @@ class TestContextClasses:
 
     def test_external_hyperplane_create_and_set(self):
         import SHOTpy
+
         hp = SHOTpy.ExternalHyperplane()
         hp.variableIndexes = [0, 1]
         hp.variableCoefficients = [2.0, -1.0]
@@ -331,6 +388,7 @@ class TestRegisterCallbackAPI:
     def test_register_with_lambda(self, solver, env):
         """registerCallback accepts a lambda."""
         import SHOTpy
+
         solver.updateSetting("Output.Console.LogLevel", 6)
         solver.updateSetting("Termination.IterationLimit", 2)
         solver.setProblem(build_ex1223b(env))
@@ -344,6 +402,7 @@ class TestRegisterCallbackAPI:
         class Counter:
             def __init__(self):
                 self.count = 0
+
             def __call__(self, ctx):
                 self.count += 1
 
@@ -357,6 +416,7 @@ class TestRegisterCallbackAPI:
     def test_register_with_list_and_integer_mask(self, solver, env):
         """The locations can be given as a list or as an integer mask."""
         import SHOTpy
+
         L = SHOTpy.CallbackLocation
 
         from_list = set()
@@ -364,10 +424,10 @@ class TestRegisterCallbackAPI:
 
         solver.updateSetting("Output.Console.LogLevel", 6)
         solver.setProblem(build_ex1223b(env))
-        solver.registerCallback([L.NewPrimalSolution, L.TerminationCheck],
-                                lambda ctx: from_list.add(ctx.location))
-        solver.registerCallback(int(L.NewPrimalSolution) | int(L.TerminationCheck),
-                                lambda ctx: from_mask.add(ctx.location))
+        solver.registerCallback([L.NewPrimalSolution, L.TerminationCheck], lambda ctx: from_list.add(ctx.location))
+        solver.registerCallback(
+            int(L.NewPrimalSolution) | int(L.TerminationCheck), lambda ctx: from_mask.add(ctx.location)
+        )
         solver.solveProblem()
 
         assert from_list == {L.NewPrimalSolution, L.TerminationCheck}
@@ -389,8 +449,9 @@ class TestRegisterCallbackAPI:
 
         calls = [0]
         solver.updateSetting("Output.Console.LogLevel", 6)
-        solver.registerCallback(SHOTpy.CallbackLocation.NewPrimalSolution,
-                                lambda ctx: calls.__setitem__(0, calls[0] + 1))
+        solver.registerCallback(
+            SHOTpy.CallbackLocation.NewPrimalSolution, lambda ctx: calls.__setitem__(0, calls[0] + 1)
+        )
         solver.setProblem(build_ex1223b(env))
         solver.solveProblem()
 
@@ -399,6 +460,7 @@ class TestRegisterCallbackAPI:
     def test_remove_callback(self, solver, env):
         """A removed callback is not called, the others still are."""
         import SHOTpy
+
         L = SHOTpy.CallbackLocation
 
         removed_calls = [0]
@@ -406,8 +468,9 @@ class TestRegisterCallbackAPI:
 
         solver.updateSetting("Output.Console.LogLevel", 6)
         solver.setProblem(build_ex1223b(env))
-        handle = solver.registerCallback(L.NewPrimalSolution,
-                                         lambda ctx: removed_calls.__setitem__(0, removed_calls[0] + 1))
+        handle = solver.registerCallback(
+            L.NewPrimalSolution, lambda ctx: removed_calls.__setitem__(0, removed_calls[0] + 1)
+        )
         solver.registerCallback(L.NewPrimalSolution, lambda ctx: kept_calls.__setitem__(0, kept_calls[0] + 1))
 
         assert solver.removeCallback(handle) is True
@@ -420,6 +483,7 @@ class TestRegisterCallbackAPI:
     def test_register_and_remove_during_solve_raise(self, solver, env):
         """Callbacks cannot be registered or removed while the problem is solved."""
         import SHOTpy
+
         L = SHOTpy.CallbackLocation
 
         errors = []
@@ -427,8 +491,10 @@ class TestRegisterCallbackAPI:
         def callback(ctx):
             if errors:
                 return
-            for action in (lambda: solver.registerCallback(L.NewPrimalSolution, lambda c: None),
-                           lambda: solver.removeCallback(handle)):
+            for action in (
+                lambda: solver.registerCallback(L.NewPrimalSolution, lambda c: None),
+                lambda: solver.removeCallback(handle),
+            ):
                 try:
                     action()
                     errors.append(None)
@@ -449,6 +515,7 @@ class TestDispatch:
 
     def test_mask_selects_locations_and_classes(self, solver, env):
         import SHOTpy
+
         L = SHOTpy.CallbackLocation
 
         seen = []
@@ -463,8 +530,9 @@ class TestDispatch:
 
         assert {location for location, _ in seen} == {L.PrimalCandidateCheck, L.TerminationCheck}
         for location, class_name in seen:
-            expected = ("PrimalCandidateCheckContext" if location == L.PrimalCandidateCheck
-                        else "TerminationCheckContext")
+            expected = (
+                "PrimalCandidateCheckContext" if location == L.PrimalCandidateCheck else "TerminationCheckContext"
+            )
             assert class_name == expected
 
     def test_common_values_have_python_types(self, solver, env):
@@ -474,17 +542,19 @@ class TestDispatch:
         received = []
 
         def callback(ctx):
-            received.append({
-                "isMinimization": ctx.isMinimization,
-                "iterationNumber": ctx.iterationNumber,
-                "elapsedTime": ctx.elapsedTime,
-                "dualBound": ctx.dualBound,
-                "primalBound": ctx.primalBound,
-                "relativeGap": ctx.relativeGap,
-                "hasPrimalSolution": ctx.hasPrimalSolution,
-                "primalSolution": ctx.primalSolution,
-                "statistics": ctx.solutionStatistics.numberOfIterations,
-            })
+            received.append(
+                {
+                    "isMinimization": ctx.isMinimization,
+                    "iterationNumber": ctx.iterationNumber,
+                    "elapsedTime": ctx.elapsedTime,
+                    "dualBound": ctx.dualBound,
+                    "primalBound": ctx.primalBound,
+                    "relativeGap": ctx.relativeGap,
+                    "hasPrimalSolution": ctx.hasPrimalSolution,
+                    "primalSolution": ctx.primalSolution,
+                    "statistics": ctx.solutionStatistics.numberOfIterations,
+                }
+            )
 
         solver.updateSetting("Output.Console.LogLevel", 6)
         solver.setProblem(build_ex1223b(env))
@@ -550,11 +620,13 @@ class TestNewPrimalSolutionCallback:
         call_log = []
 
         def on_new_primal(ctx):
-            call_log.append({
-                "objValue": ctx.objectiveValue,
-                "iteration": ctx.iterationNumber,
-                "gap": ctx.relativeGap,
-            })
+            call_log.append(
+                {
+                    "objValue": ctx.objectiveValue,
+                    "iteration": ctx.iterationNumber,
+                    "gap": ctx.relativeGap,
+                }
+            )
 
         solver.updateSetting("Output.Console.LogLevel", 6)  # Off
         solver.setProblem(build_ex1223b(env))
@@ -573,8 +645,9 @@ class TestNewPrimalSolutionCallback:
         received = []
 
         def on_new_primal(ctx):
-            received.append((ctx.objectiveValue, ctx.iterationNumber, ctx.isMinimization, ctx.point, ctx.source,
-                             ctx.isIncumbent))
+            received.append(
+                (ctx.objectiveValue, ctx.iterationNumber, ctx.isMinimization, ctx.point, ctx.source, ctx.isIncumbent)
+            )
 
         solver.updateSetting("Output.Console.LogLevel", 6)
         solver.setProblem(build_ex1223b(env))
@@ -599,6 +672,7 @@ class TestNewPrimalSolutionCallback:
         stored solution but worse than the best one, so it is not an incumbent.
         """
         import SHOTpy
+
         L = SHOTpy.CallbackLocation
 
         solver = SHOTpy.Solver()
@@ -648,8 +722,9 @@ class TestPrimalCandidateCheckCallback:
 
         solver.updateSetting("Output.Console.LogLevel", 2)
         solver.setProblem(build_ex1223b(env))
-        solver.registerCallback(SHOTpy.CallbackLocation.PrimalCandidateCheck,
-                                lambda ctx: call_log.append(ctx.objectiveValue))
+        solver.registerCallback(
+            SHOTpy.CallbackLocation.PrimalCandidateCheck, lambda ctx: call_log.append(ctx.objectiveValue)
+        )
         solver.solveProblem()
 
         assert len(call_log) >= 1, "PrimalCandidateCheck callback was never called"
@@ -685,13 +760,12 @@ class TestPrimalCandidateCheckCallback:
 
         assert rejected[0] >= 1, "Reject callback was never called"
         # With all candidates rejected no primal solution should have been recorded
-        assert not solver.getPrimalSolutions(), (
-            "Expected no primal solutions when every candidate is rejected"
-        )
+        assert not solver.getPrimalSolutions(), "Expected no primal solutions when every candidate is rejected"
 
     def test_selective_rejection_filters_accepted_candidates(self):
         """Rejected candidates never become incumbents, and the filter does not change the optimum."""
         import SHOTpy
+
         L = SHOTpy.CallbackLocation
 
         # ── Run 1: accept everything ──────────────────────────────────────────
@@ -840,17 +914,22 @@ class TestTerminationCheckCallback:
 
         reason = solver.getTerminationReason()
         assert requested[0] >= 1
-        assert reason in (SHOTpy.TerminationReason.UserAbort, SHOTpy.TerminationReason.RelativeGap,
-                          SHOTpy.TerminationReason.AbsoluteGap)
+        assert reason in (
+            SHOTpy.TerminationReason.UserAbort,
+            SHOTpy.TerminationReason.RelativeGap,
+            SHOTpy.TerminationReason.AbsoluteGap,
+        )
 
-        gap_closed = (solver.getRelativeObjectiveGap() <= solver.getDoubleSetting("Termination.ObjectiveGap.Relative")
-                      or solver.getAbsoluteObjectiveGap() <= solver.getDoubleSetting("Termination.ObjectiveGap.Absolute"))
+        gap_closed = solver.getRelativeObjectiveGap() <= solver.getDoubleSetting(
+            "Termination.ObjectiveGap.Relative"
+        ) or solver.getAbsoluteObjectiveGap() <= solver.getDoubleSetting("Termination.ObjectiveGap.Absolute")
         if gap_closed:
             assert reason != SHOTpy.TerminationReason.UserAbort
 
     def test_termination_pending_after_terminate(self):
         """After terminate() at one location, callbacks at other locations see isTerminationPending until SHOT stops."""
         import SHOTpy
+
         L = SHOTpy.CallbackLocation
 
         solver = SHOTpy.Solver()
@@ -885,6 +964,7 @@ class TestTerminationCheckCallback:
     def test_is_finalizing(self):
         """isFinalizing is false in the main loop and true while the solution is finalized."""
         import SHOTpy
+
         L = SHOTpy.CallbackLocation
 
         solver = SHOTpy.Solver()
@@ -894,8 +974,10 @@ class TestTerminationCheckCallback:
         solver.setProblem(build_ex1223b(env))
 
         calls = []
-        solver.registerCallback(L.PrimalCandidateSearch | L.TerminationCheck,
-                                lambda ctx: calls.append((ctx.location, ctx.isFinalizing, ctx.isTerminationPending)))
+        solver.registerCallback(
+            L.PrimalCandidateSearch | L.TerminationCheck,
+            lambda ctx: calls.append((ctx.location, ctx.isFinalizing, ctx.isTerminationPending)),
+        )
         solver.solveProblem()
 
         assert solver.getTerminationReason() != SHOTpy.TerminationReason.UserAbort
@@ -933,13 +1015,12 @@ class TestTerminationCheckCallback:
 
 
 class TestHyperplaneSelectionCallback:
-    """CallbackLocation.HyperplaneSelection in the single-tree strategy, where the MIP solver's callback reaches it.
-    """
+    """CallbackLocation.HyperplaneSelection in the single-tree strategy, where the MIP solver's callback reaches it."""
 
     def _make_solver(self, env_solver):
         solver = env_solver
         solver.updateSetting("Output.Console.LogLevel", 6)
-        solver.updateSetting("Dual.CutStrategy", 1)   # ECP, so SHOT adds hyperplanes of its own
+        solver.updateSetting("Dual.CutStrategy", 1)  # ECP, so SHOT adds hyperplanes of its own
         solver.updateSetting("Dual.TreeStrategy", 1)  # SingleTree
         return solver
 
@@ -950,10 +1031,12 @@ class TestHyperplaneSelectionCallback:
         hyperplane_calls = []
 
         def provide_hyperplanes(ctx):
-            hyperplane_calls.append({
-                "iteration": ctx.iterationNumber,
-                "n_points": len(ctx.solutionPoints),
-            })
+            hyperplane_calls.append(
+                {
+                    "iteration": ctx.iterationNumber,
+                    "n_points": len(ctx.solutionPoints),
+                }
+            )
             # Adding no hyperplanes is valid; SHOT continues with its own cuts
 
         self._make_solver(solver)
@@ -991,13 +1074,14 @@ class TestHyperplaneGradientCuts:
     def _make_solver_with_only_external_cuts(self):
         """Return a Solver configured to accept only external hyperplane cuts."""
         import SHOTpy
+
         solver = SHOTpy.Solver()
         solver.updateSetting("Output.Console.LogLevel", 2)
         solver.updateSetting("Model.Convexity.AssumeConvex", True)
-        solver.updateSetting("Model.Reformulation.Constraint.PartitionQuadraticTerms", 2) # Never
+        solver.updateSetting("Model.Reformulation.Constraint.PartitionQuadraticTerms", 2)  # Never
         solver.updateSetting("Dual.Relaxation.Use", True)
-        solver.updateSetting("Dual.CutStrategy", 2)    # OnlyExternal
-        solver.updateSetting("Dual.TreeStrategy", 0)    # MultiTree
+        solver.updateSetting("Dual.CutStrategy", 2)  # OnlyExternal
+        solver.updateSetting("Dual.TreeStrategy", 0)  # MultiTree
         return solver
 
     def test_solver_finds_solution_with_gradient_cuts(self):
@@ -1017,16 +1101,13 @@ class TestHyperplaneGradientCuts:
 
             reform_problem = ctx.reformulatedProblem
             for sol_point in ctx.solutionPoints:
-                dev_idx   = sol_point.maxDeviation.index
+                dev_idx = sol_point.maxDeviation.index
                 violation = sol_point.maxDeviation.value
                 if violation <= 0.0:
                     continue
 
                 # Look up by global .index, not positional index
-                constraint = next(
-                    (nlc for nlc in reform_problem.nonlinearConstraints if nlc.index == dev_idx),
-                    None
-                )
+                constraint = next((nlc for nlc in reform_problem.nonlinearConstraints if nlc.index == dev_idx), None)
                 if constraint is None:
                     continue
 
@@ -1038,11 +1119,11 @@ class TestHyperplaneGradientCuts:
                 rhs = sum(gradient[i] * sol_point.point[i] for i in var_indices) - violation
 
                 hp = SHOTpy.ExternalHyperplane()
-                hp.variableIndexes      = var_indices
+                hp.variableIndexes = var_indices
                 hp.variableCoefficients = list(gradient.values())
-                hp.rhsValue             = rhs
-                hp.isGlobal             = True
-                hp.source               = SHOTpy.HyperplaneSource.External
+                hp.rhsValue = rhs
+                hp.isGlobal = True
+                hp.source = SHOTpy.HyperplaneSource.External
                 ctx.addHyperplane(hp)
                 cut_count[0] += 1
                 break
@@ -1055,9 +1136,7 @@ class TestHyperplaneGradientCuts:
         obj = solver.getPrimalSolution().objValue
         # Known optimum: primal ≈ -20.9036, dual ≈ -20.9036
         # Accept any solution within 1% relative of the known primal bound.
-        assert obj <= JOGO_KNOWN_OBJ * 0.99, (
-            f"Objective {obj:.6f} is far from the known optimum ~-20.9036"
-        )
+        assert obj <= JOGO_KNOWN_OBJ * 0.99, f"Objective {obj:.6f} is far from the known optimum ~-20.9036"
 
     def test_constraint_lookup_by_index_not_position(self):
         """maxDeviation.index is a global constraint index, not a position in
@@ -1080,16 +1159,13 @@ class TestHyperplaneGradientCuts:
 
             reform_problem = ctx.reformulatedProblem
             for sol_point in ctx.solutionPoints:
-                dev_idx   = sol_point.maxDeviation.index
+                dev_idx = sol_point.maxDeviation.index
                 violation = sol_point.maxDeviation.value
                 if violation <= 0.0:
                     continue
 
                 # Correct lookup: by .index attribute
-                constraint = next(
-                    (nlc for nlc in reform_problem.nonlinearConstraints if nlc.index == dev_idx),
-                    None
-                )
+                constraint = next((nlc for nlc in reform_problem.nonlinearConstraints if nlc.index == dev_idx), None)
                 if constraint is not None:
                     name_log.append(constraint.name)
                 break
@@ -1102,14 +1178,17 @@ class TestHyperplaneGradientCuts:
         assert set(name_log) <= {"c1", "c2"}, f"Lookup returned wrong constraints: {set(name_log)}"
 
 
-@pytest.mark.parametrize("backend,available,tree_strategy", [
-    (2, "HAS_CBC", 0),
-    (3, "HAS_HIGHS", 0),
-    (1, "HAS_GUROBI", 0),
-    (0, "HAS_CPLEX", 0),
-    (1, "HAS_GUROBI", 1),
-    (0, "HAS_CPLEX", 1),
-])
+@pytest.mark.parametrize(
+    "backend,available,tree_strategy",
+    [
+        (2, "HAS_CBC", 0),
+        (3, "HAS_HIGHS", 0),
+        (1, "HAS_GUROBI", 0),
+        (0, "HAS_CPLEX", 0),
+        (1, "HAS_GUROBI", 1),
+        (0, "HAS_CPLEX", 1),
+    ],
+)
 def test_external_dual_bound_uses_original_maximize_direction(backend, available, tree_strategy):
     """An external upper bound must tighten a maximization problem even if its MIP minimizes."""
     import SHOTpy
@@ -1143,8 +1222,7 @@ def test_external_dual_bound_uses_original_maximize_direction(backend, available
             ctx.setDualBound(1.38)  # Valid but weaker than 1.37.
 
     solver.registerCallback(SHOTpy.CallbackLocation.DualBoundUpdate, propose_bound)
-    solver.registerCallback(SHOTpy.CallbackLocation.BoundsUpdated,
-                            lambda ctx: recorded_bounds.append(ctx.dualBound))
+    solver.registerCallback(SHOTpy.CallbackLocation.BoundsUpdated, lambda ctx: recorded_bounds.append(ctx.dualBound))
     assert solver.solveProblem()
 
     assert len(seen) >= 3
@@ -1157,8 +1235,9 @@ def test_external_dual_bound_uses_original_maximize_direction(backend, available
 
 
 class TestInitialMultiTreePrimalCandidates:
-    @pytest.mark.parametrize("backend,available", [(0, "HAS_CPLEX"), (1, "HAS_GUROBI"),
-                                                   (2, "HAS_CBC"), (3, "HAS_HIGHS")])
+    @pytest.mark.parametrize(
+        "backend,available", [(0, "HAS_CPLEX"), (1, "HAS_GUROBI"), (2, "HAS_CBC"), (3, "HAS_HIGHS")]
+    )
     def test_candidate_is_stored_before_the_first_dual_solve(self, backend, available):
         import SHOTpy
 
@@ -1264,17 +1343,26 @@ class TestDirectMIQCQPCallbacks:
 
         solver.registerCallback(SHOTpy.CallbackLocation.DualBoundUpdate, bound)
         solver.registerCallback(SHOTpy.CallbackLocation.PrimalCandidateSearch, search)
+
         def new_solution(ctx):
             if ctx.source == SHOTpy.PrimalSolutionSource.ExternalPrimalSolution:
                 accepted.append(ctx.point)
 
         def bounds_updated(ctx):
             saved_contexts.append(ctx)
-            bound_events.append((ctx.previousPrimalBound, ctx.primalBound,
-                                 ctx.previousDualBound, ctx.dualBound,
-                                 ctx.previousGlobalDualBound, ctx.globalDualBound,
-                                 ctx.primalBoundChanged, ctx.dualBoundChanged,
-                                 ctx.globalDualBoundChanged))
+            bound_events.append(
+                (
+                    ctx.previousPrimalBound,
+                    ctx.primalBound,
+                    ctx.previousDualBound,
+                    ctx.dualBound,
+                    ctx.previousGlobalDualBound,
+                    ctx.globalDualBound,
+                    ctx.primalBoundChanged,
+                    ctx.dualBoundChanged,
+                    ctx.globalDualBoundChanged,
+                )
+            )
 
         solver.registerCallback(SHOTpy.CallbackLocation.BoundsUpdated, bounds_updated)
         solver.registerCallback(SHOTpy.CallbackLocation.PrimalCandidateCheck, candidate)
@@ -1365,6 +1453,7 @@ class TestDualBoundAndPrimalSearchCallbacks:
         """With several callbacks, the tightest proposed bound is used, and none sees the others' proposals
         in the committed dual bound."""
         import SHOTpy
+
         L = SHOTpy.CallbackLocation
 
         solver = SHOTpy.Solver()
@@ -1408,6 +1497,7 @@ class TestDualBoundAndPrimalSearchCallbacks:
                  the optimum.
         """
         import SHOTpy
+
         L = SHOTpy.CallbackLocation
 
         # ── Phase 1: the verified optimal primal solution ─────────────
@@ -1416,7 +1506,7 @@ class TestDualBoundAndPrimalSearchCallbacks:
         solver1.updateSetting("Output.Console.LogLevel", 6)
         solver1.updateSetting("Model.Convexity.AssumeConvex", True)
         solver1.updateSetting("Dual.Relaxation.Use", False)
-        solver1.updateSetting("Dual.TreeStrategy", 0)    # MultiTree
+        solver1.updateSetting("Dual.TreeStrategy", 0)  # MultiTree
         env1 = solver1.getEnvironment()
         solver1.setProblem(build_shot_ex_jogo(env1), build_shot_ex_jogo(env1))
 
@@ -1424,12 +1514,11 @@ class TestDualBoundAndPrimalSearchCallbacks:
         solver1.registerCallback(L.NewPrimalSolution, lambda ctx: collected_solutions.append(ctx.point))
         solver1.solveProblem()
         iters_phase1 = solver1.getSolutionStatistics().numberOfIterations
-        print(f"\n  Phase 1 finished: {iters_phase1} iterations, "
-              f"{len(collected_solutions)} primal solutions collected")
+        print(f"\n  Phase 1 finished: {iters_phase1} iterations, {len(collected_solutions)} primal solutions collected")
         assert collected_solutions, "No primal solutions collected in phase 1"
 
         best_solution = list(solver1.getPrimalSolution().point)
-        best_obj      = solver1.getPrimalSolution().objValue
+        best_obj = solver1.getPrimalSolution().objValue
         print(f"  Best solution: {best_solution}  obj={best_obj:.6f}")
 
         # ── Phase 2: inject in the first iteration ────────────────────────────
@@ -1437,12 +1526,12 @@ class TestDualBoundAndPrimalSearchCallbacks:
         solver2.updateSetting("Output.Console.LogLevel", 2)
         solver2.updateSetting("Model.Convexity.AssumeConvex", True)
         solver2.updateSetting("Dual.Relaxation.Use", False)
-        solver2.updateSetting("Dual.TreeStrategy", 0)    # MultiTree
+        solver2.updateSetting("Dual.TreeStrategy", 0)  # MultiTree
         env2 = solver2.getEnvironment()
         solver2.setProblem(build_shot_ex_jogo(env2), build_shot_ex_jogo(env2))
 
         provided = [False]
-        call_log  = []
+        call_log = []
 
         new_primal_log = []
 
@@ -1452,19 +1541,21 @@ class TestDualBoundAndPrimalSearchCallbacks:
 
         def provide_primal_solution(ctx):
             call_log.append(ctx.iterationNumber)
-            print(f"  [PrimalCandidateSearch] iter={ctx.iterationNumber}  "
-                  f"dual={ctx.dualBound:.4f}  primal={ctx.primalBound:.4f}")
+            print(
+                f"  [PrimalCandidateSearch] iter={ctx.iterationNumber}  "
+                f"dual={ctx.dualBound:.4f}  primal={ctx.primalBound:.4f}"
+            )
             if not provided[0]:
                 provided[0] = True
                 print(f"    -> injecting phase-1 optimal solution: {best_solution}")
                 ctx.addPrimalSolution(best_solution)
 
-        solver2.registerCallback(L.NewPrimalSolution,     on_new_primal)
+        solver2.registerCallback(L.NewPrimalSolution, on_new_primal)
         solver2.registerCallback(L.PrimalCandidateSearch, provide_primal_solution)
         solver2.solveProblem()
 
         iters_phase2 = solver2.getSolutionStatistics().numberOfIterations
-        obj2         = solver2.getPrimalSolution().objValue
+        obj2 = solver2.getPrimalSolution().objValue
         print(f"\n  Phase 2 finished: {iters_phase2} iterations  obj={obj2:.6f}")
 
         assert call_log, "PrimalCandidateSearch callback never called"
@@ -1473,12 +1564,15 @@ class TestDualBoundAndPrimalSearchCallbacks:
         # The injected solution becomes the incumbent in the iteration it is added in. The number of iterations is
         # not compared with Phase 1, since the cutoff it gives changes the path of the MIP solver
         injection_iteration = call_log[0]
-        assert any(it == injection_iteration and abs(obj - best_obj) < 1e-6 and incumbent
-                   for it, obj, incumbent in new_primal_log), new_primal_log
+        assert any(
+            it == injection_iteration and abs(obj - best_obj) < 1e-6 and incumbent
+            for it, obj, incumbent in new_primal_log
+        ), new_primal_log
 
     def test_several_primal_solutions_can_be_added(self):
         """addPrimalSolution can be called several times in one callback."""
         import SHOTpy
+
         L = SHOTpy.CallbackLocation
 
         solver = SHOTpy.Solver()
@@ -1534,26 +1628,29 @@ class TestDualBoundAndPrimalSearchCallbacks:
           accepted (not silently discarded).
         """
         import SHOTpy
+
         L = SHOTpy.CallbackLocation
 
         solver = SHOTpy.Solver()
         solver.updateSetting("Output.Console.LogLevel", 2)
         solver.updateSetting("Model.Convexity.AssumeConvex", True)
         solver.updateSetting("Dual.Relaxation.Use", False)
-        solver.updateSetting("Dual.TreeStrategy", 0)   # MultiTree
+        solver.updateSetting("Dual.TreeStrategy", 0)  # MultiTree
         env = solver.getEnvironment()
         problem = build_shot_ex_jogo(env)
         solver.setProblem(problem, problem)
 
-        dual_calls      = [0]
-        primal_calls    = [0]
-        dual_injected   = [False]
+        dual_calls = [0]
+        primal_calls = [0]
+        dual_injected = [False]
         primal_injected = [False]
         primal_accepted = [False]
 
         def on_new_primal(ctx):
-            print(f"  [NewPrimalSolution]        iter={ctx.iterationNumber:3d}  "
-                  f"obj={ctx.objectiveValue:.6f}  point={[round(v,4) for v in ctx.point]}")
+            print(
+                f"  [NewPrimalSolution]        iter={ctx.iterationNumber:3d}  "
+                f"obj={ctx.objectiveValue:.6f}  point={[round(v, 4) for v in ctx.point]}"
+            )
             # Confirm the injected primal solution was accepted by the solver
             if primal_injected[0] and abs(ctx.objectiveValue - JOGO_KNOWN_OBJ) < 0.01:
                 primal_accepted[0] = True
@@ -1571,21 +1668,22 @@ class TestDualBoundAndPrimalSearchCallbacks:
                 primal_injected[0] = True
                 ctx.addPrimalSolution(JOGO_KNOWN_POINT)
 
-        solver.registerCallback(L.NewPrimalSolution,     on_new_primal)
-        solver.registerCallback(L.DualBoundUpdate,       provide_dual)
+        solver.registerCallback(L.NewPrimalSolution, on_new_primal)
+        solver.registerCallback(L.DualBoundUpdate, provide_dual)
         solver.registerCallback(L.PrimalCandidateSearch, provide_primal)
         solver.solveProblem()
 
-        print(f"\n  Summary: dual_calls={dual_calls[0]}  primal_calls={primal_calls[0]}  "
-              f"dual_injected={dual_injected[0]}  primal_injected={primal_injected[0]}  "
-              f"primal_accepted={primal_accepted[0]}")
-        assert dual_calls[0]   >= 1, "DualBoundUpdate callback never called"
+        print(
+            f"\n  Summary: dual_calls={dual_calls[0]}  primal_calls={primal_calls[0]}  "
+            f"dual_injected={dual_injected[0]}  primal_injected={primal_injected[0]}  "
+            f"primal_accepted={primal_accepted[0]}"
+        )
+        assert dual_calls[0] >= 1, "DualBoundUpdate callback never called"
         assert primal_calls[0] >= 1, "PrimalCandidateSearch callback never called"
-        assert dual_injected[0],   "Known dual bound was never injected (condition never met)"
+        assert dual_injected[0], "Known dual bound was never injected (condition never met)"
         assert primal_injected[0], "Known primal point was never injected"
         assert primal_accepted[0], (
-            f"Injected primal point was not accepted: NewPrimalSolution never called "
-            f"near obj={JOGO_KNOWN_OBJ:.6f}"
+            f"Injected primal point was not accepted: NewPrimalSolution never called near obj={JOGO_KNOWN_OBJ:.6f}"
         )
         assert solver.getPrimalSolutions(), "No primal solution found"
 
@@ -1595,6 +1693,7 @@ class TestInvalidActions:
 
     def test_invalid_primal_solutions_and_dual_bounds(self):
         import SHOTpy
+
         L = SHOTpy.CallbackLocation
 
         solver = SHOTpy.Solver()
@@ -1715,6 +1814,7 @@ class TestCallbackFailure:
 
     def test_exception_is_raised_by_solve_problem(self):
         import SHOTpy
+
         L = SHOTpy.CallbackLocation
 
         solver = SHOTpy.Solver()
@@ -1770,8 +1870,7 @@ class TestCallbackFailure:
 
         solver.updateSetting("Output.Console.LogLevel", 6)
         solver.setProblem(build_ex1223b(env))
-        solver.registerCallback(SHOTpy.CallbackLocation.PrimalCandidateSearch,
-                                lambda ctx: ctx.addPrimalSolution([1.0]))
+        solver.registerCallback(SHOTpy.CallbackLocation.PrimalCandidateSearch, lambda ctx: ctx.addPrimalSolution([1.0]))
 
         with pytest.raises(ValueError):
             solver.solveProblem()
@@ -1794,8 +1893,14 @@ class TestBoundTighteningCallback:
 
         def callback(ctx):
             assert isinstance(ctx, SHOTpy.BoundTighteningContext)
-            calls.append((ctx.isReformulatedProblem, ctx.reformulatedProblem is None,
-                          len(ctx.variableLowerBounds), ctx.variableUpperBounds[0]))
+            calls.append(
+                (
+                    ctx.isReformulatedProblem,
+                    ctx.reformulatedProblem is None,
+                    len(ctx.variableLowerBounds),
+                    ctx.variableUpperBounds[0],
+                )
+            )
 
         solver.registerCallback(SHOTpy.CallbackLocation.BoundTightening, callback)
         solver.setProblem(build_ex1223b(env))
@@ -1847,8 +1952,14 @@ class TestBoundTighteningCallback:
         rejected = []
 
         def callback(ctx):
-            for args in [(0, 1.0, 0.5), (0, math.nan, 0.5), (-1, 0.0, 1.0), ([0.0] * 6, [0.0] * 6),
-                         (3, 0.2, 0.8), (0, 2.0, 3.0)]:
+            for args in [
+                (0, 1.0, 0.5),
+                (0, math.nan, 0.5),
+                (-1, 0.0, 1.0),
+                ([0.0] * 6, [0.0] * 6),
+                (3, 0.2, 0.8),
+                (0, 2.0, 3.0),
+            ]:
                 with pytest.raises(ValueError):
                     ctx.setVariableBounds(*args)
                 rejected.append(args)
@@ -1977,6 +2088,7 @@ class TestMultipleCallbacksForInteriorPoints:
 
     def test_last_replacement_wins(self):
         import SHOTpy
+
         L = SHOTpy.CallbackLocation
 
         solver = SHOTpy.Solver()
@@ -2014,6 +2126,7 @@ class TestMultipleCallbacksForInteriorPoints:
 # ESH interior point callback tests
 # ---------------------------------------------------------------------------
 
+
 class TestCallbackESHInteriorPoint:
     """Tests for the InteriorPointSearch callback.
 
@@ -2043,13 +2156,17 @@ class TestCallbackESHInteriorPoint:
         solver.solveProblem()
 
         assert callback_fired[0], "ESH interior point callback was not fired"
-        assert points_received[0] > 0, (
-            "Callback fired but received no interior points from the internal strategy"
-        )
+        assert points_received[0] > 0, "Callback fired but received no interior points from the internal strategy"
 
-    @pytest.mark.parametrize("backend,available", [
-        (0, "HAS_CPLEX"), (1, "HAS_GUROBI"), (2, "HAS_CBC"), (3, "HAS_HIGHS"),
-    ])
+    @pytest.mark.parametrize(
+        "backend,available",
+        [
+            (0, "HAS_CPLEX"),
+            (1, "HAS_GUROBI"),
+            (2, "HAS_CBC"),
+            (3, "HAS_HIGHS"),
+        ],
+    )
     def test_internal_strategy_finds_point_with_each_mip_solver(self, backend, available):
         """The minimax problem of shot_ex_jogo, which Gurobi's presolve reports as infeasible or unbounded since its
         objective variable has a lower bound of -1e12, gives an interior point with every MIP solver."""
@@ -2064,8 +2181,9 @@ class TestCallbackESHInteriorPoint:
         solver.setProblem(build_shot_ex_jogo(solver.getEnvironment()))
 
         points_received = []
-        solver.registerCallback(SHOTpy.CallbackLocation.InteriorPointSearch,
-                                lambda ctx: points_received.append(len(ctx.interiorPoints)))
+        solver.registerCallback(
+            SHOTpy.CallbackLocation.InteriorPointSearch, lambda ctx: points_received.append(len(ctx.interiorPoints))
+        )
         assert solver.solveProblem()
 
         assert points_received and points_received[0] > 0, "The internal strategy found no interior point"
@@ -2139,8 +2257,7 @@ class TestCallbackESHInteriorPoint:
         print(f"  Phase 2 objective: {phase2_obj:.6f}")
 
         assert abs(phase2_obj - phase1_obj) <= tol + tol * abs(phase1_obj), (
-            f"Phase 2 objective {phase2_obj:.6f} differs from Phase 1 ({phase1_obj:.6f}) "
-            f"by more than tolerance {tol}"
+            f"Phase 2 objective {phase2_obj:.6f} differs from Phase 1 ({phase1_obj:.6f}) by more than tolerance {tol}"
         )
 
     def test_aux_problem_interior_point_injection(self):
@@ -2182,42 +2299,34 @@ class TestCallbackESHInteriorPoint:
         # Objective: minimize mu
         lt_obj = SHOTpy.LinearTerms()
         lt_obj.add(SHOTpy.LinearTerm(1.0, mu))
-        problem_aux.setObjective(
-            SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize, lt_obj, 0.0)
-        )
+        problem_aux.setObjective(SHOTpy.LinearObjectiveFunction(SHOTpy.ObjectiveDirection.Minimize, lt_obj, 0.0))
 
         # e1: x1+x2+x3+b4+b5+b6 <= 5  (linear, unchanged)
         lt1 = SHOTpy.LinearTerms()
         for v in [x1, x2, x3, b4, b5, b6]:
             lt1.add(SHOTpy.LinearTerm(1.0, v))
-        problem_aux.addConstraint(
-            SHOTpy.LinearConstraint("e1", lt1, SHOTpy.SHOT_DBL_MIN, 5.0)
-        )
+        problem_aux.addConstraint(SHOTpy.LinearConstraint("e1", lt1, SHOTpy.SHOT_DBL_MIN, 5.0))
 
         # e2: b6^2+x1^2+x2^2+x3^2 - mu <= 5.5  (quadratic - mu)
-        problem_aux.addConstraint(SHOTpy.NonlinearConstraint("e2", b6**2 + x1**2 + x2**2 + x3**2 - mu, SHOTpy.SHOT_DBL_MIN, 5.5
-        ))
+        problem_aux.addConstraint(
+            SHOTpy.NonlinearConstraint("e2", b6**2 + x1**2 + x2**2 + x3**2 - mu, SHOTpy.SHOT_DBL_MIN, 5.5)
+        )
 
         # e3-e6: linear constraints, unchanged
         for idx, (va, vb, rhs, nm) in enumerate(
-                [(x1, b4, 1.2, "e3"), (x2, b5, 1.8, "e4"),
-                 (x3, b6, 2.5, "e5"), (x1, b7, 1.2, "e6")], start=2):
+            [(x1, b4, 1.2, "e3"), (x2, b5, 1.8, "e4"), (x3, b6, 2.5, "e5"), (x1, b7, 1.2, "e6")], start=2
+        ):
             lt = SHOTpy.LinearTerms()
             lt.add(SHOTpy.LinearTerm(1.0, va))
             lt.add(SHOTpy.LinearTerm(1.0, vb))
-            problem_aux.addConstraint(
-                SHOTpy.LinearConstraint(nm, lt, SHOTpy.SHOT_DBL_MIN, rhs)
-            )
+            problem_aux.addConstraint(SHOTpy.LinearConstraint(nm, lt, SHOTpy.SHOT_DBL_MIN, rhs))
 
         # e7: b5^2+x2^2 - mu <= 1.64
-        problem_aux.addConstraint(SHOTpy.NonlinearConstraint("e7", b5**2 + x2**2 - mu, SHOTpy.SHOT_DBL_MIN, 1.64
-        ))
+        problem_aux.addConstraint(SHOTpy.NonlinearConstraint("e7", b5**2 + x2**2 - mu, SHOTpy.SHOT_DBL_MIN, 1.64))
         # e8: b6^2+x3^2 - mu <= 4.25
-        problem_aux.addConstraint(SHOTpy.NonlinearConstraint("e8", b6**2 + x3**2 - mu, SHOTpy.SHOT_DBL_MIN, 4.25
-        ))
+        problem_aux.addConstraint(SHOTpy.NonlinearConstraint("e8", b6**2 + x3**2 - mu, SHOTpy.SHOT_DBL_MIN, 4.25))
         # e9: b5^2+x3^2 - mu <= 4.64
-        problem_aux.addConstraint(SHOTpy.NonlinearConstraint("e9", b5**2 + x3**2 - mu, SHOTpy.SHOT_DBL_MIN, 4.64
-        ))
+        problem_aux.addConstraint(SHOTpy.NonlinearConstraint("e9", b5**2 + x3**2 - mu, SHOTpy.SHOT_DBL_MIN, 4.64))
 
         problem_aux.finalize()
         solver_aux.setProblem(problem_aux)
@@ -2255,9 +2364,7 @@ class TestCallbackESHInteriorPoint:
         solver2.solveProblem()
 
         assert callback_fired[0], "Phase 2: ESH interior point callback was not fired"
-        assert solver2.getPrimalSolutions(), (
-            "Phase 2: no primal solution found when using aux-problem interior point"
-        )
+        assert solver2.getPrimalSolutions(), "Phase 2: no primal solution found when using aux-problem interior point"
         phase2_obj = solver2.getPrimalSolution().objValue
         print(f"  Phase 2 objective: {phase2_obj:.6f}  (expected ≈ 4.5796)")
         assert abs(phase2_obj - 4.579582) < 0.01, (
@@ -2265,11 +2372,17 @@ class TestCallbackESHInteriorPoint:
         )
 
 
-@pytest.mark.parametrize("backend,available,tree", [
-    (2, "HAS_CBC", 0), (3, "HAS_HIGHS", 0),
-    (0, "HAS_CPLEX", 0), (1, "HAS_GUROBI", 0),
-    (0, "HAS_CPLEX", 1), (1, "HAS_GUROBI", 1),
-])
+@pytest.mark.parametrize(
+    "backend,available,tree",
+    [
+        (2, "HAS_CBC", 0),
+        (3, "HAS_HIGHS", 0),
+        (0, "HAS_CPLEX", 0),
+        (1, "HAS_GUROBI", 0),
+        (0, "HAS_CPLEX", 1),
+        (1, "HAS_GUROBI", 1),
+    ],
+)
 def test_linear_tree_hyperplane_callback(backend, available, tree):
     """An external linear restriction must be applied by the requested tree strategy on a MILP."""
     import SHOTpy
@@ -2308,19 +2421,24 @@ def test_linear_tree_hyperplane_callback(backend, available, tree):
 
     solver.registerCallback(SHOTpy.CallbackLocation.PrimalCandidateCheck, review)
     solver.registerCallback(SHOTpy.CallbackLocation.HyperplaneSelection, cut)
-    solver.registerCallback(SHOTpy.CallbackLocation.BoundsUpdated,
-                            lambda ctx: bounds.append(ctx.dualBound))
+    solver.registerCallback(SHOTpy.CallbackLocation.BoundsUpdated, lambda ctx: bounds.append(ctx.dualBound))
     assert solver.solveProblem()
     assert calls, "MILP bypassed the tree strategy's hyperplane callback"
     assert solver.getPrimalSolution().objValue == pytest.approx(2.0)
     assert bounds[-1] == pytest.approx(2.0)
 
 
-@pytest.mark.parametrize("backend,available,tree", [
-    (2, "HAS_CBC", 0), (3, "HAS_HIGHS", 0),
-    (0, "HAS_CPLEX", 0), (1, "HAS_GUROBI", 0),
-    (0, "HAS_CPLEX", 1), (1, "HAS_GUROBI", 1),
-])
+@pytest.mark.parametrize(
+    "backend,available,tree",
+    [
+        (2, "HAS_CBC", 0),
+        (3, "HAS_HIGHS", 0),
+        (0, "HAS_CPLEX", 0),
+        (1, "HAS_GUROBI", 0),
+        (0, "HAS_CPLEX", 1),
+        (1, "HAS_GUROBI", 1),
+    ],
+)
 @pytest.mark.parametrize("discrete", [False, True])
 def test_linear_initial_candidate(backend, available, tree, discrete):
     """Routing LP/MILP through tree/continuous strategies preserves pre-solve candidate review and stop."""
@@ -2357,9 +2475,13 @@ def test_linear_initial_candidate(backend, available, tree, discrete):
     assert solver.getTerminationReason() == SHOTpy.TerminationReason.UserAbort
 
 
-@pytest.mark.parametrize("backend,available", [
-    (0, "HAS_CPLEX"), (1, "HAS_GUROBI"),
-])
+@pytest.mark.parametrize(
+    "backend,available",
+    [
+        (0, "HAS_CPLEX"),
+        (1, "HAS_GUROBI"),
+    ],
+)
 @pytest.mark.parametrize("cut_strategy", [0, 1])
 def test_linear_single_tree_relaxation_callback(backend, available, cut_strategy):
     """Relaxed MILP nodes must skip nonexistent ESH/ECP tasks while still invoking external cuts."""
@@ -2369,12 +2491,18 @@ def test_linear_single_tree_relaxation_callback(backend, available, cut_strategy
     if not getattr(SHOTpy, available):
         pytest.skip(f"SHOT is not built with {available[4:]}")
     solver = SHOTpy.Solver()
-    for name, value in [("Output.Console.LogLevel", 6), ("Dual.MIP.Solver", backend),
-                        ("Dual.TreeStrategy", 1),
-                        ("Dual.CutStrategy", cut_strategy), ("Dual.Relaxation.Use", False),
-                        ("Dual.Relaxation.MaxLazyConstraints", 10), ("Dual.MIP.NumberOfThreads", 1),
-                        ("Primal.FixedInteger.Use", False),
-                        ("Primal.PolishSolution.NumberOfPoints", 0), ("Termination.TimeLimit", 10.0)]:
+    for name, value in [
+        ("Output.Console.LogLevel", 6),
+        ("Dual.MIP.Solver", backend),
+        ("Dual.TreeStrategy", 1),
+        ("Dual.CutStrategy", cut_strategy),
+        ("Dual.Relaxation.Use", False),
+        ("Dual.Relaxation.MaxLazyConstraints", 10),
+        ("Dual.MIP.NumberOfThreads", 1),
+        ("Primal.FixedInteger.Use", False),
+        ("Primal.PolishSolution.NumberOfPoints", 0),
+        ("Termination.TimeLimit", 10.0),
+    ]:
         solver.updateSetting(name, value)
     if backend == 1:
         solver.updateSetting("Subsolver.Gurobi.Heuristics", 0.0)
@@ -2402,9 +2530,15 @@ def test_linear_single_tree_relaxation_callback(backend, available, cut_strategy
     assert solver.getTerminationReason() == SHOTpy.TerminationReason.UserAbort
 
 
-@pytest.mark.parametrize("backend,available", [
-    (0, "HAS_CPLEX"), (1, "HAS_GUROBI"), (2, "HAS_CBC"), (3, "HAS_HIGHS"),
-])
+@pytest.mark.parametrize(
+    "backend,available",
+    [
+        (0, "HAS_CPLEX"),
+        (1, "HAS_GUROBI"),
+        (2, "HAS_CBC"),
+        (3, "HAS_HIGHS"),
+    ],
+)
 def test_milp_hyperplanes_before_first_solve_and_gap_checks(backend, available):
     """A seed rejection reaches the model immediately, and the final iteration still invokes cut selection."""
     import SHOTpy
@@ -2412,9 +2546,14 @@ def test_milp_hyperplanes_before_first_solve_and_gap_checks(backend, available):
     if not getattr(SHOTpy, available):
         pytest.skip(f"SHOT was not built with {available[4:]}")
     solver = SHOTpy.Solver()
-    for setting, value in [("Output.Console.LogLevel", 6), ("Dual.MIP.Solver", backend),
-                           ("Dual.TreeStrategy", 0), ("Dual.Relaxation.Use", False),
-                           ("Primal.FixedInteger.Use", False), ("Primal.PolishSolution.NumberOfPoints", 0)]:
+    for setting, value in [
+        ("Output.Console.LogLevel", 6),
+        ("Dual.MIP.Solver", backend),
+        ("Dual.TreeStrategy", 0),
+        ("Dual.Relaxation.Use", False),
+        ("Primal.FixedInteger.Use", False),
+        ("Primal.PolishSolution.NumberOfPoints", 0),
+    ]:
         solver.updateSetting(setting, value)
     problem = SHOTpy.Problem(solver)
     x = problem.addVariable("x", SHOTpy.VariableType.Integer, 0, 4)
@@ -2450,7 +2589,8 @@ def test_milp_hyperplanes_before_first_solve_and_gap_checks(backend, available):
     assert solver.solveProblem()
     assert submitted == [1]
     assert calls[0][0] == 0  # No backend solution exists yet.
-    assert any(n > 0 and dual == pytest.approx(2.0) and primal == pytest.approx(2.0)
-               for n, dual, primal in calls)  # A closed gap must not skip the final cut callback.
+    assert any(
+        n > 0 and dual == pytest.approx(2.0) and primal == pytest.approx(2.0) for n, dual, primal in calls
+    )  # A closed gap must not skip the final cut callback.
     assert solver.getSolutionStatistics().numberOfIterations == 1
     assert solver.getPrimalSolution().objValue == pytest.approx(2.0)

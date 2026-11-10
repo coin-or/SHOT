@@ -24,8 +24,18 @@ def _build_problem(problem):
     z = problem.addVariable("z", SHOTpy.VariableType.Real, 0.1, 5.0)
 
     def function():
-        return (2 * x - y + x * y + 3 * y * z + 2 * x * y * z - x * z * z + 1.5 * z**0.5 * y
-                + SHOTpy.exp(x) * y + SHOTpy.log(z) + SHOTpy.sin(x * z))
+        return (
+            2 * x
+            - y
+            + x * y
+            + 3 * y * z
+            + 2 * x * y * z
+            - x * z * z
+            + 1.5 * z**0.5 * y
+            + SHOTpy.exp(x) * y
+            + SHOTpy.log(z)
+            + SHOTpy.sin(x * z)
+        )
 
     problem.addConstraint(function() <= 10, "nl")
     problem.addConstraint(x + 2 * y <= 10, "lin")
