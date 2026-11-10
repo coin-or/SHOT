@@ -311,7 +311,8 @@ void Report::outputSolverHeader()
     env->output->outputInfo("");
 
     env->output->outputInfo(fmt::format(" Andreas Lundell and Jan Kronqvist, Åbo Akademi University, Finland."));
-    env->output->outputInfo(" See documentation for full list of contributors and utilized software libraries.");
+    env->output->outputInfo(
+        " See https://shotsolver.dev for more information, including contributors and utilized software libraries.");
 
     env->output->outputInfo("");
 
@@ -327,7 +328,17 @@ void Report::outputSolverHeader()
     }
 
     env->output->outputInfo("");
-    env->output->outputInfo(" For more information visit https://shotsolver.dev");
+    env->output->outputInfo(" If you publish work using this software, please cite publications from "
+                            "https://shotsolver.dev/publications, such as:");
+    env->output->outputInfo("");
+    env->output->outputInfo("  - A. Lundell, J. Kronqvist and T. Westerlund. The supporting hyperplane optimization "
+                            "toolkit for convex MINLP.");
+    env->output->outputInfo("    Journal of Global Optimization, 84(1):1-41, 2022. doi:10.1007/s10898-022-01128-0");
+    env->output->outputInfo("");
+    env->output->outputInfo("  - A. Lundell and J. Kronqvist. Polyhedral approximation strategies for nonconvex "
+                            "mixed-integer nonlinear");
+    env->output->outputInfo("    programming in SHOT. Journal of Global Optimization, 82(4):863-896, 2022. "
+                            "doi:10.1007/s10898-021-01006-1");
     env->output->outputInfo("");
 }
 
