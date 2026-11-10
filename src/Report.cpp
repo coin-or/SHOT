@@ -304,7 +304,7 @@ void Report::outputSolverHeader()
                             "-------------------------------------------------------------------");
 #else
     env->output->outputInfo("");
-    env->output->outputInfo("╶ Supporting Hyperplane Optimization Toolkit (SHOT) "
+    env->output->outputInfo("- Supporting Hyperplane Optimization Toolkit (SHOT) "
                             "──────────────────────────────────────────────────────────────────╴");
 #endif
 
@@ -340,7 +340,7 @@ void Report::outputOptionsReport()
                             "------------------------------------------------------------------------------------------"
                             "-------------------");
 #else
-    env->output->outputInfo("╶ Options "
+    env->output->outputInfo("- Options "
                             "──────────────────────────────────────────────────────────────────────────────────────────"
                             "──────────────────╴");
 #endif
@@ -466,7 +466,7 @@ void Report::outputModelingSystemReport(ES_ModelingSystem system, std::string fi
         "-----------------------------------------------------------------------------------------------------");
 #else
     env->output->outputInfo(
-        "╶ Modeling system "
+        "- Modeling system "
         "────────────────────────────────────────────────────────────────────────────────────────────────────╴");
 #endif
 
@@ -509,7 +509,7 @@ void Report::outputProblemInstanceReport()
         "----------------------------------------------------------------------------------------------------");
 #else
     env->output->outputInfo(
-        "╶ Problem instance "
+        "- Problem instance "
         "───────────────────────────────────────────────────────────────────────────────────────────────────╴");
 #endif
 
@@ -913,7 +913,7 @@ void Report::outputSolutionReport()
         "-----------------------------------------------------------------------------------------------------");
 #else
     env->output->outputInfo(
-        "╶ Solution report "
+        "- Solution report "
         "────────────────────────────────────────────────────────────────────────────────────────────────────╴");
 #endif
 
@@ -1251,7 +1251,7 @@ void Report::outputInteriorPointPreReport()
         "-----------------------------------------------------------------------------------------------");
 #else
     env->output->outputInfo(
-        "╶ Interior point search "
+        "- Interior point search "
         "──────────────────────────────────────────────────────────────────────────────────────────────╴");
 #endif
 
@@ -1273,7 +1273,7 @@ void Report::outputPreReport()
         "-------------------------------------------------------------------------------------------------");
 #else
     env->output->outputInfo(
-        "╶ Main iteration step "
+        "- Main iteration step "
         "────────────────────────────────────────────────────────────────────────────────────────────────╴");
 #endif
 

@@ -219,7 +219,7 @@ E_NLPSolutionStatus NLPSolverSHOT::solveProblemInstance()
         "-------------------------------------------------------------------------------------------");
 #else
     solver->getEnvironment()->output->outputInfo(
-        "╶ Solving fixed NLP problem "
+        "- Solving fixed NLP problem "
         "──────────────────────────────────────────────────────────────────────────────────────────╴");
 #endif
 
