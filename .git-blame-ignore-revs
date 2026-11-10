@@ -1,3 +1,6 @@
 # Mechanical formatting revisions (one full, merged commit SHA per line).
-# After the baseline formatting PR is squash merged, add its final SHA here
-# in a separate follow-up change. A pre-merge SHA will not survive squash merging.
+# Add the final SHA after a formatting PR is squash merged, in a separate
+# follow-up change. A pre-merge SHA does not survive squash merging.
+
+# chore(format): Reformat sources and enforce consistent style (#313)
+72e54e6418a9ca8161d8dcf42051ca0bf8a76d2e
