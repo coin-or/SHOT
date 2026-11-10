@@ -795,6 +795,8 @@ int main(int argc, char* argv[])
 
     solver.outputSolutionReport();
 
+    env->output->outputInfo("");
+
 #ifdef SIMPLE_OUTPUT_CHARS
     env->output->outputInfo("-----------------------------------------------------------------------------------"
                             "-----------------------------------");
@@ -905,6 +907,8 @@ int main(int argc, char* argv[])
         auto debugDirectory = fs::filesystem::path(solver.getSetting<std::string>("Output.Debug.Path"));
         env->output->outputInfo(" Debug directory:    " + debugDirectory.string());
     }
+
+    env->output->outputInfo("");
 
     env->results = NULL;
     env->problem = NULL;
