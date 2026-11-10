@@ -140,7 +140,7 @@ Changes since SHOT 1.1.
 - Systems of equations without an objective, i.e., GAMS CNS models and OSiL
   files without an objective, are solved by minimizing zero, as in other
   solvers. A solved GAMS CNS model gets the model status Solved. SHOT stopped
-  with an error for CNS models and crashed for such OSiL files.
+  with an error for CNS models and crashed for such OSiL files ([#312]).
 
 ### Changed
 
@@ -197,25 +197,25 @@ Changes since SHOT 1.1.
 - The infeasibility repair of the dual problem works with HiGHS for
   maximization problems, and when the objective is unbounded with the cuts
   relaxed. It failed in both cases, so that SHOT stopped without a solution
-  on nonconvex problems whose cuts made the dual problem infeasible.
+  on nonconvex problems whose cuts made the dual problem infeasible ([#312]).
 - On nonconvex problems without a primal solution, the infeasibility repair
   continues when the repaired dual problem keeps giving the same solutions.
   It stopped after the cuts of the nonconvex constraints had been reset three
   times, and SHOT then ended with "no additional dual cuts can be added"
-  without a solution.
+  without a solution ([#312]).
 - Cutting planes are added for the deviating constraints also when the most
   deviating ones have already been cut in the same point, e.g., after an
   infeasibility repair. `Dual.HyperplaneCuts.MaxConstraintFactor` is now
   relative to the largest deviation not cut yet. It was relative to the
   largest one, so that no cut was added and SHOT ended with "no additional
-  dual cuts can be added".
+  dual cuts can be added" ([#312]).
 - With HiGHS and Cbc, an integer cut for binary variables excludes its
   combination of values. It only excluded the combination where all variables
   are one, so that the dual problem could give the same combination again
   after an infeasible fixed NLP problem, and SHOT often ended with "no
   additional dual cuts can be added" on nonconvex problems. With Cbc, an
   integer cut for general integer variables could exclude another
-  combination when a variable before the last one was at a bound.
+  combination when a variable before the last one was at a bound ([#312]).
 - Cbc's time limit is wall-clock time. With several threads it was CPU time
   summed over the threads, so Cbc stopped after a fraction of
   `Termination.TimeLimit`, e.g., after about 56 s of 900 s with 16 threads
@@ -616,6 +616,7 @@ Changes since SHOT 1.1.
 [#308]: https://github.com/coin-or/SHOT/pull/308
 [#309]: https://github.com/coin-or/SHOT/pull/309
 [#311]: https://github.com/coin-or/SHOT/pull/311
+[#312]: https://github.com/coin-or/SHOT/pull/312
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
