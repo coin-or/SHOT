@@ -10,8 +10,8 @@ for how to add entries. Changes in versions before 2.0 are described in the
 
 - The SHOTpy tutorial is a series of four notebooks in `docs/tutorial`, from
   getting started to solver features, Python workflows and advanced modeling,
-  with their data files. The documentation site shows each notebook as a page
-  and offers the folder as a download.
+  with their data files, written by Joakim Blomqvist. The documentation site
+  shows each notebook as a page and offers the folder as a download.
 
 ## 2.0.0 — 2026-11-10
 
