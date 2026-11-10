@@ -113,7 +113,7 @@ if(HAS_GUROBI)
 endif()
 
 if(HAS_HIGHS)
-  set(Highs_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14)
+  set(Highs_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15)
   set(cpptests ${cpptests} Highs)
 endif()
 
@@ -136,7 +136,8 @@ if(HAS_GAMS)
       14
       15
       16
-      17)
+      17
+      18)
   # HiGHS does not implement SHOT's SOS interface.
   if(NOT (HAS_CBC OR HAS_CPLEX OR HAS_GUROBI))
     list(REMOVE_ITEM GAMS_parts 8 9 10)
@@ -144,7 +145,7 @@ if(HAS_GAMS)
   set(cpptests ${cpptests} GAMS)
 endif()
 
-set(DualBound_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20)
+set(DualBound_parts 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22)
 set(cpptests ${cpptests} DualBound)
 
 set(Determinism_parts 1 2 3)
@@ -200,7 +201,8 @@ set(Solver_parts
     48
     49
     50
-    51)
+    51
+    53)
 if(HAS_IPOPT)
   list(APPEND Solver_parts 46)
 endif()

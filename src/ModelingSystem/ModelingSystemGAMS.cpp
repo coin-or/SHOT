@@ -679,6 +679,14 @@ void ModelingSystemGAMS::finalizeSolution()
         gmoModelStatSet(modelingObject, gmoModelStat_ErrorNoSolution);
     };
 
+    // A constrained nonlinear system has no objective, so a feasible point solves it
+    if(gmoModelType(modelingObject) == gmoProc_cns && r->hasPrimalSolution()
+        && (r->getModelReturnStatus() == E_ModelReturnStatus::OptimalGlobal
+            || r->getModelReturnStatus() == E_ModelReturnStatus::FeasibleSolution))
+    {
+        gmoModelStatSet(modelingObject, gmoModelStat_Solved);
+    }
+
     // set solve status and possibly change model status
     switch(r->terminationReason)
     {
@@ -1022,12 +1030,15 @@ bool ModelingSystemGAMS::copyObjectiveFunction(ProblemPtr destination)
 {
     env->output->outputTrace(" Starting to copy objective function between GAMS modeling and SHOT problem objects.");
 
-    // Check if we have an objective at all
+    // A constrained nonlinear system (CNS) has no objective, and a feasible point is looked for by minimizing zero
     if(gmoModelType(modelingObject) == gmoProc_cns)
     {
-        // no objective in constraint satisfaction models
-        env->output->outputError(" Problem has no objective function.");
-        return (false);
+        destination->add(std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize));
+
+        env->output->outputTrace(
+            " Problem is a constrained nonlinear system without an objective function, using a zero objective.");
+
+        return (true);
     }
 
     ObjectiveFunctionPtr objectiveFunction;
@@ -1311,7 +1322,7 @@ bool ModelingSystemGAMS::copyQuadraticTerms(ProblemPtr destination)
 {
     env->output->outputTrace(" Starting to copy quadratic terms between GAMS modeling and SHOT problem objects.");
 
-    if(gmoGetObjOrder(modelingObject) == gmoorder_Q)
+    if(gmoModelType(modelingObject) != gmoProc_cns && gmoGetObjOrder(modelingObject) == gmoorder_Q)
     {
 #if GMOAPIVERSION <= 19
         int numQuadraticTerms = gmoObjQNZ(modelingObject);
@@ -1488,7 +1499,8 @@ bool ModelingSystemGAMS::copyNonlinearExpressions(ProblemPtr destination)
     double* constants = (double*)gmoPPool(modelingObject);
     int codelen;
 
-    if(gmoObjNLNZ(modelingObject) > 0 && gmoGetObjOrder(modelingObject) == gmoorder_NL)
+    if(gmoModelType(modelingObject) != gmoProc_cns && gmoObjNLNZ(modelingObject) > 0
+        && gmoGetObjOrder(modelingObject) == gmoorder_NL)
     {
         // handle nonlinear objective
 

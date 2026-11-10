@@ -103,17 +103,23 @@ void TaskRepairInfeasibleDualProblem::run()
                 return;
             }
 
-            currIter->forceObjectiveReductionCut = true;
-            env->tasks->setNextTask(taskIDIfFalse);
+            // An objective reduction cut needs a primal solution. Without one, the dual problem would stay infeasible
+            // until no more cuts can be added, so the repair continues instead, within
+            // Dual.MIP.InfeasibilityRepair.IterationLimit
+            if(env->results->hasPrimalSolution())
+            {
+                currIter->forceObjectiveReductionCut = true;
+                env->tasks->setNextTask(taskIDIfFalse);
 
-            std::stringstream tmpType;
-            tmpType << "REP-LOOP";
+                std::stringstream tmpType;
+                tmpType << "REP-LOOP";
 
-            env->report->outputIterationDetail(totRepairTries, tmpType.str(), env->timing->getElapsedTime("Total"),
-                currIter->numberOfInfeasibilityRepairedConstraints, 0, 0, env->dualSolver->cutOffToUse, 0, 0, 0, 0,
-                currIter->maxDeviation, E_IterationLineType::DualRepair, true);
+                env->report->outputIterationDetail(totRepairTries, tmpType.str(), env->timing->getElapsedTime("Total"),
+                    currIter->numberOfInfeasibilityRepairedConstraints, 0, 0, env->dualSolver->cutOffToUse, 0, 0, 0, 0,
+                    currIter->maxDeviation, E_IterationLineType::DualRepair, true);
 
-            return;
+                return;
+            }
         }
     }
 

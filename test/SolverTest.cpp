@@ -5064,6 +5064,50 @@ bool TestBilinearLinearizationWithHugeBounds()
     return true;
 }
 
+// A system of equations without an objective, e.g., a GAMS CNS model or the OSiL file GAMS writes for it, is solved by
+// minimizing zero
+bool SolveConstrainedNonlinearSystem(const std::string& filename)
+{
+    auto solver = std::make_unique<Solver>();
+    solver->updateSetting("Dual.MIP.NumberOfThreads", 1);
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Termination.TimeLimit", 30.0);
+
+    if(!solver->setProblem(filename))
+    {
+        std::cout << "The problem without an objective could not be read.\n";
+        return false;
+    }
+
+    auto problem = solver->getOriginalProblem();
+
+    if(!problem->objectiveFunction || problem->objectiveFunction->direction != E_ObjectiveFunctionDirection::Minimize)
+    {
+        std::cout << "The problem without an objective did not get an objective to minimize.\n";
+        return false;
+    }
+
+    if(!solver->solveProblem() || !solver->hasPrimalSolution())
+    {
+        std::cout << "No solution was found to the system of equations.\n";
+        return false;
+    }
+
+    auto point = solver->getPrimalSolution().point;
+
+    if(std::abs(solver->getPrimalBound()) > 1e-10 || std::abs(problem->objectiveFunction->calculateValue(point)) > 1e-10
+        || !problem->areNumericConstraintsFulfilled(point, 1e-5) || !problem->areVariableBoundsFulfilled(point, 1e-6)
+        || std::abs(point[0] * point[1] - 1.0) > 1e-5
+        || std::abs(point[0] * point[0] + point[1] * point[1] - 4.0) > 1e-5)
+    {
+        std::cout << "The solution (" << point[0] << ", " << point[1] << ") with objective value "
+                  << solver->getPrimalBound() << " does not solve the system of equations.\n";
+        return false;
+    }
+
+    return true;
+}
+
 int SolverTest(int argc, char* argv[])
 {
     int defaultchoice = 1;
@@ -5341,6 +5385,10 @@ int SolverTest(int argc, char* argv[])
         break;
     case 52:
         passed = TestStrategySelectionForNonconvexQuadraticProblems();
+        break;
+    case 53:
+        std::cout << "Testing a system of equations without an objective in OSiL." << std::endl;
+        passed = SolveConstrainedNonlinearSystem("data/cns.osil");
         break;
     default:
         passed = false;
