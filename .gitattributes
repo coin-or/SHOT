@@ -3,6 +3,12 @@
 ###############################################################################
 * text=auto
 
+# cmake-format drops the carriage return after "# cmake-format: off", so CMake
+# files checked out with CRLF line endings fail the format check on Windows.
+CMakeLists.txt text eol=lf
+*.cmake        text eol=lf
+*.cmake.in     text eol=lf
+
 ###############################################################################
 # Set default behavior for command prompt diff.
 #
