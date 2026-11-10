@@ -17,7 +17,7 @@ project(SHOT VERSION 2.0.0
 
 # Pre-release suffix of the version (a<n>, b<n> or rc<n>), empty for a final release.
 # A release tag v<version>[-<suffix>] must match the version and suffix here.
-set(SHOT_VERSION_SUFFIX "rc1")
+set(SHOT_VERSION_SUFFIX "")
 
 include(GNUInstallDirs)
 

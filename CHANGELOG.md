@@ -4,15 +4,14 @@ User-visible changes to SHOT and SHOTpy. See [CONTRIBUTING.md](CONTRIBUTING.md)
 for how to add entries. Changes in versions before 2.0 are described in the
 [GitHub releases](https://github.com/coin-or/SHOT/releases).
 
-## Unreleased
+## 2.0.0 — 2026-11-10
 
 Changes since SHOT 1.1.
 
 ### Breaking changes
 
-- macOS ARM64 wheels and standalone packages require macOS 15 or newer.
-  The previous deployment target, macOS 14, did not match the bundled
-  Fortran runtimes ([#308]).
+- macOS ARM64 wheels and standalone packages require macOS 15 or newer
+  ([#308]).
 - Gurobi builds require version 10.0 or newer ([#299]).
 - Settings are updated with `updateSetting("Category.Name", value)` instead
   of `updateSetting(name, category, value)`, and a priority decides which
@@ -39,121 +38,90 @@ Changes since SHOT 1.1.
   `<prefix>/include/SHOT` to their include path ([#241], [#250]).
 - C++17 is required ([#217]).
 - The results and problems of an environment are only available while its
-  solver exists: a solver frees them when it is destroyed, so that the
-  environment is freed. A problem used afterwards keeps the environment with
-  its settings and output. The environment was never freed, since its
-  components refer back to it, so creating many solvers, e.g., in a loop in
-  SHOTpy, used about 0.3 MB more memory per solver ([#258]).
+  solver exists; a problem used afterwards keeps the environment with its
+  settings and output. Each solver previously leaked about 0.3 MB, e.g., when
+  creating solvers in a loop in SHOTpy ([#258]).
 
 ### Added
 
-- Standalone executable archives for Linux x86_64 and ARM64, macOS ARM64,
-  and Windows x64, with HiGHS, Cbc, Ipopt, solver licenses and SHA-256
-  checksums. Python and pip are not required. The archives are extracted
-  from repaired wheels, tested on fresh runners, and attached to tagged
-  GitHub releases; manual builds provide them as Actions artifacts ([#308]).
-- `Primal.FixedInteger.MaxStartsPerCall` limits the number of dual-pool
-  starting points used per NLP call to five by default; zero allows all starts
-  ([#306]).
-- MIP backend capability queries for convex/nonconvex quadratic objectives and
-  constraints, SOS1/SOS2, semicontinuous and semi-integer variables, SHOT's
-  single-tree integration, and finite variable-bound defaults, available
-  without constructing a solver. SHOTpy exposes the records through
-  `getMIPSolverCapabilities()` with read-only properties ([#299]).
-- A [MIP solver capabilities guide](docs/MIPSolverCapabilities.md) and
-  [C++ and SHOTpy query examples](docs/site/concepts.md#solver-backends) in the
-  public documentation, with generated API references ([#299]).
-- Guides to interpreting terminal output, configuring solves, and understanding
-  modeling and reformulation, with expanded result handling and C++ examples
-  ([#295]).
-- HiGHS as MIP solver ([#182], [#191], [#194], [4f096597]).
-- Uno ([#200]) and CONOPT ([#225]) as NLP solvers for the fixed-integer
-  primal heuristic.
 - SHOTpy, a Python interface for building, solving and inspecting problems,
   including SOS and semicontinuous variables; it requires Python 3.11
   ([#185], [#192], [#208]).
 - Wheels for Linux (x86_64 and arm64), macOS and Windows with Cbc, Ipopt and
   HiGHS, which also install the `SHOT` executable for use from AMPL, Pyomo
-  and JuMP ([#221], [#228]).
-- Evaluation of gradients, Hessians, interval bounds and interval
-  derivatives from C++ and Python ([#216]).
+  and JuMP, and standalone executable archives with SHA-256 checksums for
+  Linux x86_64 and ARM64, macOS ARM64 and Windows x64 that need no Python
+  ([#221], [#228], [#308]).
 - Native Windows builds with MSVC ([#221]) and an installable CMake package
   with the target `SHOT::SHOTSolver` ([#214]).
+- HiGHS as MIP solver ([#182], [#191], [#194], [4f096597]), and Uno
+  ([#200]) and CONOPT ([#225]) as NLP solvers for the fixed-integer primal
+  heuristic.
+- Queries of what each MIP solver supports (quadratic objectives and
+  constraints, SOS, semicontinuous and semi-integer variables, single-tree
+  strategy, variable-bound defaults) without constructing a solver, in C++
+  and through SHOTpy's `getMIPSolverCapabilities()` ([#299]).
+- Evaluation of gradients, Hessians, interval bounds and interval
+  derivatives from C++ and Python ([#216]).
 - LDLᵀ reformulation of convex quadratic expressions ([#183], [f4a5daaa]).
 - Reformulation of `a*x1*x2 >= c` with positive variables as convex
   constraints (`Model.Reformulation.Bilinear.InverseFormulation`) ([#226]).
 - Supporting hyperplanes in feasible fixed-integer NLP solutions
   (`Primal.FixedInteger.CreateSupportingHyperplanes`, on by default) ([#234]).
 - Fixed-integer NLP problems are also solved during the search for nonconvex
-  continuous problems ([#235]).
+  continuous problems ([#235]), by default from the best dual solution, with
+  at most `Primal.FixedInteger.MaxStartsPerCall` (5) starting points per call
+  ([#306]).
 - Final polishing of the solution with NLP solves
-  (`Primal.PolishSolution.NumberOfPoints`, on by default) ([#204]). Its NLP
-  solves are shown as `NLPFINAL`, and it is skipped for problems without
-  continuous variables ([#318]).
-- Exit codes in the SHOT executable ([#207]).
+  (`Primal.PolishSolution.NumberOfPoints`, on by default), shown as
+  `NLPFINAL` and skipped for problems without continuous variables ([#204],
+  [#318]).
+- `Solver::setStartingPoint()` and `getStartingPoint()` in C++ and SHOTpy to
+  give a starting point after `setProblem()`. A feasible point is the first
+  primal solution and the MIP start of the dual problems ([#246]); from a
+  point that is not feasible, an NLP problem with the discrete variables
+  fixed is solved, which may repair it
+  (`Primal.FixedInteger.UseStartingPoint`, on by default) ([#261], [#262]).
 - Starting points from GAMS ([#190]) and AMPL ([1b054e3e]), the
   `shot_options` environment variable in AMPL mode ([#227]), and the `tan`
   function in GAMS ([#189]).
-- `Solver::setStartingPoint()` and `getStartingPoint()` in C++ and SHOTpy to
-  give a starting point after `setProblem()`, as AMPL and GAMS can. A feasible
-  point is the first primal solution and the MIP start of the dual problems
-  ([#246]). With `Primal.FixedInteger.UseStartingPoint` (on by default), an
-  NLP problem with the discrete variables fixed is solved from a starting
-  point that is not feasible, which may repair it ([#261], [#262]).
-- A `BoundTightening` callback location, called in `setProblem()` after the
-  bound tightening of the original and of the reformulated problem, where
-  bounds from other techniques can tighten the variable bounds; with
-  `Model.BoundTightening.FeasibilityBased.Use` off, only these are used.
-  `Model.BoundTightening.FeasibilityBased.UseAfterCallback` propagates them
-  with another bound tightening pass ([#247]).
-- `setFunctionConvexity()` on quadratic and nonlinear constraints and
-  objective functions in C++ and SHOTpy, and the `functionConvexity`
-  argument of SHOTpy's `Problem.addConstraint()` and `Problem.setObjective()`,
-  specify the convexity of a function, which is then used instead of
-  detected. The solution report, the OSrL results and
+- A `BoundTightening` callback location, where bounds from other techniques
+  can tighten the variable bounds after SHOT's bound tightening
+  (`Model.BoundTightening.FeasibilityBased.UseAfterCallback` propagates them)
+  ([#247]).
+- `setFunctionConvexity()` in C++ and SHOTpy, and the `functionConvexity`
+  argument in SHOTpy, give the convexity of a constraint or objective
+  function instead of detecting it. The solution report, the OSrL results and
   `getUserSpecifiedConvexityDescription()` tell when global optimality
   depends on such functions or on `Model.Convexity.AssumeConvex` ([#256]).
-- The AMPL solve message gives the SHOT version, the problem types and the
-  subsolvers; the status text is unchanged ([d9db1155]).
-- The options report shows the number of MIP solver threads, and a warning
-  is given when several threads are requested but Cbc has no thread support
-  ([66efbd6d]).
-- A warning when a primal bound passes a global dual bound ([#236]).
-- Clear errors for problems without variables or objective ([5a82942f]).
-- MPS files in the debug output for Cbc, CPLEX, Gurobi and HiGHS
-  ([64b10f44]).
-- Many new tests: C++ tests of the model, settings, dual bounds and
-  determinism, a test for each MIP and NLP solver, instance tests including
-  the MINLPTests.jl problems, and Python tests of SHOTpy ([#192], [#197],
-  [#204]).
-- Documentation of the command-line usage, compilation, callbacks and
-  debugging of SHOT, a SHOTpy tutorial, and a C++ and Python API reference
-  on the website ([06f753cd], [#206], [#220], [#240]).
-- Contribution guidelines (`CONTRIBUTING.md`) and this changelog ([#240]),
-  and `AGENTS.md` with instructions for AI coding agents ([06f753cd]).
-- The settings reference lists the settings of all MIP and NLP solvers and of
-  GAMS with the solver each requires, also when SHOT is built without them,
-  and the recommended values for nonconvex problems ([#242]).
-- In the multi-tree strategy, the discrete values of the previous MIP
-  solution are given to the MIP solver as a partial start, which it completes
-  by solving the LP with these values fixed. This is on for convex problems
-  (setting `Dual.MIP.UseDualSolutionStart`), where it mainly helps HiGHS and
-  Cbc find primal solutions ([#248]).
+- In the multi-tree strategy for convex problems, the discrete values of the
+  previous MIP solution are given to the MIP solver as a partial start
+  (`Dual.MIP.UseDualSolutionStart`), which mainly helps HiGHS and Cbc find
+  primal solutions ([#248]).
 - Systems of equations without an objective, i.e., GAMS CNS models and OSiL
-  files without an objective, are solved by minimizing zero, as in other
-  solvers. A solved GAMS CNS model gets the model status Solved. SHOT stopped
+  files without an objective, are solved by minimizing zero. SHOT stopped
   with an error for CNS models and crashed for such OSiL files ([#312]).
+- Exit codes in the SHOT executable ([#207]).
+- More information in the output: the SHOT version, problem types and
+  subsolvers in the AMPL solve message ([d9db1155]); the number of MIP solver
+  threads in the options report, with a warning when Cbc has no thread
+  support ([66efbd6d]); a warning when a primal bound passes a global dual
+  bound ([#236]); clear errors for problems without variables or objective
+  ([5a82942f]); and MPS files of the MIP problems in the debug output
+  ([64b10f44]).
+- Documentation on the website: command-line usage, compilation,
+  configuration, modeling and reformulations, understanding the output,
+  callbacks, MIP solver capabilities and debugging; a SHOTpy tutorial; a C++
+  and Python API reference; and a settings reference that lists the settings
+  of all MIP and NLP solvers and of GAMS, also when SHOT is built without
+  them, with the recommended values for nonconvex problems ([06f753cd],
+  [#206], [#220], [#240], [#242], [#295], [#299]). The C++ API documents, as
+  the Python API, that `Solver::getCurrentDualBound()` is not a valid bound
+  for nonconvex problems; `Solver::getGlobalDualBound()` is.
+- Contribution guidelines (`CONTRIBUTING.md`) and this changelog ([#240]).
 
 ### Changed
 
-- Nonconvex continuous problems use the best dual solution as the default NLP
-  starting point, rather than every point in the solution pool. Explicit
-  `Primal.FixedInteger.Source` selections still take precedence ([#306]).
-- NLP progress rows are numbered by the fixed-integer NLP problems solved.
-  The outer SHOT iteration and the batch-start counter are shown in a
-  separate debug message. `NLPPOOL` replaces `NLPUNFEA` to distinguish a
-  starting point that violates nonlinear constraints from an infeasible NLP
-  ([#306], [#317]).
 - Equality constraints and ranges are kept as they are in the original
   problem ([#210]).
 - Much faster reading, reformulating and solving of large problems, and
@@ -161,186 +129,136 @@ Changes since SHOT 1.1.
   [#212], [#237]).
 - Repeated runs with the same settings give the same results, except when
   limited by time ([#204]).
-- The cutoff is given to HiGHS and Cbc as a solver parameter, as for CPLEX
-  and Gurobi ([ec55766b]).
+- Quadratic objectives and constraints are passed to the MIP solver whenever
+  it supports them, instead of being reformulated or solved with the NLP or
+  multi-tree strategy: convex quadratic objectives also when other
+  constraints are nonconvex, nonconvex quadratic objectives and constraints
+  with Gurobi, nonconvex QP and MIQP and convex maximization QCQP and MIQCQP
+  with CPLEX, and the supported quadratic parts of functions with
+  higher-degree terms. Gurobi no longer stops with "Objective Q not PSD"
+  when the recommended settings are not used. Problems that are MILPs after
+  reformulation are solved directly by the MIP solver, unless a
+  `HyperplaneSelection` callback is registered ([#287], [#298], [#299],
+  [#301], [#302]).
+- Bilinear terms with integer variables:
+  `Model.Reformulation.Bilinear.IntegerFormulation.MaxDomain` is 250 instead
+  of 100, and also applies to bilinear terms extracted to auxiliary
+  variables, e.g., with `Model.Reformulation.Quadratics.ExtractStrategy=2`.
+  SHOT tells how many such terms are not discretized, and warns when
+  bilinear terms get nonconvex auxiliary constraints although
+  `Model.Convexity.AssumeConvex` is true ([#282]). The discretization uses
+  linear instead of quadratic memory and time ([#297]).
+- Repeated Ipopt NLP solves reuse the initialized solver ([#296]).
+- The cutoff is given to Cbc as a solver parameter, as for CPLEX and Gurobi
+  ([ec55766b]).
 - Dual stagnation is again checked as a termination criterion ([cf408fbd]).
 - The MIP start includes the values of the reformulation variables
   ([8c4a2bb8]).
 - Improved primal reduction cut heuristic ([#178]).
-- Updated bundled third-party libraries ([#213]).
-- MC++ is pinned to 5.1.0 and the optional Uno compatibility target is
-  2.9.3 ([#304]).
-- New repository layout, and the documentation is on the website ([#220],
-  [#240]).
+- NLP rows in the iteration table are numbered by the fixed-integer NLP
+  problems solved ([#306], [#317]).
 - Settings of a MIP or NLP solver or of GAMS that SHOT is not compiled with
   are accepted instead of giving an error, so that the same options files
   work with all builds; a warning tells that they are ignored if they are
   changed from their defaults ([#242]).
-- The C++ API documents, as the Python API, that
-  `Solver::getCurrentDualBound()` is not a valid bound for a nonconvex
-  problem once cuts have been added to nonconvex functions, and that
-  `Solver::getGlobalDualBound()` is.
-- `Model.Reformulation.Bilinear.IntegerFormulation.MaxDomain` is 250 instead
-  of 100, so that integer variables with domains such as 0..200 are
-  discretized in bilinear terms. On the MINLPLib instances where this
-  matters (nvs01–nvs24, primary), HiGHS, Cbc and CPLEX solve more of them,
-  e.g., nvs02 and nvs14 within seconds instead of not at all in 60 s. The
-  limit now also applies to bilinear terms that are extracted to auxiliary
-  variables, e.g., with `Model.Reformulation.Quadratics.ExtractStrategy=2`,
-  whose integer variables were discretized regardless of their domain
-  ([#282]).
-- SHOT tells how many bilinear terms with integer variables are not
-  discretized because of their bounds or the limit, and warns when bilinear
-  terms get nonconvex auxiliary constraints although
-  `Model.Convexity.AssumeConvex` is true, since the solution may then not be
-  optimal ([#282]).
+- Updated bundled third-party libraries ([#213]); MC++ is pinned to 5.1.0
+  and the optional Uno compatibility target is 2.9.3 ([#304]).
+- New repository layout ([#220], [#240]).
 
 ### Fixed
 
-- The infeasibility repair of the dual problem works with HiGHS for
-  maximization problems, and when the objective is unbounded with the cuts
-  relaxed. It failed in both cases, so that SHOT stopped without a solution
-  on nonconvex problems whose cuts made the dual problem infeasible ([#312]).
-- On nonconvex problems without a primal solution, the infeasibility repair
-  continues when the repaired dual problem keeps giving the same solutions.
-  It stopped after the cuts of the nonconvex constraints had been reset three
-  times, and SHOT then ended with "no additional dual cuts can be added"
-  without a solution ([#312]).
-- Cutting planes are added for the deviating constraints also when the most
-  deviating ones have already been cut in the same point, e.g., after an
-  infeasibility repair. `Dual.HyperplaneCuts.MaxConstraintFactor` is now
-  relative to the largest deviation not cut yet. It was relative to the
-  largest one, so that no cut was added and SHOT ended with "no additional
-  dual cuts can be added" ([#312]).
-- With HiGHS and Cbc, an integer cut for binary variables excludes its
-  combination of values. It only excluded the combination where all variables
-  are one, so that the dual problem could give the same combination again
-  after an infeasible fixed NLP problem, and SHOT often ended with "no
-  additional dual cuts can be added" on nonconvex problems. With Cbc, an
-  integer cut for general integer variables could exclude another
-  combination when a variable before the last one was at a bound ([#312]).
-- Cbc's time limit is wall-clock time. With several threads it was CPU time
-  summed over the threads, so Cbc stopped after a fraction of
-  `Termination.TimeLimit`, e.g., after about 56 s of 900 s with 16 threads
-  ([#311]).
-- Documentation navigation and tutorial links open the corresponding pages
-  on the documentation site instead of source files on GitHub.
-- Native MSVC builds with tests enabled link correctly with HiGHS and GAMS.
-  Regression tests explicitly select the intended reformulations and Python
-  backends, account for constraint scaling, and run GAMS optimization cases
-  with Ipopt in separate CTest groups per MIP backend ([#309]).
-- Python wheels preserve external solver license notices on Linux and
-  macOS as well as Windows ([#308]).
-- SHOT builds with `CMAKE_BUILD_TYPE=RelWithDebInfo`; configuring the bundled
-  CppAD failed for this build type ([#307]).
-- Floating-point checks explicitly use `std::abs`. Depending on the included
-  headers, GCC could use integer `abs` and treat, e.g., a power 1.5 as linear
-  and 2.5 as quadratic ([#307]).
-- The convexity of the tangent of an interval containing a pole is unknown;
-  the interval error was not caught ([#307]).
-- The Gurobi interface passes empty arrays without accessing their first
-  element when adding special ordered sets or repairing infeasibility ([#307]).
-- HiGHS model-loading messages no longer bypass SHOT's console output settings,
-  including when creating internal feasibility and repair models ([#303]).
-- HiGHS distinguishes unbounded from infeasible MILPs by checking integer
-  feasibility with presolve enabled, avoiding a numerical status for unbounded
-  integer domains ([#301]).
-- Convex quadratic objectives are retained when supported by the MIP backend
-  even when other constraints make the problem nonconvex ([#301]).
-- Removing a `HyperplaneSelection` callback after `setProblem()` restores
-  direct MILP solving when no cut callback remains ([#301]).
-- Nonconvex quadratic constraints retain their quadratic terms when the MIP
-  backend and quadratic strategy support them, including Gurobi's recommended
-  strategy for binary quadratic models ([#301]).
-- Supported quadratic parts are retained by default in objectives and
-  constraints containing higher-degree terms when the MIP backend supports
-  them. Explicit partitioning and integer-bilinear reformulation settings
-  still take precedence ([#302]).
-- Complete MILP reformulations are solved directly by the MIP backend to its
-  optimality tolerances, without SHOT's single-tree callbacks or initial LP
-  relaxation. Models with a `HyperplaneSelection` callback retain the tree
-  strategy so that user cuts are applied ([#301]).
-- SOS-only models with continuous columns use the discrete strategy with Cbc;
-  HiGHS rejects unsupported SOS sets instead of omitting them. Unsupported
-  negative semicontinuous and semi-integer branches are rejected by the CPLEX
-  and HiGHS adapters before model construction ([#299]).
-- Retained nonconvex quadratic objectives with linear constraints can use
-  Gurobi's direct strategy under the objective-enabled reformulation modes too
-  ([#299]).
-- `hasMIPSolver()` reports HiGHS availability consistently with the supported
-  solver list ([#299]).
-- Compatibility settings for an unavailable MIP solver's fallback are applied
-  before reformulation, including when the unavailable solver was explicitly
-  selected. A failed MIP model construction stops initialization ([#299]).
-- Convex maximization QCQP and MIQCQP models retain their quadratic constraints
-  with CPLEX and use the direct quadratic strategy ([#298]).
-- CPLEX uses the direct quadratic strategy for nonconvex QP and MIQP models
-  with only linear constraints when quadratic objectives are enabled ([#298]).
-- Nonconvex QP, MIQP, QCQP and MIQCQP models use the direct quadratic strategy
-  with Gurobi when `Model.Reformulation.Quadratics.Strategy=3`,
-  including when selected by recommended settings, instead of falling back to
-  the NLP or multi-tree strategy ([#298]).
-- Integer bilinear discretization stores and evaluates its auxiliary binary values
-  in linear space and time instead of building a quadratic number of polynomial
-  factors. Fractional points use bounded interpolation between adjacent values
-  ([#297]).
-- Repeated Ipopt NLP solves reuse initialized solver state after completed solves,
-  including iteration/time limits and infeasibility, instead of always rebuilding
-  it. Errors force a fresh initialization for the next solve ([#296]).
-- The iteration table labels MIQCQP subproblems correctly instead of `MIQPCP`
-  ([#295]).
-- Ipopt NLP solves stop when iteration values become NaN or infinite, avoiding
-  a numerical stall in the linear solver that could exceed the time limit.
-  The failed solve is reported as an error without retaining its solution
-  ([#294]).
-- Antiepigraph reformulation reconstructs the objective variable correctly for
-  scaled and offset objectives and normalizes maximization objectives consistently.
-  Each MIP solution uses its own objective value to reconstruct the variable
-  ([#293]).
-- Antiepigraph reformulation preserves the defining constraint when its direction,
-  ranged bounds or objective-variable domain make the reformulation unsafe,
-  preventing incorrect global optimality claims and lost variable restrictions
-  ([#292]).
-- A GAMS NLP solver licence failure produces one warning and switches to
-  GAMS IPOPT without reusing solver-specific options. Failed solvers are
-  skipped for the rest of the problem; if IPOPT also has a licence failure,
-  further GAMS NLP calls are skipped ([#291]).
-- Single-tree integer-cut regression tests for Gurobi and CPLEX trigger
-  cuts deterministically, avoiding failures caused by solver search behavior
-  ([#290]).
-- Binary and integer bilinear products stay in their original expressions
-  when linearization would require big-M values of 1e15 or larger. A warning
-  reports the skipped linearizations. This avoids rejected or poorly scaled
-  MIP models without introducing nonconvex auxiliary equalities ([#289]).
-- HiGHS recovery attempts share the remaining solve time, with additional
-  time checks in interrupt callbacks. Solves without presolve stop with a
-  numerical status when large integer domains risk overflow in HiGHS's
-  reduced-cost probing, avoiding a loop that ignores time limits ([#289]).
-- Gurobi, CPLEX and Cbc retry apparently infeasible dual problems with more
-  robust numerical settings, avoiding false infeasibility from badly scaled cuts.
-  Artificial variable bounds are removed before accepting infeasibility of
-  an unrepaired global relaxation, also without an incumbent or cutoff.
-  If such bounds remain, SHOT stops without claiming infeasibility ([#288]).
-- Gurobi accepts nonconvex quadratic objectives when recommended settings
-  are disabled, including with quadratic strategies 1 and 2, instead of
-  stopping with an "Objective Q not PSD" error ([#287]).
-- Large negative lower bounds and positive upper bounds of auxiliary
-  variables are treated as infinite in MIP models (threshold 1e15), with
-  fixed values preserved. Oversized square and product auxiliaries use
-  continuous columns, and very loose interval objective bounds are not used
-  as cutoffs. This prevents incorrect optimality claims from poorly scaled
-  dual problems while preserving original variable bounds ([#286]).
-- Integer cuts after a feasible fixed-integer NLP solve of a convex
-  problem are added only when the NLP status is optimal and its point is
-  accepted as a primal solution. Rejected or merely feasible points no
-  longer exclude an integer combination that may contain a better solution
-  and lead to a false optimality claim ([#285]).
-- Primal candidates from MIP solution pools and callbacks are checked
-  against the original linear constraints even when
-  `Primal.Tolerance.TrustLinearConstraintValues` is enabled. Numerically
-  infeasible points, e.g., after bounding an unbounded dual objective, can
-  no longer become the incumbent and produce a false optimality claim
-  ([#284]).
+- Early stops without a primal solution on nonconvex problems, with "no
+  additional dual cuts can be added": the infeasibility repair continues when
+  there is no primal solution yet, cuts are added for the deviating
+  constraints also when the most deviating ones have already been cut in the
+  point (`Dual.HyperplaneCuts.MaxConstraintFactor` is now relative to the
+  largest deviation not cut yet), and an integer combination with an
+  infeasible fixed-integer NLP problem is excluded with an integer cut
+  ([#257], [#312]).
+- Integer cuts: with Cbc, an integer cut excludes exactly its own
+  combination of values, where it could exclude the wrong one or too few
+  ([#312]); for convex problems, an integer cut after a fixed-integer NLP
+  problem is only added when its solution is optimal and accepted, so that a
+  better solution is not excluded ([#285]); and discrete values are rounded
+  instead of truncated when checking whether a combination has been tested
+  ([#260]).
+- Wrong solutions reported as optimal: candidates from MIP solution pools
+  and callbacks are checked against the linear constraints also with
+  `Primal.Tolerance.TrustLinearConstraintValues` ([#284]); MIP solutions are
+  projected onto the variable bounds before nonlinear functions are
+  evaluated ([#272]); and a solution that fulfils
+  `Termination.ConstraintTolerance` is reported instead of one that only
+  fulfils the looser primal tolerances, if it is within the gap tolerances
+  ([#265]).
+- Wrong dual bounds from badly scaled dual problems: the cuts of the initial
+  polyhedral outer approximation and the lazy cuts of the single-tree
+  strategy are scaled by their largest coefficient as the other cuts
+  ([#268], [#270]), and huge bounds of auxiliary variables (from 1e15) are
+  treated as infinite in the MIP problem ([#286]).
+- Wrong results from interval arithmetic and convexity detection: the
+  interval bounds of `cos`, `sin` and `tan` for arguments with large bounds
+  ([#283]), the convexity of `tan` over a pole, and floating-point
+  exponents that GCC could round with the integer `abs`, e.g., treating a
+  power 1.5 as linear ([#307]).
+- The antiepigraph reformulation gives correct objective values for scaled,
+  offset and maximized objectives, and is not used when it is not valid for
+  the constraint ([#292], [#293]).
+- Dual problems wrongly taken as infeasible or failing: Gurobi, CPLEX and Cbc
+  solve them again with more robust numerical settings, and artificial
+  bounds are removed before infeasibility is accepted ([#288]); infeasibility
+  because of the cutoff gives the cutoff as dual bound ([#263]);
+  `Dual.MIP.UpdateObjectiveBounds` tightens the objective bounds in the sense
+  of the dual problem, where maximization problems were reported infeasible
+  ([#269]); and numerical trouble in the relaxation of a problem with
+  discrete variables ends only the relaxation ([#271]).
+- The ESH method adds a cut for a violated convex constraint also when the
+  root search ends on the boundary ([#255]), and with Gurobi, the interior
+  point search finds a point also when Gurobi's presolve reports the minimax
+  problem as infeasible or unbounded ([#259]).
+- Gurobi: a continuous convex problem with quadratic constraints gets a dual
+  bound, numerical trouble is retried with `NumericFocus` 3 ([#271]), and
+  SHOT no longer crashes in the single-tree strategy after integer cuts of
+  nonbinary variables ([#267]) or reads past empty arrays when adding SOS
+  or repairing infeasibility ([#307]).
+- CPLEX ([#245], [#280]):
+  - The MIP start is used in the multi-tree strategy; it was deleted
+    whenever cuts were added.
+  - The cutoff constraint keeps the objective constant when the cutoff is
+    updated, where it could cut off better solutions.
+  - Repairing or removing cuts no longer changes other constraints of
+    problems with quadratic constraints.
+  - SHOT no longer crashes in the single-tree strategy after integer cuts of
+    nonbinary variables.
+  - Failed and presolve-infeasible dual problems are solved again with
+    numerical emphasis or without presolve instead of stopping SHOT.
+- Integer variables in bilinear terms: unbounded ones, or ones with only
+  artificial bounds, are no longer discretized when the term is extracted to
+  an auxiliary variable, which used up all memory ([#282]), and products are
+  not linearized when this would need big-M values of 1e15 or more ([#289]).
+- Ipopt solves stop when iteration values become NaN or infinite, which
+  could stall the linear solver past the time limit ([#294]).
+- A GAMS NLP solver licence failure gives one warning and switches to GAMS
+  IPOPT ([#291]).
+- Time limits and times: the bound tightening, initial outer approximation
+  and primal NLP setup in `setProblem()` stop at the time limit ([#251]);
+  Cbc's time limit is wall-clock instead of CPU time summed over threads
+  ([#311]); and the time report gives the time spent in the MIP solver for
+  relaxed and MIP problems ([46affef9], [a49ecf75]).
+- Results: the OSrL file has the values with all significant digits instead
+  of six decimals ([4b31c007]); the OSrL results and trace file give the NLP
+  solver used for the fixed-integer NLP problems ([#252]); the largest linear
+  constraint error of a problem without linear constraints is no longer
+  undefined, and cuts for nonconvex constraints are no longer postponed or
+  added because of values read outside the primal solution ([#260]); and the
+  iteration table labels MIQCQP subproblems correctly ([#295]).
+- SHOT no longer crashes when reading several monomial or signomial terms in
+  the objective with `Model.Reformulation.ObjectiveFunction.EpigraphStrategy=2`
+  and `Model.Reformulation.Constraint.PartitionNonlinearTerms=0` ([#281]).
+- Models with only SOS constraints and continuous variables use the discrete
+  strategy with Cbc, CPLEX rejects negative semicontinuous and semi-integer
+  variables it does not support, and the settings of the fallback for an
+  unavailable MIP solver are applied before reformulation ([#299]).
+- SHOT builds with `CMAKE_BUILD_TYPE=RelWithDebInfo` ([#307]).
 - Many fixes for wrong results, invalid dual bounds, crashes and
   non-termination, mainly on nonconvex problems, found by running the
   MINLPLib and MINLPTests instances with several MIP and NLP solvers
@@ -349,148 +267,6 @@ Changes since SHOT 1.1.
   [#198], [#227], [46404779], [801c7809]) and in the Gurobi, Cbc, HiGHS and
   Ipopt interfaces ([#151], [#155], [#170], [#172], [#218], [#232],
   [15695f16], [7f2b2af7], [bca3b691]).
-- CPLEX now uses the MIP start in the multi-tree strategy; it was deleted
-  whenever cuts were added to the model ([#245]).
-- The times for solving relaxed and MIP problems in the time report are the
-  times spent in the MIP solver; they measured the whole LP step and the time
-  from the end of the LP step to the end of the run, and the time for MIP
-  problems was zero without an LP step ([46affef9], [a49ecf75]).
-- The bound tightening, the initial outer approximation and the creation of
-  the primal NLP solvers, performed when the problem is set, stop at the time
-  limit, so that the solution time runs less over the limit when reading a
-  large problem uses up most of it ([#251]).
-- The OSrL results name HiGHS as the dual solver, where the name was empty,
-  and give the NLP solver used for the fixed-integer NLP problems as
-  `FixedNLPSolver`, which gave the dual solver ([c95eba1d], [#252]). The
-  trace file gives the NLP solver only if an NLP problem was solved, and the
-  GAMS NLP solver called instead of the setting, e.g., `CONOPT` instead of
-  `auto` ([#252]).
-- With `Dual.HyperplaneCuts.UseIntegerCuts`, the default for nonconvex
-  problems, an integer combination for which the fixed-integer NLP problem is
-  infeasible is also excluded with an integer cut. SHOT could otherwise stop
-  without a primal solution when the MIP solver returned the same combination
-  again ([#257]).
-- The ESH method adds a cut for a violated convex constraint also when the
-  root search ends on the boundary, where the constraint value can be rounded
-  to slightly below zero. Convex problems, e.g., with quadratic terms and
-  Cbc or HiGHS, could otherwise stop with a gap since no additional cuts
-  could be added ([#255]).
-- A MIP problem that HiGHS reports as infeasible is solved again without
-  presolve, since HiGHS can reject every solution of a feasible problem when
-  they violate a row after the presolve is undone. The dual problem could
-  then be taken as infeasible, and the solution stop without a primal
-  solution ([#255]).
-- With Gurobi, the ESH interior point search finds a point also when Gurobi's
-  presolve reports the minimax problem as infeasible or unbounded, which it
-  can do because of the large lower bound of the objective variable. The
-  problem is solved again without dual reductions, as are the other problems
-  solved before the main iterations; the search could otherwise end without
-  an interior point ([#259]).
-- A dual problem that is infeasible because of the cutoff gives the cutoff as
-  dual bound also when only the solution limit was updated since the cutoff
-  was set. The solution could otherwise stop with a gap, e.g., on a convex
-  problem, since the dual problem was taken as infeasible ([#263]).
-- A primal solution that fulfils the constraints to
-  `Termination.ConstraintTolerance` is reported instead of an incumbent that
-  only fulfils them to the larger primal tolerances, if its objective value is
-  within the termination gap tolerances. A point from a relaxation could
-  otherwise be reported with an objective value better than that of any
-  feasible solution when the objective is sensitive to the constraint
-  violation ([#265]).
-- With Gurobi in the single-tree strategy, SHOT no longer crashes when an
-  integer cut of nonbinary variables has been added, which adds variables
-  to the MIP problem. The callback read the values of the new variables
-  outside the variables it got before the first solve.
-- The cuts of the initial polyhedral outer approximation
-  (`Model.BoundTightening.InitialPOA.Use`) are scaled by their largest
-  coefficient, as the other cuts. A cut generated close to a singularity,
-  e.g., of `x^2/y` for `y` close to zero, could have coefficients so large
-  that Gurobi returned a solution of the dual problem that was not optimal,
-  and SHOT took a suboptimal solution as globally optimal.
-- With `Dual.MIP.UpdateObjectiveBounds`, the bounds of the objective
-  variable are updated in the sense of the dual problem, and only tightened.
-  A maximization problem was reported as infeasible, since the bounds of the
-  maximized objective were given to the minimized objective variable, and
-  the bounds were loosened when there was no primal or dual bound yet.
-- When selecting cuts for nonconvex constraints, the check whether a cut
-  would cut away a primal solution read the values of auxiliary variables
-  from outside the primal solution, which only has the variables of the
-  original problem. It now uses the values of the auxiliary variables, so
-  that cuts are not postponed, or added, because of arbitrary values.
-- The largest error of the linear constraints of a primal solution of a
-  problem without linear constraints was undefined, and could be reported in
-  the output and the OSrL results and used as the largest constraint error of
-  the solution.
-- The values of the discrete variables of a fixed-integer NLP candidate are
-  rounded rather than truncated when checking whether the integer combination
-  has been tested before. A value just below an integer was taken as the
-  integer below, so the same combination could be solved again, or a new one
-  skipped; values outside the range of an `int` were undefined.
-- The lazy cuts of the Gurobi and Cplex single-tree strategy are scaled by
-  their largest coefficient, as the other cuts. They were only scaled when
-  their RHS was larger than 1e15, so a cut generated close to a singularity,
-  e.g., of `x^2/y` for `y` close to zero, could be given to the MIP solver
-  with coefficients of the order 1e20.
-- With Gurobi, a continuous convex problem with quadratic constraints that
-  Gurobi solves to optimality gets its objective value as dual bound. Gurobi
-  reports an infinite `ObjBound` for such a problem, so the dual bound was
-  missing and the solution could not be proven optimal.
-- When Gurobi stops with numerical trouble, the dual problem is solved again
-  with `NumericFocus` 3, unless `Subsolver.Gurobi.NumericFocus` is already 3.
-  SHOT otherwise stopped, e.g., on a degenerate convex problem with
-  quadratic constraints.
-- Numerical trouble in the relaxation of a problem with discrete variables
-  (`Dual.Relaxation.Use`) ends the relaxation instead of the solution, so the
-  problem with the discrete variables is still solved.
-- The values of the solutions of the MIP solver are projected onto the
-  variable bounds before they are used. A value slightly outside a bound,
-  within the feasibility tolerance of the MIP solver, could be outside the
-  domain of a nonlinear function, e.g., `y < 0` in `x^2/y` with `y >= 0`, so
-  that the constraint was fulfilled by a large margin. With Cplex, an
-  infeasible point was then accepted as the optimal solution, and no cut
-  was generated for the constraint.
-- The OSrL result file has the values of the variables, the objective and
-  the constraints with all significant digits. They were written with six
-  decimals, so that, e.g., a value of `1.5e-7` was written as `0.000000`.
-- Fixes in the CPLEX interface ([#280]):
-  - The cutoff constraint of a minimization problem with a constant in the
-    objective function lost the constant when the cutoff was updated, so
-    that it cut off solutions better than the cutoff and SHOT could report a
-    wrong optimum.
-  - The cuts are found by their position among all constraints, also when the
-    problem has quadratic constraints. Their positions were counted among the
-    linear constraints only, so that repairing or removing cuts changed the
-    bounds of other constraints, e.g., removed a quadratic constraint.
-  - In the single-tree strategy, the callback uses only the variables of the
-    problem after integer cuts of nonbinary variables have added variables
-    to the MIP problem, and gives CPLEX primal solutions for these variables
-    only. SHOT crashed in this case.
-  - When CPLEX fails, e.g., because of numerical trouble, the dual problem is
-    solved again with numerical emphasis, and the solutions are used if it
-    fails again. SHOT stopped with an error.
-  - A dual problem that CPLEX reports as infeasible before a primal solution
-    is found is solved again without presolve, since CPLEX's presolve can
-    report a feasible problem with quadratic constraints as infeasible.
-- SHOT crashed when reading a problem with several monomial or signomial
-  terms in the objective function with
-  `Model.Reformulation.ObjectiveFunction.EpigraphStrategy=2` and
-  `Model.Reformulation.Constraint.PartitionNonlinearTerms=0`: the bounds of
-  the terms of the epigraph constraint were calculated before the constraint
-  belonged to the reformulated problem ([#281]).
-- An integer variable without bounds, or with the artificial bounds from
-  `Model.Variables.Integer.MinimumLowerBound` and `MaximumUpperBound`, is no
-  longer discretized in a bilinear term that is extracted to an auxiliary
-  variable, e.g., with `Model.Reformulation.Quadratics.ExtractStrategy=2`;
-  the term is reformulated as a continuous bilinear term instead. The
-  discretization has one binary variable for each value of the variable, so
-  SHOT used up all memory ([#282]).
-- The interval bounds of `cos`, `sin` and `tan` are correct for arguments
-  with bounds larger than about 6.7e9, e.g. a variable without a lower or
-  upper bound. MC++ converted the number of periods to an `int`, which
-  overflowed and gave wrong intervals, so that bound tightening could cut
-  off the optimum and SHOT reported a wrong optimal solution. On x86-64 this
-  happened already for, e.g., a variable in [-1e20, 1], on arm64 for bounds
-  such as [-1e12, -1e11] ([#283]).
 
 ### Removed
 
@@ -536,7 +312,6 @@ Changes since SHOT 1.1.
 [#192]: https://github.com/coin-or/SHOT/pull/192
 [#194]: https://github.com/coin-or/SHOT/pull/194
 [#196]: https://github.com/coin-or/SHOT/pull/196
-[#197]: https://github.com/coin-or/SHOT/pull/197
 [#198]: https://github.com/coin-or/SHOT/pull/198
 [#200]: https://github.com/coin-or/SHOT/pull/200
 [#204]: https://github.com/coin-or/SHOT/pull/204
@@ -586,10 +361,17 @@ Changes since SHOT 1.1.
 [#257]: https://github.com/coin-or/SHOT/pull/257
 [#258]: https://github.com/coin-or/SHOT/pull/258
 [#259]: https://github.com/coin-or/SHOT/pull/259
+[#260]: https://github.com/coin-or/SHOT/pull/260
 [#261]: https://github.com/coin-or/SHOT/pull/261
 [#262]: https://github.com/coin-or/SHOT/pull/262
 [#263]: https://github.com/coin-or/SHOT/pull/263
 [#265]: https://github.com/coin-or/SHOT/pull/265
+[#267]: https://github.com/coin-or/SHOT/pull/267
+[#268]: https://github.com/coin-or/SHOT/pull/268
+[#269]: https://github.com/coin-or/SHOT/pull/269
+[#270]: https://github.com/coin-or/SHOT/pull/270
+[#271]: https://github.com/coin-or/SHOT/pull/271
+[#272]: https://github.com/coin-or/SHOT/pull/272
 [#280]: https://github.com/coin-or/SHOT/pull/280
 [#281]: https://github.com/coin-or/SHOT/pull/281
 [#282]: https://github.com/coin-or/SHOT/pull/282
@@ -600,7 +382,6 @@ Changes since SHOT 1.1.
 [#287]: https://github.com/coin-or/SHOT/pull/287
 [#288]: https://github.com/coin-or/SHOT/pull/288
 [#289]: https://github.com/coin-or/SHOT/pull/289
-[#290]: https://github.com/coin-or/SHOT/pull/290
 [#291]: https://github.com/coin-or/SHOT/pull/291
 [#292]: https://github.com/coin-or/SHOT/pull/292
 [#293]: https://github.com/coin-or/SHOT/pull/293
@@ -613,11 +394,9 @@ Changes since SHOT 1.1.
 [#301]: https://github.com/coin-or/SHOT/pull/301
 [#302]: https://github.com/coin-or/SHOT/pull/302
 [#304]: https://github.com/coin-or/SHOT/pull/304
-[#303]: https://github.com/coin-or/SHOT/pull/303
 [#306]: https://github.com/coin-or/SHOT/pull/306
 [#307]: https://github.com/coin-or/SHOT/pull/307
 [#308]: https://github.com/coin-or/SHOT/pull/308
-[#309]: https://github.com/coin-or/SHOT/pull/309
 [#311]: https://github.com/coin-or/SHOT/pull/311
 [#312]: https://github.com/coin-or/SHOT/pull/312
 [#317]: https://github.com/coin-or/SHOT/pull/317
@@ -627,6 +406,7 @@ Changes since SHOT 1.1.
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
 [46404779]: https://github.com/coin-or/SHOT/commit/46404779
 [46affef9]: https://github.com/coin-or/SHOT/commit/46affef9
+[4b31c007]: https://github.com/coin-or/SHOT/commit/4b31c007
 [4f096597]: https://github.com/coin-or/SHOT/commit/4f096597
 [5a82942f]: https://github.com/coin-or/SHOT/commit/5a82942f
 [64b10f44]: https://github.com/coin-or/SHOT/commit/64b10f44
@@ -637,7 +417,6 @@ Changes since SHOT 1.1.
 [a49ecf75]: https://github.com/coin-or/SHOT/commit/a49ecf75
 [bca3b691]: https://github.com/coin-or/SHOT/commit/bca3b691
 [bf3f7447]: https://github.com/coin-or/SHOT/commit/bf3f7447
-[c95eba1d]: https://github.com/coin-or/SHOT/commit/c95eba1d
 [cf408fbd]: https://github.com/coin-or/SHOT/commit/cf408fbd
 [d9db1155]: https://github.com/coin-or/SHOT/commit/d9db1155
 [ec55766b]: https://github.com/coin-or/SHOT/commit/ec55766b
