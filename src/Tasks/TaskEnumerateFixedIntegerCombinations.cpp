@@ -265,6 +265,10 @@ void TaskEnumerateFixedIntegerCombinations::enumerateCombinations()
     std::string endReason;
     bool hasMoreCombinations = true;
 
+    int numberOfNLPsFeasible = 0;
+    int numberOfNLPsInfeasible = 0;
+    int numberOfNLPsFailed = 0;
+
     while(hasMoreCombinations)
     {
         if(env->tasks->isTerminated())
@@ -321,9 +325,19 @@ void TaskEnumerateFixedIntegerCombinations::enumerateCombinations()
                 numberSolved++;
 
                 if(status == E_NLPSolutionStatus::Optimal || status == E_NLPSolutionStatus::Feasible)
+                {
                     isFeasible = true;
-                else if(status != E_NLPSolutionStatus::Infeasible)
+                    numberOfNLPsFeasible++;
+                }
+                else if(status == E_NLPSolutionStatus::Infeasible)
+                {
+                    numberOfNLPsInfeasible++;
+                }
+                else
+                {
                     isConclusive = false;
+                    numberOfNLPsFailed++;
+                }
             }
 
             if(isOutOfTime)
@@ -359,16 +373,9 @@ void TaskEnumerateFixedIntegerCombinations::enumerateCombinations()
         hasMoreCombinations = selectNextCombination(combination);
     }
 
-    int numberSolved = statistics.numberOfFixedIntegerEnumerationCombinationsFeasible
-        + statistics.numberOfFixedIntegerEnumerationCombinationsInfeasible
-        + statistics.numberOfFixedIntegerEnumerationCombinationsUnresolved;
-
-    env->output->outputInfo(fmt::format("        Exhaustive fixed-integer search{}: {}/{} solved in {:.2f} s "
-                                        "({} feasible, {} infeasible, {} unresolved, {} skipped).{}",
-        isFallback ? " (fallback)" : "", numberSolved, numberOfCombinations, timeUsed,
-        statistics.numberOfFixedIntegerEnumerationCombinationsFeasible,
-        statistics.numberOfFixedIntegerEnumerationCombinationsInfeasible,
-        statistics.numberOfFixedIntegerEnumerationCombinationsUnresolved,
-        statistics.numberOfFixedIntegerEnumerationCombinationsSkipped, endReason));
+    env->output->outputInfo(fmt::format("        Exhaustive fixed-integer search{}: {} NLPs solved in {:.2f} s "
+                                        "({} feasible, {} infeasible, {} failed).{}",
+        isFallback ? " (fallback)" : "", numberOfNLPsFeasible + numberOfNLPsInfeasible + numberOfNLPsFailed, timeUsed,
+        numberOfNLPsFeasible, numberOfNLPsInfeasible, numberOfNLPsFailed, endReason));
 }
 } // namespace SHOT
