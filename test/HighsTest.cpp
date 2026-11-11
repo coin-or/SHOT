@@ -25,7 +25,9 @@
 #include "../src/Model/ObjectiveFunction.h"
 #include "IntegerCutTestCommon.h"
 
+#include <algorithm>
 #include <iostream>
+#include <random>
 
 using namespace SHOT;
 
@@ -173,6 +175,88 @@ bool HighsRepairInfeasibilityTest()
         {
             std::cout << "The repaired problem is not solved to optimality, status " << static_cast<int>(status)
                       << ".\n";
+            return (false);
+        }
+    }
+
+    return (true);
+}
+
+// HiGHS compares the time limit of an LP with the run time accumulated over all solves of the instance. A time limit
+// longer than one solve, but shorter than the solves before it together, must not stop the next LP solve at once.
+bool HighsLPTimeLimitAfterEarlierSolvesTest()
+{
+    Solver solver;
+    auto env = solver.getEnvironment();
+    solver.updateSetting("Dual.MIP.NumberOfThreads", 1);
+    solver.updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    env->reformulatedProblem = std::make_shared<Problem>(env);
+
+    MIPSolverHighs lp(env);
+    lp.initializeProblem();
+
+    // A dense random LP, so that solving it from scratch takes a measurable time
+    const int numberOfVariables = 600;
+    const int numberOfConstraints = 500;
+    std::mt19937 generator(1);
+    std::uniform_real_distribution<double> distribution(0.0, 1.0);
+
+    for(int i = 0; i < numberOfVariables; i++)
+        lp.addVariable(fmt::format("x{}", i), E_VariableType::Real, 0.0, 10.0, 0.0);
+
+    lp.initializeObjective();
+
+    for(int i = 0; i < numberOfVariables; i++)
+        lp.addLinearTermToObjective(-distribution(generator), i);
+
+    lp.finalizeObjective(true);
+    lp.finalizeProblem();
+
+    for(int j = 0; j < numberOfConstraints; j++)
+    {
+        std::map<int, double> terms;
+
+        for(int i = 0; i < numberOfVariables; i++)
+        {
+            if(distribution(generator) < 0.3)
+                terms.emplace(i, distribution(generator));
+        }
+
+        if(lp.addLinearConstraint(terms, -1.0, fmt::format("c{}", j)) < 0)
+            return (false);
+    }
+
+    lp.setSolutionLimit(2100000000);
+    lp.setTimeLimit(100.0);
+
+    auto started = std::chrono::steady_clock::now();
+    auto status = lp.solveProblem();
+    double firstSolveTime = std::chrono::duration<double>(std::chrono::steady_clock::now() - started).count();
+
+    if(status != E_ProblemSolutionStatus::Optimal)
+    {
+        std::cout << "The first LP is not solved to optimality, status " << static_cast<int>(status) << ".\n";
+        return (false);
+    }
+
+    std::cout << fmt::format("The first LP was solved in {:.4f} s.\n", firstSolveTime);
+
+    // Each following solve is warm started and changes the bound of one variable that is nonzero in the solution, so
+    // it takes a few simplex iterations, which are much faster than solving from scratch
+    for(int k = 0; k < 5; k++)
+    {
+        auto solution = lp.getVariableSolution(0);
+        int index
+            = static_cast<int>(std::distance(solution.begin(), std::max_element(solution.begin(), solution.end())));
+        lp.updateVariableBound(index, 0.0, solution[index] / 2.0);
+        lp.setTimeLimit(firstSolveTime / 2.0);
+
+        status = lp.solveProblem();
+
+        if(status != E_ProblemSolutionStatus::Optimal)
+        {
+            std::cout << fmt::format("The LP after {} bound changes is not solved to optimality, status {}.\n", k + 1,
+                static_cast<int>(status));
             return (false);
         }
     }
@@ -605,6 +689,10 @@ int HighsTest(int argc, char* argv[])
     case 15:
         std::cout << "Testing the HiGHS infeasibility repair for minimization and maximization problems." << std::endl;
         passed = HighsRepairInfeasibilityTest();
+        break;
+    case 16:
+        std::cout << "Testing an LP time limit in HiGHS after earlier solves of the same instance." << std::endl;
+        passed = HighsLPTimeLimitAfterEarlierSolvesTest();
         break;
     default:
         passed = false;

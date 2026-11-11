@@ -215,6 +215,7 @@ if(HAS_HIGHS)
         13
         14
         15
+        16
     )
     set(cpptests ${cpptests} Highs)
 endif()
