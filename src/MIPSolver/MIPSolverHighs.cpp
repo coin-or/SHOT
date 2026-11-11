@@ -970,6 +970,11 @@ HighsStatus MIPSolverHighs::runSolver()
     double originalLimit;
     highsInstance.getOptionValue("time_limit", originalLimit);
     highsInstance.setOptionValue("time_limit", remainingTime);
+
+    // HiGHS compares the time limit of an LP with the run time accumulated over all solves of the instance, so
+    // without zeroing its clocks an LP returns at once with a time limit status after earlier solves have used up
+    // the remaining time. MIP solves use a timer of their own.
+    highsInstance.zeroAllClocks();
     auto status = highsInstance.run();
     highsInstance.setOptionValue("time_limit", originalLimit);
     return status;

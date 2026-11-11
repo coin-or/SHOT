@@ -252,8 +252,9 @@ Changes since SHOT 1.1.
 - Time limits and times: the bound tightening, initial outer approximation
   and primal NLP setup in `setProblem()` stop at the time limit ([#251]);
   Cbc's time limit is wall-clock instead of CPU time summed over threads
-  ([#311]); and the time report gives the time spent in the MIP solver for
-  relaxed and MIP problems ([46affef9], [a49ecf75]).
+  ([#311]); HiGHS's applies to each LP solve, not to all together ([#324]);
+  and the time report gives the time spent in the MIP solver for relaxed and
+  MIP problems ([46affef9], [a49ecf75]).
 - Results: the OSrL file has the values with all significant digits instead
   of six decimals ([4b31c007]); the OSrL results and trace file give the NLP
   solver used for the fixed-integer NLP problems ([#252]); the largest linear
@@ -412,6 +413,7 @@ Changes since SHOT 1.1.
 [#317]: https://github.com/coin-or/SHOT/pull/317
 [#318]: https://github.com/coin-or/SHOT/pull/318
 [#323]: https://github.com/coin-or/SHOT/pull/323
+[#324]: https://github.com/coin-or/SHOT/pull/324
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
