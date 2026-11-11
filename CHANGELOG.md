@@ -4,17 +4,7 @@ User-visible changes to SHOT and SHOTpy. See [CONTRIBUTING.md](CONTRIBUTING.md)
 for how to add entries. Changes in versions before 2.0 are described in the
 [GitHub releases](https://github.com/coin-or/SHOT/releases).
 
-## Unreleased
-
-### Changed
-
-- The SHOTpy tutorial is a series of four notebooks in `docs/tutorial`, from
-  getting started to solver features, Python workflows and advanced modeling,
-  with their data files, written by Joakim Blomqvist. The documentation site
-  shows each notebook as a page and offers the folder as a download
-  ([#323]).
-
-## 2.0.0 — 2026-11-10
+## 2.0.0 — 2026-11-11
 
 Changes since SHOT 1.1.
 
@@ -132,6 +122,11 @@ Changes since SHOT 1.1.
 
 ### Changed
 
+- The SHOTpy tutorial is a series of four notebooks in `docs/tutorial`, from
+  getting started to solver features, Python workflows and advanced modeling,
+  with their data files, written by Joakim Blomqvist. The documentation site
+  shows each notebook as a page and offers the folder as a download
+  ([#323]).
 - Equality constraints and ranges are kept as they are in the original
   problem ([#210]).
 - Much faster reading, reformulating and solving of large problems, and
