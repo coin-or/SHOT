@@ -19,10 +19,10 @@
       "patches": []
     },
     "HiGHS": {
-      "version": "1.15.1",
+      "version": "1.16.0",
       "source": "https://github.com/ERGO-Code/HiGHS",
       "kind": "submodule",
-      "commit": "04024d701f79feb8e2f18bc3df0dffc04ef05088",
+      "commit": "f3f113d230429a8c0014b12ab0dd1a3847e58c55",
       "license": "MIT",
       "patches": []
     },

@@ -413,6 +413,7 @@ Changes since SHOT 1.1.
 [#317]: https://github.com/coin-or/SHOT/pull/317
 [#318]: https://github.com/coin-or/SHOT/pull/318
 [#323]: https://github.com/coin-or/SHOT/pull/323
+[#325]: https://github.com/coin-or/SHOT/pull/325
 [#324]: https://github.com/coin-or/SHOT/pull/324
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
