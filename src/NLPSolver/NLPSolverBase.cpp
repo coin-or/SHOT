@@ -12,8 +12,13 @@
 
 #include "../Settings.h"
 
+#include <cstdlib>
 #ifndef _WIN32
 #include <dlfcn.h>
+#endif
+
+#ifdef _OPENMP
+extern "C" void omp_set_num_threads(int);
 #endif
 
 namespace SHOT
@@ -23,10 +28,14 @@ namespace SHOT
 // used by MUMPS in Ipopt; 0 leaves them unchanged. OpenMP limits only the calling thread.
 static void setNumberOfThreadsInNLPLibraries(int threads)
 {
-#ifndef _WIN32
     if(threads <= 0)
         return;
 
+#ifdef _OPENMP
+    omp_set_num_threads(threads);
+#endif
+
+#ifndef _WIN32
     // SHOT is not linked with these libraries directly, and which of them are loaded depends on how the NLP solvers
     // were built, so they are looked up at run time
     using SetNumberOfThreads = void (*)(int);
@@ -35,8 +44,10 @@ static void setNumberOfThreadsInNLPLibraries(int threads)
         = reinterpret_cast<SetNumberOfThreads>(dlsym(RTLD_DEFAULT, "openblas_set_num_threads"));
     static auto MKLSetNumberOfThreads
         = reinterpret_cast<SetNumberOfThreads>(dlsym(RTLD_DEFAULT, "MKL_Set_Num_Threads"));
+#ifndef _OPENMP
     static auto OpenMPSetNumberOfThreads
         = reinterpret_cast<SetNumberOfThreads>(dlsym(RTLD_DEFAULT, "omp_set_num_threads"));
+#endif
 
     if(openBLASSetNumberOfThreads)
         openBLASSetNumberOfThreads(threads);
@@ -44,8 +55,15 @@ static void setNumberOfThreadsInNLPLibraries(int threads)
     if(MKLSetNumberOfThreads)
         MKLSetNumberOfThreads(threads);
 
+#ifndef _OPENMP
     if(OpenMPSetNumberOfThreads)
         OpenMPSetNumberOfThreads(threads);
+#endif
+#endif
+
+#ifdef __APPLE__
+    std::string s = std::to_string(threads);
+    setenv("VECLIB_MAXIMUM_THREADS", s.c_str(), 1);
 #endif
 }
 

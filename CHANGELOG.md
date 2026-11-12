@@ -4,6 +4,13 @@ User-visible changes to SHOT and SHOTpy. See [CONTRIBUTING.md](CONTRIBUTING.md)
 for how to add entries. Changes in versions before 2.0 are described in the
 [GitHub releases](https://github.com/coin-or/SHOT/releases).
 
+## 2.0.1
+
+### Added
+
+- The number of threads for the macOS Accelerate framework is now set to
+  the value of option Primal.FixedInteger.NumberOfThreads.
+
 ## 2.0.0 — 2026-11-11
 
 Changes since SHOT 1.1.
