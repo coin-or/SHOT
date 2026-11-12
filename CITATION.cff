@@ -17,6 +17,7 @@ authors:
 title: "SHOT: The Supporting Hyperplane Optimization Toolkit"
 version: 2.0.0
 date-released: 2026-11-11
+doi: 10.5281/zenodo.24161046
 url: "https://shotsolver.dev"
 repository-code: "https://github.com/coin-or/SHOT"
 license: EPL-2.0
