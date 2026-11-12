@@ -12,20 +12,53 @@
 
 #include "../Settings.h"
 
-#include <cstdlib>
 #ifndef _WIN32
 #include <dlfcn.h>
 #endif
 
+#ifdef __APPLE__
+#include <cstdlib>
+#include <mutex>
+#include <string>
+#endif
+
 #ifdef _OPENMP
-extern "C" void omp_set_num_threads(int);
+#include <omp.h>
 #endif
 
 namespace SHOT
 {
 
+#ifdef __APPLE__
+// Limits the threads of BLAS and LAPACK in the Accelerate framework. From macOS 15, BLASSetThreading switches the
+// calling thread between one thread and as many as Accelerate decides; before, only VECLIB_MAXIMUM_THREADS is
+// available, which is set once, since setting environment variables is not thread safe, and only if the user has not
+// set it.
+static void setNumberOfThreadsInAccelerate(int threads)
+{
+    // The values of the enum BLAS_THREADING in vecLib's thread_api.h
+    constexpr unsigned int BLASThreadingMultiThreaded = 0;
+    constexpr unsigned int BLASThreadingSingleThreaded = 1;
+
+    using SetThreading = int (*)(unsigned int);
+
+    static auto BLASSetThreading = reinterpret_cast<SetThreading>(dlsym(RTLD_DEFAULT, "BLASSetThreading"));
+
+    if(BLASSetThreading)
+    {
+        BLASSetThreading(threads == 1 ? BLASThreadingSingleThreaded : BLASThreadingMultiThreaded);
+        return;
+    }
+
+    static std::once_flag environmentSet;
+    std::call_once(
+        environmentSet, [threads]() { setenv("VECLIB_MAXIMUM_THREADS", std::to_string(threads).c_str(), 0); });
+}
+#endif
+
 // Limits the number of threads of the BLAS and OpenMP libraries that the NLP solvers are linked with, e.g., OpenBLAS
-// used by MUMPS in Ipopt; 0 leaves them unchanged. OpenMP limits only the calling thread.
+// used by MUMPS in Ipopt or the Accelerate framework on macOS; 0 leaves them unchanged. OpenMP and, from macOS 15,
+// Accelerate limit only the calling thread.
 static void setNumberOfThreadsInNLPLibraries(int threads)
 {
     if(threads <= 0)
@@ -62,8 +95,7 @@ static void setNumberOfThreadsInNLPLibraries(int threads)
 #endif
 
 #ifdef __APPLE__
-    std::string s = std::to_string(threads);
-    setenv("VECLIB_MAXIMUM_THREADS", s.c_str(), 1);
+    setNumberOfThreadsInAccelerate(threads);
 #endif
 }
 

@@ -819,8 +819,9 @@ void Solver::initializeSettings()
     // Independent of Dual.MIP.NumberOfThreads, so that NLP problems can be solved at the same time as the MIP problem.
     // The BLAS library, e.g., OpenBLAS used by MUMPS in Ipopt, otherwise uses all cores.
     env->settings->createSetting("Primal.FixedInteger.NumberOfThreads", 1,
-        "Number of threads for each NLP problem, in the NLP solver and its BLAS and OpenMP libraries: 0: Automatic", 0,
-        SHOT_INT_MAX);
+        "Number of threads for each NLP problem, in the NLP solver and its BLAS, OpenMP and Accelerate libraries: "
+        "0: Automatic",
+        0, SHOT_INT_MAX);
 
     env->settings->createSetting("Primal.FixedInteger.UseStartingPoint", true,
         "Solve an NLP problem from a given starting point that is not feasible, e.g. the levels of the variables in "
