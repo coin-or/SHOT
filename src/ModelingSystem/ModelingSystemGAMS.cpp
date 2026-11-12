@@ -24,6 +24,7 @@
 #ifdef GAMS_BUILD
 #include "GamsLicensing.h"
 #include "GamsHSLInit.h"
+#include "gevlice.h" // for conopt license setup
 #endif
 
 #if defined(_WIN32)
@@ -619,6 +620,26 @@ void ModelingSystemGAMS::createAuditLicensing()
 
     palLicenseCheck(auditLicensing, gmoM(modelingObject), gmoN(modelingObject), gmoNZ(modelingObject),
         gmoNLNZ(modelingObject), gmoNDisc(modelingObject));
+}
+
+// Get license code for CONOPT, if a GAMS/CONOPT license is available
+// Returns true if a GAMS/CONOPT license is available, false otherwise.
+bool ModelingSystemGAMS::getConoptLicense([[maybe_unused]] int& int1, [[maybe_unused]] int& int2,
+    [[maybe_unused]] int& int3, [[maybe_unused]] std::string& text)
+{
+#ifdef GAMS_BUILD
+    if(!GAMScheckCONOPTLicense(auditLicensing, true))
+        return false;
+
+    int1 = CONOPT_LICENSE_INT_1;
+    int2 = CONOPT_LICENSE_INT_2;
+    int3 = CONOPT_LICENSE_INT_3;
+    text = CONOPT_LICENSE_TEXT;
+
+    return true;
+#else
+    return false;
+#endif
 }
 
 VectorDouble ModelingSystemGAMS::getStartingPoint()

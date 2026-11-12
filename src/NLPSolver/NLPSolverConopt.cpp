@@ -10,6 +10,9 @@
 #include "../TaskHandler.h"
 #include "../Timing.h"
 #include "../Utilities.h"
+#ifdef HAS_GAMS
+#include "../ModelingSystem/ModelingSystemGAMS.h"
+#endif
 #include <conopt.hpp>
 #include <algorithm>
 #include <chrono>
@@ -44,7 +47,7 @@ namespace SHOT
 {
 namespace
 {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(GAMS_BUILD)
     // CONOPT is delay-loaded on Windows. Load it from the configured SDK, as rpaths do elsewhere, since
     // Python does not search PATH for the dependencies of SHOTpy. Otherwise use the default DLL search.
     bool loadConopt()
@@ -788,48 +791,76 @@ E_NLPSolutionStatus NLPSolverConopt::solveProblemInstance()
             check(solver.setItLim(iterationLimit));
         check(solver.setResLim(seconds));
         check(COIDEF_Optfile(solver.controlVector(), options.name.c_str()));
-        const char* license[] = { std::getenv("CONOPT_LICENSE_INT_1"), std::getenv("CONOPT_LICENSE_INT_2"),
-            std::getenv("CONOPT_LICENSE_INT_3"), std::getenv("CONOPT_LICENSE_TEXT") };
-        int count = 0;
 
-        for(auto value : license)
-            if(value)
-                ++count;
-        if(count == 4)
+        bool licenseSetup = false;
+#ifdef HAS_GAMS
+        auto modelingSystemGAMS = std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem);
+
+        if(modelingSystemGAMS)
         {
-            int integers[3];
-            try
+            int int1, int2, int3;
+            std::string text;
+
+            if(modelingSystemGAMS->getConoptLicense(int1, int2, int3, text))
             {
-                for(int i = 0; i < 3; ++i)
+                int licenseCode = solver.setLicense(int1, int2, int3, text);
+                if(licenseCode && !warnedLicense)
                 {
-                    size_t used;
-                    integers[i] = std::stoi(license[i], &used);
-                    if(license[i][used] != '\0')
-                        throw std::runtime_error("Invalid license integer");
+                    env->output->outputWarning(
+                        " CONOPT rejected the CONOPT license from GAMS. Contact support@gams.com.");
+                    warnedLicense = true;
                 }
+                check(licenseCode);
+                licenseSetup = true;
             }
-            catch(const std::exception&)
-            {
-                if(!warnedLicense)
-                    env->output->outputWarning(" Invalid CONOPT license integer environment variables.");
-                warnedLicense = true;
-                return E_NLPSolutionStatus::Error;
-            }
-            int licenseCode = solver.setLicense(integers[0], integers[1], integers[2], license[3]);
-            if(licenseCode && !warnedLicense)
-            {
-                env->output->outputWarning(" CONOPT rejected the configured license.");
-                warnedLicense = true;
-            }
-            check(licenseCode);
         }
-        else if(count && !warnedIncompleteLicense)
+#endif
+
+        if(!licenseSetup)
         {
-            env->output->outputWarning(" Incomplete CONOPT license environment; using demo mode.");
-            warnedIncompleteLicense = true;
+            const char* license[] = { std::getenv("CONOPT_LICENSE_INT_1"), std::getenv("CONOPT_LICENSE_INT_2"),
+                std::getenv("CONOPT_LICENSE_INT_3"), std::getenv("CONOPT_LICENSE_TEXT") };
+            int count = 0;
+
+            for(auto value : license)
+                if(value)
+                    ++count;
+            if(count == 4)
+            {
+                int integers[3];
+                try
+                {
+                    for(int i = 0; i < 3; ++i)
+                    {
+                        size_t used;
+                        integers[i] = std::stoi(license[i], &used);
+                        if(license[i][used] != '\0')
+                            throw std::runtime_error("Invalid license integer");
+                    }
+                }
+                catch(const std::exception&)
+                {
+                    if(!warnedLicense)
+                        env->output->outputWarning(" Invalid CONOPT license integer environment variables.");
+                    warnedLicense = true;
+                    return E_NLPSolutionStatus::Error;
+                }
+                int licenseCode = solver.setLicense(integers[0], integers[1], integers[2], license[3]);
+                if(licenseCode && !warnedLicense)
+                {
+                    env->output->outputWarning(" CONOPT rejected the configured license.");
+                    warnedLicense = true;
+                }
+                check(licenseCode);
+            }
+            else if(count && !warnedIncompleteLicense)
+            {
+                env->output->outputWarning(" Incomplete CONOPT license environment; using demo mode.");
+                warnedIncompleteLicense = true;
+            }
+            else if(!count)
+                env->output->outputDebug(" CONOPT demo mode.");
         }
-        else if(!count)
-            env->output->outputDebug(" CONOPT demo mode.");
         int rc = solver.solve();
         if(rc)
         {
