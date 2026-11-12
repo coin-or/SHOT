@@ -47,7 +47,7 @@ namespace SHOT
 {
 namespace
 {
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(GAMS_BUILD)
     // CONOPT is delay-loaded on Windows. Load it from the configured SDK, as rpaths do elsewhere, since
     // Python does not search PATH for the dependencies of SHOTpy. Otherwise use the default DLL search.
     bool loadConopt()
