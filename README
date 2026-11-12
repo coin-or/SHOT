@@ -128,4 +128,10 @@ Reformulation of nonseparable convex quadratic expressions (preprint):
 
 Blomqvist, J., Tamm, E., Kronqvist, J. and Lundell, A. Decomposition-Based Reformulation of Nonseparable Quadratic Expressions in Convex MINLP. Optimization Online (2026). https://optimization-online.org/?p=34367
 
+The software itself is archived on Zenodo:
+
+Lundell, A., Kronqvist, J., Blomqvist, J. and Vigerske, S. SHOT: The Supporting Hyperplane Optimization Toolkit. Zenodo. https://doi.org/10.5281/zenodo.24161046
+
+This DOI refers to all versions and resolves to the latest; each release also has a DOI of its own, listed on its Zenodo page.
+
 All publications are listed on the project website (https://shotsolver.dev/publications/).

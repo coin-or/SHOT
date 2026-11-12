@@ -3,6 +3,7 @@
 [![Setup manual](https://gitmanual.com/coin-or/SHOT/badge.svg)](https://gitmanual.com/coin-or/SHOT)
 [![PyPI](https://img.shields.io/pypi/v/SHOTpy?label=PyPI)](https://pypi.org/project/SHOTpy/)
 [![GitHub release](https://img.shields.io/github/v/release/coin-or/SHOT)](https://github.com/coin-or/SHOT/releases)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.24161046.svg)](https://doi.org/10.5281/zenodo.24161046)
 [![License](https://img.shields.io/badge/License-EPL%202.0-red.svg)](https://opensource.org/licenses/EPL-2.0)
 
 
@@ -142,5 +143,11 @@ Lundell, A. and Kronqvist, J. *On Solving Nonconvex MINLP Problems with SHOT* (2
 **Reformulation of nonseparable convex quadratic expressions (preprint):**
 
 Blomqvist, J., Tamm, E., Kronqvist, J. and Lundell, A. *Decomposition-Based Reformulation of Nonseparable Quadratic Expressions in Convex MINLP*. Optimization Online (2026). https://optimization-online.org/?p=34367
+
+**The software itself is archived on Zenodo:**
+
+Lundell, A., Kronqvist, J., Blomqvist, J. and Vigerske, S. *SHOT: The Supporting Hyperplane Optimization Toolkit*. Zenodo. https://doi.org/10.5281/zenodo.24161046
+
+This DOI refers to all versions and resolves to the latest; each release also has a DOI of its own, listed on its Zenodo page.
 
 All publications are listed on the [project website](https://shotsolver.dev/publications/).
