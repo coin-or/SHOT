@@ -59,6 +59,10 @@ public:
 
     VectorDouble getStartingPoint() override;
 
+    // Get license code for CONOPT, if a GAMS/CONOPT license is available
+    // Returns true if a GAMS/CONOPT license is available, false otherwise.
+    bool getConoptLicense(int& int1, int& int2, int& int3, std::string& text);
+
     gmoHandle_t modelingObject;
     gevHandle_t modelingEnvironment;
     palHandle_t auditLicensing;

@@ -679,6 +679,8 @@ setting is needed for these installed targets.
 For a full license, set all four environment variables before starting SHOT:
 `CONOPT_LICENSE_INT_1`, `CONOPT_LICENSE_INT_2`, `CONOPT_LICENSE_INT_3`, and
 `CONOPT_LICENSE_TEXT`. SHOT does not persist license values in model or option files.
+When SHOT is run as a GAMS solver from the GAMS distribution, it uses the GAMS/CONOPT
+license instead, if there is one, and otherwise the environment variables.
 With no license configuration, CONOPT uses demo mode. Incomplete configuration
 produces a warning. See [CONOPT licensing](https://conopt.gams.com/licensing/)
 for demo and academic eligibility and usage terms. The NLP demo limit is 1000

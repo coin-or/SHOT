@@ -4,12 +4,17 @@ User-visible changes to SHOT and SHOTpy. See [CONTRIBUTING.md](CONTRIBUTING.md)
 for how to add entries. Changes in versions before 2.0 are described in the
 [GitHub releases](https://github.com/coin-or/SHOT/releases).
 
-## 2.0.1
+## Unreleased
 
 ### Added
 
-- The number of threads for the macOS Accelerate framework is now set to
-  the value of option Primal.FixedInteger.NumberOfThreads.
+- SHOT as a GAMS solver from the GAMS distribution uses a GAMS/CONOPT license
+  for CONOPT, and otherwise the CONOPT license environment variables ([#330]).
+
+### Changed
+
+- `Primal.FixedInteger.NumberOfThreads` also limits the threads of the macOS
+  Accelerate framework used by the NLP solvers ([#331]).
 
 ## 2.0.0 — 2026-11-11
 
@@ -417,6 +422,8 @@ Changes since SHOT 1.1.
 [#323]: https://github.com/coin-or/SHOT/pull/323
 [#325]: https://github.com/coin-or/SHOT/pull/325
 [#324]: https://github.com/coin-or/SHOT/pull/324
+[#330]: https://github.com/coin-or/SHOT/pull/330
+[#331]: https://github.com/coin-or/SHOT/pull/331
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
