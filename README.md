@@ -1,7 +1,7 @@
-[![Build and Test](https://github.com/coin-or/SHOT/actions/workflows/build-workflow.yml/badge.svg)](https://github.com/coin-or/SHOT/actions/workflows/build-workflow.yml)
+[![Build and Test](https://github.com/coin-or/SHOT/actions/workflows/wheels.yml/badge.svg)](https://github.com/coin-or/SHOT/actions/workflows/wheels.yml)
 [![Documentation](https://github.com/coin-or/SHOT/actions/workflows/docs.yml/badge.svg)](https://shotsolver.dev/docs/)
 [![Setup manual](https://gitmanual.com/coin-or/SHOT/badge.svg)](https://gitmanual.com/coin-or/SHOT)
-[![PyPI](https://img.shields.io/pypi/v/SHOTpy)](https://pypi.org/project/SHOTpy/)
+[![PyPI](https://img.shields.io/pypi/v/SHOTpy?label=PyPI)](https://pypi.org/project/SHOTpy/)
 [![GitHub release](https://img.shields.io/github/v/release/coin-or/SHOT)](https://github.com/coin-or/SHOT/releases)
 [![License](https://img.shields.io/badge/License-EPL%202.0-red.svg)](https://opensource.org/licenses/EPL-2.0)
 
