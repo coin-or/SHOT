@@ -71,7 +71,7 @@ Python from the [GitHub releases](https://github.com/coin-or/SHOT/releases) as a
 Linux x86_64 and ARM64, macOS ARM64 and Windows x64. Extract the whole
 archive and run `./SHOT` (or `SHOT.exe` on Windows) in its directory.
 
-The public wheels do not include CPLEX, Gurobi, GAMS or CONOPT. To use them,
+The public wheels do not include CPLEX, Gurobi, GAMS, CONOPT or Uno. To use them,
 build SHOTpy from source as described in
 [SHOTpy with proprietary solvers](https://shotsolver.dev/docs/2.0/CompilationInstructions.html#shotpy-with-proprietary-solvers).
 SHOT builds on Linux, macOS, and natively on Windows x64 with MSVC.
