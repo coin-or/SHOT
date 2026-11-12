@@ -792,15 +792,16 @@ E_NLPSolutionStatus NLPSolverConopt::solveProblemInstance()
         check(solver.setResLim(seconds));
         check(COIDEF_Optfile(solver.controlVector(), options.name.c_str()));
 
-        bool licensesetup = false;
+        bool licenseSetup = false;
 #ifdef HAS_GAMS
-        std::shared_ptr<ModelingSystemGAMS> modsysgams
-            = std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem);
-        if(modsysgams)
+        auto modelingSystemGAMS = std::dynamic_pointer_cast<ModelingSystemGAMS>(env->modelingSystem);
+
+        if(modelingSystemGAMS)
         {
             int int1, int2, int3;
             std::string text;
-            if(modsysgams->getConoptLicense(int1, int2, int3, text))
+
+            if(modelingSystemGAMS->getConoptLicense(int1, int2, int3, text))
             {
                 int licenseCode = solver.setLicense(int1, int2, int3, text);
                 if(licenseCode && !warnedLicense)
@@ -810,12 +811,12 @@ E_NLPSolutionStatus NLPSolverConopt::solveProblemInstance()
                     warnedLicense = true;
                 }
                 check(licenseCode);
-                licensesetup = true;
+                licenseSetup = true;
             }
         }
 #endif
 
-        if(!licensesetup)
+        if(!licenseSetup)
         {
             const char* license[] = { std::getenv("CONOPT_LICENSE_INT_1"), std::getenv("CONOPT_LICENSE_INT_2"),
                 std::getenv("CONOPT_LICENSE_INT_3"), std::getenv("CONOPT_LICENSE_TEXT") };

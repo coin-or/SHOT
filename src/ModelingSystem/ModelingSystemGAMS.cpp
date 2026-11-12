@@ -623,8 +623,9 @@ void ModelingSystemGAMS::createAuditLicensing()
 }
 
 // Get license code for CONOPT, if a GAMS/CONOPT license is available
-// Returns true if a GAMS/CONOPT license is known to be available, false otherwise.
-bool ModelingSystemGAMS::getConoptLicense(int& int1, int& int2, int& int3, std::string& text)
+// Returns true if a GAMS/CONOPT license is available, false otherwise.
+bool ModelingSystemGAMS::getConoptLicense([[maybe_unused]] int& int1, [[maybe_unused]] int& int2,
+    [[maybe_unused]] int& int3, [[maybe_unused]] std::string& text)
 {
 #ifdef GAMS_BUILD
     if(!GAMScheckCONOPTLicense(auditLicensing, true))
