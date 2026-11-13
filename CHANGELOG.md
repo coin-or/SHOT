@@ -11,6 +11,11 @@ for how to add entries. Changes in versions before 2.0 are described in the
 - SHOT as a GAMS solver from the GAMS distribution uses a GAMS/CONOPT license
   for CONOPT, and otherwise the CONOPT license environment variables ([#330]).
 
+### Changed
+
+- `Primal.FixedInteger.NumberOfThreads` also limits the threads of the macOS
+  Accelerate framework used by the NLP solvers ([#331]).
+
 ## 2.0.0 — 2026-11-11
 
 Changes since SHOT 1.1.
@@ -418,6 +423,7 @@ Changes since SHOT 1.1.
 [#325]: https://github.com/coin-or/SHOT/pull/325
 [#324]: https://github.com/coin-or/SHOT/pull/324
 [#330]: https://github.com/coin-or/SHOT/pull/330
+[#331]: https://github.com/coin-or/SHOT/pull/331
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
