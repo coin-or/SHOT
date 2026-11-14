@@ -77,6 +77,12 @@ protected:
 private:
     std::string selectedNLPSolver = "";
     std::shared_ptr<GAMSNLPLicenseState> licenseState;
+
+    // The bounds of the variables when they are not fixed: the bounds of the GAMS model, tightened through
+    // updateVariableLowerBound() and updateVariableUpperBound()
+    VectorDouble lowerBounds;
+    VectorDouble upperBounds;
+
     void useLicenseFallback();
 };
 } // namespace SHOT

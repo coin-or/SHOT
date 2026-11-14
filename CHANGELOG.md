@@ -16,6 +16,12 @@ for how to add entries. Changes in versions before 2.0 are described in the
 - `Primal.FixedInteger.NumberOfThreads` also limits the threads of the macOS
   Accelerate framework used by the NLP solvers ([#331]).
 
+### Fixed
+
+- A GAMS NLP solver used for the fixed-integer NLP problems keeps the variable
+  bounds from SHOT's bound tightening after the first problem, instead of
+  falling back to the bounds of the GAMS model ([#332]).
+
 ## 2.0.0 — 2026-11-11
 
 Changes since SHOT 1.1.
@@ -424,6 +430,7 @@ Changes since SHOT 1.1.
 [#324]: https://github.com/coin-or/SHOT/pull/324
 [#330]: https://github.com/coin-or/SHOT/pull/330
 [#331]: https://github.com/coin-or/SHOT/pull/331
+[#332]: https://github.com/coin-or/SHOT/pull/332
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e

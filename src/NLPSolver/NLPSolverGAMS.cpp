@@ -120,6 +120,15 @@ NLPSolverGAMS::NLPSolverGAMS(EnvironmentPtr envPtr, gmoHandle_t modelingObject, 
     }
 
     showlog = env->settings->getSetting<bool>("Output.Console.PrimalSolver.Show");
+
+    lowerBounds.resize(gmoN(modelingObject));
+    upperBounds.resize(gmoN(modelingObject));
+
+    if(gmoN(modelingObject) > 0)
+    {
+        gmoGetVarLower(modelingObject, lowerBounds.data());
+        gmoGetVarUpper(modelingObject, upperBounds.data());
+    }
 }
 
 NLPSolverGAMS::~NLPSolverGAMS() = default;
@@ -147,10 +156,12 @@ void NLPSolverGAMS::fixVariables(VectorInteger variableIndexes, VectorDouble var
 
 void NLPSolverGAMS::unfixVariables()
 {
+    // The bounds of the GAMS model would discard those tightened through updateVariableLowerBound() and
+    // updateVariableUpperBound()
     for(int i = 0; i < gmoN(modelingObject); ++i)
     {
-        gmoSetAltVarLowerOne(modelingObject, i, gmoGetVarLowerOne(modelingObject, i));
-        gmoSetAltVarUpperOne(modelingObject, i, gmoGetVarUpperOne(modelingObject, i));
+        gmoSetAltVarLowerOne(modelingObject, i, lowerBounds[i]);
+        gmoSetAltVarUpperOne(modelingObject, i, upperBounds[i]);
     }
 }
 
@@ -391,35 +402,19 @@ void NLPSolverGAMS::useLicenseFallback()
     env->results->usedPrimalNLPSolverDescription = getSolverDescription();
 }
 
-VectorDouble NLPSolverGAMS::getVariableLowerBounds()
-{
-    assert(modelingObject != nullptr);
+VectorDouble NLPSolverGAMS::getVariableLowerBounds() { return lowerBounds; }
 
-    VectorDouble lb(gmoN(modelingObject));
-
-    gmoGetVarLower(modelingObject, &lb[0]);
-
-    return lb;
-}
-
-VectorDouble NLPSolverGAMS::getVariableUpperBounds()
-{
-    assert(modelingObject != nullptr);
-
-    VectorDouble ub(gmoN(modelingObject));
-
-    gmoGetVarUpper(modelingObject, &ub[0]);
-
-    return ub;
-}
+VectorDouble NLPSolverGAMS::getVariableUpperBounds() { return upperBounds; }
 
 void NLPSolverGAMS::updateVariableLowerBound(int variableIndex, double bound)
 {
+    lowerBounds.at(variableIndex) = bound;
     gmoSetAltVarLowerOne(modelingObject, variableIndex, bound);
 }
 
 void NLPSolverGAMS::updateVariableUpperBound(int variableIndex, double bound)
 {
+    upperBounds.at(variableIndex) = bound;
     gmoSetAltVarUpperOne(modelingObject, variableIndex, bound);
 }
 
