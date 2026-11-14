@@ -21,6 +21,10 @@ for how to add entries. Changes in versions before 2.0 are described in the
 - A GAMS NLP solver used for the fixed-integer NLP problems keeps the variable
   bounds from SHOT's bound tightening after the first problem, instead of
   falling back to the bounds of the GAMS model ([#332]).
+- A primal solution with an integer or semi-integer variable slightly outside
+  its bounds is projected to the nearest integer within the bounds. Before, it
+  could be moved one step further, e.g., to -1 for the upper bound 0 or to 3
+  for the lower bound 2, and a valid solution was then rejected.
 
 ## 2.0.0 — 2026-11-11
 

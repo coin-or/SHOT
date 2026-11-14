@@ -188,6 +188,12 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
     // projecting it to the bound can violate a linear constraint with a large coefficient, e.g., 1000 * 1e-8 > 1e-6
     auto boundTolerance = [](double bound) { return (1e-8 * std::max(1.0, std::abs(bound))); };
 
+    auto integerTol = env->settings->getSetting<double>("Primal.Tolerance.Integer");
+
+    // An integer variable outside its bounds is projected to the nearest integer within them
+    auto integerUpperBound = [integerTol](double bound) { return (std::floor(bound + integerTol)); };
+    auto integerLowerBound = [integerTol](double bound) { return (std::ceil(bound - integerTol)); };
+
     for(auto& V : env->problem->realVariables)
     {
         auto value = V->calculate(tmpPoint);
@@ -291,7 +297,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
                 if(diffToZero < diffToLowerBound)
                     tmpPoint.at(V->getIndex()) = 0.0;
                 else
-                    tmpPoint.at(V->getIndex()) = round(ub - 0.5);
+                    tmpPoint.at(V->getIndex()) = integerUpperBound(ub);
             }
             else if(value < lb)
             {
@@ -302,7 +308,7 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
                 if(diffToZero < diffToLowerBound)
                     tmpPoint.at(V->getIndex()) = 0.0;
                 else
-                    tmpPoint.at(V->getIndex()) = round(lb + 0.5);
+                    tmpPoint.at(V->getIndex()) = integerLowerBound(lb);
             }
         }
     }
@@ -314,12 +320,12 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         if(value > V->upperBound)
         {
             isVariableBoundsFulfilled = false;
-            tmpPoint.at(V->getIndex()) = round(V->upperBound - 0.5);
+            tmpPoint.at(V->getIndex()) = integerUpperBound(V->upperBound);
         }
         else if(value < V->lowerBound)
         {
             isVariableBoundsFulfilled = false;
-            tmpPoint.at(V->getIndex()) = round(V->lowerBound + 0.5);
+            tmpPoint.at(V->getIndex()) = integerLowerBound(V->lowerBound);
         }
     }
 
@@ -350,8 +356,6 @@ bool PrimalSolver::checkPrimalSolutionPoint(PrimalSolution primalSol)
         env->output->outputDebug("         All variable bounds fulfilled.");
         primalSol.boundProjectionPerformed = false;
     }
-
-    auto integerTol = env->settings->getSetting<double>("Primal.Tolerance.Integer");
 
     // Check that it fulfills integer constraints, round otherwise
     if(env->problem->properties.numberOfDiscreteVariables > 0)

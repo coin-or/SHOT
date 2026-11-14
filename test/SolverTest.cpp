@@ -2584,6 +2584,74 @@ bool TestPrimalSolutionSlightlyOutsideBounds()
     return (passed);
 }
 
+// An NLP solver can return the value of a fixed integer variable slightly outside its bounds, e.g., 1e-17 above the
+// upper bound 0. The projection must move such a variable to the nearest integer within its bounds, and not to an
+// integer one step further, which violates the linear constraints with these variables
+bool TestPrimalSolutionIntegerProjectionToBounds()
+{
+    bool passed = true;
+
+    auto solver = std::make_unique<SHOT::Solver>();
+    auto env = solver->getEnvironment();
+    solver->updateSetting("Output.Console.LogLevel", static_cast<int>(E_LogLevel::Off));
+    solver->updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+
+    auto problem = std::make_shared<SHOT::Problem>(env);
+    problem->name = "integerprojection";
+
+    auto x = std::make_shared<Variable>("x", E_VariableType::Real, 0.0, 1.0);
+    auto y1 = std::make_shared<Variable>("y1", E_VariableType::Integer, 0.0, 0.0);
+    auto y2 = std::make_shared<Variable>("y2", E_VariableType::Integer, 0.0, 3.0);
+    auto y3 = std::make_shared<Variable>("y3", E_VariableType::Integer, 2.0, 4.0);
+    // s is zero or in [2, 4]
+    auto s = std::make_shared<Variable>("s", E_VariableType::Semiinteger, 0.0, 4.0, 2.0);
+    problem->add({ x, y1, y2, y3, s });
+
+    auto objective = std::make_shared<LinearObjectiveFunction>(E_ObjectiveFunctionDirection::Minimize);
+    objective->add(std::make_shared<LinearTerm>(1.0, x));
+    problem->add(objective);
+
+    // y1 projected to -1 violates e1, y2 projected to 1 and y3 and s projected to 3 violate e2 and e3
+    auto e1 = std::make_shared<LinearConstraint>("e1", SHOT_DBL_MIN, 0.0);
+    e1->add(std::make_shared<LinearTerm>(1.0, x));
+    e1->add(std::make_shared<LinearTerm>(-1.0, y1));
+    problem->add(e1);
+
+    auto e2 = std::make_shared<LinearConstraint>("e2", SHOT_DBL_MIN, 2.0);
+    e2->add(std::make_shared<LinearTerm>(1.0, y2));
+    e2->add(std::make_shared<LinearTerm>(1.0, y3));
+    e2->add(std::make_shared<LinearTerm>(-1.0, x));
+    problem->add(e2);
+
+    auto e3 = std::make_shared<LinearConstraint>("e3", SHOT_DBL_MIN, 2.0);
+    e3->add(std::make_shared<LinearTerm>(1.0, y2));
+    e3->add(std::make_shared<LinearTerm>(1.0, s));
+    problem->add(e3);
+
+    problem->updateProperties();
+    problem->finalize();
+
+    if(!solver->setProblem(problem))
+    {
+        std::cout << "Could not set the problem\n";
+        return (false);
+    }
+
+    PrimalSolution solution;
+    solution.point = { 0.0, 1e-17, -1e-10, 2.0 - 1e-10, 2.0 - 1e-10 };
+    solution.sourceType = E_PrimalSolutionSource::NLPFixedIntegers;
+    solution.objValue = 0.0;
+    solution.iterFound = 1;
+
+    if(!env->primalSolver->checkPrimalSolutionPoint(solution))
+    {
+        std::cout << "A point with integer variables slightly outside their bounds was not accepted\n";
+        passed = false;
+    }
+
+    return (passed);
+}
+
 // Complete MILPs and supported convex quadratic problems use direct solves regardless of the tree setting.
 bool TestStrategySelectionForLinearAndQuadraticProblems()
 {
@@ -5391,6 +5459,11 @@ int SolverTest(int argc, char* argv[])
     case 53:
         std::cout << "Testing a system of equations without an objective in OSiL." << std::endl;
         passed = SolveConstrainedNonlinearSystem("data/cns.osil");
+        break;
+    case 54:
+        std::cout << "Starting test for the projection of integer variables to their bounds" << std::endl;
+        passed = TestPrimalSolutionIntegerProjectionToBounds();
+        std::cout << "Finished test for the projection of integer variables to their bounds." << std::endl;
         break;
     default:
         passed = false;
