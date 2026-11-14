@@ -16,6 +16,12 @@ for how to add entries. Changes in versions before 2.0 are described in the
 - `Primal.FixedInteger.NumberOfThreads` also limits the threads of the macOS
   Accelerate framework used by the NLP solvers ([#331]).
 
+### Fixed
+
+- A GAMS NLP solver used for the fixed-integer NLP problems keeps the variable
+  bounds from SHOT's bound tightening after the first problem, instead of
+  falling back to the bounds of the GAMS model.
+
 ## 2.0.0 — 2026-11-11
 
 Changes since SHOT 1.1.
