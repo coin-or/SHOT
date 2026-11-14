@@ -333,6 +333,7 @@ set(Solver_parts
     50
     51
     53
+    54
 )
 if(HAS_IPOPT)
     list(APPEND Solver_parts 46)
