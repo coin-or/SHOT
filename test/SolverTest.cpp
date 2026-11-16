@@ -130,7 +130,7 @@ bool TestRootsearch(const std::string& problemFile)
     if(!solver->setProblem(problemFile))
     {
         std::cout << "Error while reading problem";
-        passed = false;
+        return false;
     }
 
     std::cout << env->problem << "\n\n";
@@ -207,7 +207,7 @@ bool TestGradient(const std::string& problemFile)
     if(!solver->setProblem(problemFile))
     {
         std::cout << "Error while reading problem";
-        passed = false;
+        return false;
     }
 
     VectorDouble point;

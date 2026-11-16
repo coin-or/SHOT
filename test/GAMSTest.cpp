@@ -385,7 +385,7 @@ bool TestRootsearchGAMS(const std::string& problemFile)
         != E_ProblemCreationStatus::NormalCompletion)
     {
         std::cout << "Error while reading problem";
-        passed = false;
+        return false;
     }
     else
     {
@@ -469,7 +469,7 @@ bool TestGradientGAMS(const std::string& problemFile)
         != E_ProblemCreationStatus::NormalCompletion)
     {
         std::cout << "Error while reading problem";
-        passed = false;
+        return false;
     }
     else
     {
@@ -524,7 +524,7 @@ bool TestReformulateProblemGAMS(const std::string& problemFile)
         != E_ProblemCreationStatus::NormalCompletion)
     {
         std::cout << "Error while reading problem";
-        passed = false;
+        return false;
     }
     else
     {
