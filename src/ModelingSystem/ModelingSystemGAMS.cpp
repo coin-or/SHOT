@@ -214,10 +214,22 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
          * be */
         if(!GAMScheckCPLEXLicense(auditLicensing, true))
         {
-            env->output->outputInfo(
-                " CPLEX chosen as MIP solver, but no GAMS/CPLEX license available. Changing to CBC.");
-            env->settings->updateSetting(
-                "Dual.MIP.Solver", (int)ES_MIPSolver::Cbc, E_SettingPriority::SolverCompatibility);
+            int numsos1, numsos2, nzsos;
+            gmoGetSosCounts(modelingObject, &numsos1, &numsos2, &nzsos);
+            if(numsos1 > 0 || numsos2 > 0)
+            {
+                env->output->outputInfo(
+                    " CPLEX chosen as MIP solver, but no GAMS/CPLEX license available. Changing to CBC.");
+                env->settings->updateSetting(
+                    "Dual.MIP.Solver", (int)ES_MIPSolver::Cbc, E_SettingPriority::SolverCompatibility);
+            }
+            else
+            {
+                env->output->outputInfo(
+                    " CPLEX chosen as MIP solver, but no GAMS/CPLEX license available. Changing to HiGHS.");
+                env->settings->updateSetting(
+                    "Dual.MIP.Solver", (int)ES_MIPSolver::Highs, E_SettingPriority::SolverCompatibility);
+            }
         }
     }
 #endif
