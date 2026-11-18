@@ -24,7 +24,11 @@
 #ifdef GAMS_BUILD
 #include "GamsLicensing.h"
 #include "GamsHSLInit.h"
-#include "gevlice.h" // for conopt license setup
+#include "gevlice.h" // for conopt and gurobi license setup
+#endif
+
+#ifdef HAS_GUROBI
+#include "gurobi_c++.h"
 #endif
 
 #if defined(_WIN32)
@@ -160,17 +164,20 @@ void ModelingSystemGAMS::updateSettings(SettingsPtr settings)
         env->output->outputDebug(fmt::format(
             " MIP number of threads set to {} by GAMS", env->settings->getSetting<int>("Dual.MIP.NumberOfThreads")));
 
-        // Uses NLP solver in GAMS by default, Ipopt can be used directly if value set by user in options file (read
-        // below)
-        env->settings->updateSetting(
-            "Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::GAMS), E_SettingPriority::Default);
-
 #ifdef GAMS_BUILD
-        // Change default MIP solver to CPLEX, which may then be changed to CBC below if no license is available
-        // The original default of Gurobi would lead to SHOT stopping with a license error if no Gurobi license is
-        // available
-        env->settings->updateSetting(
-            "Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex), E_SettingPriority::Default);
+        // if GAMS/CONOPT licensed, then use SHOT's interface to CONOPT by default
+        // otherwise SHOT will use its interface to Ipopt
+        if(GAMScheckCONOPTLicense(auditLicensing, true))
+            env->settings->updateSetting(
+                "Primal.FixedInteger.Solver", static_cast<int>(ES_PrimalNLPSolver::Conopt), E_SettingPriority::Default);
+
+        // The default MIP solver is Gurobi. If no GAMS/Gurobi license is available, then change the default to CPLEX.
+        // Further below, it may be changed again if no GAMS/CPLEX license is available.
+        // If we change it to CPLEX here, but the user sets Gurobi, then the user needs to have a Gurobi license.
+        assert(env->settings->getSetting<int>("Dual.MIP.Solver") == (int)ES_MIPSolver::Gurobi);
+        if(!GAMScheckGurobiLicense(auditLicensing, true))
+            env->settings->updateSetting(
+                "Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Cplex), E_SettingPriority::Default);
 #endif
     }
 
@@ -641,6 +648,25 @@ bool ModelingSystemGAMS::getConoptLicense([[maybe_unused]] int& int1, [[maybe_un
     return false;
 #endif
 }
+
+#ifdef HAS_GUROBI
+void ModelingSystemGAMS::setGurobiLicense([[maybe_unused]] GRBEnv& env)
+{
+#ifdef GAMS_BUILD
+    if(!GAMScheckGurobiLicense(auditLicensing, true))
+        return;
+
+    int corelimit = palLicensedCoreLimit(auditLicensing);
+    if(corelimit > 0)
+        env.set(GRB_IntParam_ThreadLimit, corelimit);
+
+    env.set("GURO_PAR_ISVNAME", GUROBI_ISV_NAME);
+    env.set("GURO_PAR_ISVAPPNAME", GUROBI_ISV_APPNAME);
+    env.set("GURO_PAR_ISVKEY", GUROBI_ISV_KEY);
+    env.set("GURO_PAR_ISVEXPIRATION", std::to_string(GUROBI_ISV_EXPIRATION));
+#endif
+}
+#endif
 
 VectorDouble ModelingSystemGAMS::getStartingPoint()
 {

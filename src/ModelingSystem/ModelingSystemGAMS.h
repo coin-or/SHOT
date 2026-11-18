@@ -22,6 +22,10 @@
 #include <memory>
 #include <string>
 
+#ifdef HAS_GUROBI
+class GRBEnv;
+#endif
+
 namespace SHOT
 {
 
@@ -62,6 +66,11 @@ public:
     // Get license code for CONOPT, if a GAMS/CONOPT license is available
     // Returns true if a GAMS/CONOPT license is available, false otherwise.
     bool getConoptLicense(int& int1, int& int2, int& int3, std::string& text);
+
+#ifdef HAS_GUROBI
+    // Set Gurobi license, if a GAMS/GUROBI license is available
+    void setGurobiLicense(GRBEnv& env);
+#endif
 
     gmoHandle_t modelingObject;
     gevHandle_t modelingEnvironment;

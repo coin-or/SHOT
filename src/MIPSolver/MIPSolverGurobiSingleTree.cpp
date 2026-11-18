@@ -22,6 +22,9 @@
 #include "../Utilities.h"
 
 #include "../Model/Problem.h"
+#ifdef HAS_GAMS
+#include "../ModelingSystem/ModelingSystemGAMS.h"
+#endif
 
 #include <fstream>
 #include <iomanip>
@@ -40,6 +43,10 @@ MIPSolverGurobiSingleTree::MIPSolverGurobiSingleTree(EnvironmentPtr envPtr)
         // Start an empty environment with console output off, so that the licence messages are not printed
         GRBEnv env = GRBEnv(true);
         env.set(GRB_IntParam_LogToConsole, 0);
+#ifdef HAS_GAMS
+        if(auto modelingSystemGAMS = std::dynamic_pointer_cast<ModelingSystemGAMS>(this->env->modelingSystem))
+            modelingSystemGAMS->setGurobiLicense(env);
+#endif
         env.start();
 
         gurobiModel = std::make_shared<GRBModel>(env);
