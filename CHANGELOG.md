@@ -10,6 +10,10 @@ for how to add entries. Changes in versions before 2.0 are described in the
 
 - SHOT as a GAMS solver from the GAMS distribution uses a GAMS/CONOPT license
   for CONOPT, and otherwise the CONOPT license environment variables ([#330]).
+- SHOT as a GAMS solver from the GAMS distribution uses a GAMS/GUROBI license
+  for GUROBI, and otherwise CPLEX, CBC, or HiGHS as MIP subsolver ([#335]).
+- SHOT as a GAMS solver from outside the GAMS distribution uses IPOPT as NLP
+  solver ([#335]).
 
 ### Changed
 
