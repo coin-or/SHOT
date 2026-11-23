@@ -16,7 +16,7 @@ for how to add entries. Changes in versions before 2.0 are described in the
   solver ([#335]).
 - `SHOT --version` (or `-v`) writes the version of SHOT. The version is also
   given by `Solver::getVersion()` in C++, and by `SHOTpy.__version__` and
-  `SHOTpy.getVersion()` in Python.
+  `SHOTpy.getVersion()` in Python ([#336]).
 
 ### Changed
 
@@ -443,6 +443,7 @@ Changes since SHOT 1.1.
 [#331]: https://github.com/coin-or/SHOT/pull/331
 [#332]: https://github.com/coin-or/SHOT/pull/332
 [#333]: https://github.com/coin-or/SHOT/pull/333
+[#336]: https://github.com/coin-or/SHOT/pull/336
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
