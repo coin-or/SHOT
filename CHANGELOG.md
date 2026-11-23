@@ -14,6 +14,8 @@ for how to add entries. Changes in versions before 2.0 are described in the
   for GUROBI, and otherwise CPLEX, CBC, or HiGHS as MIP subsolver ([#335]).
 - SHOT as a GAMS solver from outside the GAMS distribution uses IPOPT as NLP
   solver ([#335]).
+- In SHOTpy, a number can be raised to a variable or an expression, e.g.,
+  `2 ** x`.
 
 ### Changed
 
