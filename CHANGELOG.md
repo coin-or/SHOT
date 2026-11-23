@@ -14,6 +14,9 @@ for how to add entries. Changes in versions before 2.0 are described in the
   for GUROBI, and otherwise CPLEX, CBC, or HiGHS as MIP subsolver ([#335]).
 - SHOT as a GAMS solver from outside the GAMS distribution uses IPOPT as NLP
   solver ([#335]).
+- `SHOT --version` (or `-v`) writes the version of SHOT. The version is also
+  given by `Solver::getVersion()` in C++, and by `SHOTpy.__version__` and
+  `SHOTpy.getVersion()` in Python ([#336]).
 - In SHOTpy, a number can be raised to a variable or an expression, e.g.,
   `2 ** x` ([#337]).
 
@@ -442,6 +445,7 @@ Changes since SHOT 1.1.
 [#331]: https://github.com/coin-or/SHOT/pull/331
 [#332]: https://github.com/coin-or/SHOT/pull/332
 [#333]: https://github.com/coin-or/SHOT/pull/333
+[#336]: https://github.com/coin-or/SHOT/pull/336
 [#337]: https://github.com/coin-or/SHOT/pull/337
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16

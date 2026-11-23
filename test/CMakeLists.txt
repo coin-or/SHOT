@@ -646,6 +646,16 @@ foreach(cpptest ${cpptests})
     endforeach()
 endforeach()
 
+# The executable writes only its version with --version and -v
+if(TARGET SHOT)
+    add_test(NAME Executable_Version COMMAND $<TARGET_FILE:SHOT> --version)
+    add_test(NAME Executable_VersionShort COMMAND $<TARGET_FILE:SHOT> -v)
+    set_tests_properties(
+        Executable_Version Executable_VersionShort PROPERTIES PASS_REGULAR_EXPRESSION
+                                                              "^SHOT ${PROJECT_VERSION}${SHOT_VERSION_SUFFIX}\n$"
+    )
+endif()
+
 # Copies the data files to the test directory
 execute_process(
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR}/data ${CMAKE_CURRENT_BINARY_DIR}/data

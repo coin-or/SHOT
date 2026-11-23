@@ -2,7 +2,38 @@
 Tests for module-level constants and enums in the Python API.
 """
 
+import importlib.metadata
+from pathlib import Path
+import re
+
 import pytest
+
+
+class TestVersion:
+    """Tests for the version of SHOT."""
+
+    def test_version(self):
+        """The version is a string such as 2.0.0 or 2.0.0rc1, given both by __version__ and getVersion()."""
+        import SHOTpy
+
+        assert re.fullmatch(r"\d+\.\d+\.\d+((a|b|rc)\d+)?", SHOTpy.__version__)
+        assert SHOTpy.getVersion() == SHOTpy.__version__
+
+    def test_version_of_installed_package(self):
+        """An installed SHOTpy reports the version of its package."""
+        import SHOTpy
+
+        try:
+            distribution = importlib.metadata.distribution("SHOTpy")
+        except importlib.metadata.PackageNotFoundError:
+            pytest.skip("SHOTpy is not installed as a package")
+
+        files = {Path(distribution.locate_file(file)).resolve() for file in distribution.files or []}
+
+        if Path(SHOTpy.__file__).resolve() not in files:
+            pytest.skip("SHOTpy is used from a build directory, not from the installed package")
+
+        assert SHOTpy.__version__ == distribution.version
 
 
 class TestConstants:

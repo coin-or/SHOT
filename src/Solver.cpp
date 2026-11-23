@@ -1336,6 +1336,11 @@ std::string Solver::getUserSpecifiedConvexityDescription()
     return (env->results->getUserSpecifiedConvexityDescription());
 }
 
+std::string Solver::getVersion()
+{
+    return (fmt::format("{}.{}.{}{}", SHOT_VERSION_MAJOR, SHOT_VERSION_MINOR, SHOT_VERSION_PATCH, SHOT_VERSION_SUFFIX));
+}
+
 std::vector<ES_ModelingSystem> Solver::getSupportedModelingSystems()
 {
     std::vector<ES_ModelingSystem> systems;

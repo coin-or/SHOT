@@ -60,6 +60,12 @@ int main(int argc, char* argv[])
 
     cmdl.parse(argc, argv);
 
+    if(cmdl[{ "--version", "-v" }])
+    {
+        std::cout << "SHOT " << Solver::getVersion() << std::endl;
+        return static_cast<int>(E_ExitCode::Success);
+    }
+
     std::string filename;
     fs::filesystem::path resultFile, optionsFile, traceFile, logFile, solFile, gdxFile;
 
@@ -120,6 +126,7 @@ int main(int argc, char* argv[])
         env->output->outputCritical("   --osrl FILE              Sets the filename for the OSrL result file");
         env->output->outputCritical(
             "   --trc [FILE]             Prints a trace file to <problemname>.trc or specified filename");
+        env->output->outputCritical("   --version, -v            Prints the version of SHOT");
         env->output->outputCritical("");
         env->output->outputCritical("");
         env->output->outputCritical("  It is possible to specify options directly using the the command line:");
