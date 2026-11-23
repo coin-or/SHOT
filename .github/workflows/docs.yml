@@ -8,6 +8,9 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 jobs:
   docs:
     runs-on: ubuntu-24.04
@@ -18,14 +21,40 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      # The apt mirror is sometimes very slow, so keep the downloaded packages between runs.
+      - name: Restore apt packages
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/apt-archives
+          key: apt-ubuntu-24.04-docs-
+          restore-keys: apt-ubuntu-24.04-docs-
       - name: Install build dependencies
-        run: sudo apt-get update && sudo apt-get install -y doxygen coinor-libipopt-dev libopenblas-dev ninja-build
+        id: apt
+        run: |
+          mkdir -p ~/apt-archives/partial
+          sudo apt-get update
+          sudo apt-get install -y -o Dir::Cache::Archives="$HOME/apt-archives" \
+            doxygen coinor-libipopt-dev libopenblas-dev ninja-build ccache
+          sudo chown -R "$USER" ~/apt-archives
+          echo "key=apt-ubuntu-24.04-docs-$(ls ~/apt-archives/*.deb | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
+      - name: Save apt packages
+        uses: actions/cache/save@v4
+        continue-on-error: true
+        with:
+          path: ~/apt-archives
+          key: ${{ steps.apt.outputs.key }}
+      # CMakeLists.txt uses ccache when it is installed; the pip build uses the fixed build/{wheel_tag} directory.
+      - uses: hendrikmuhs/ccache-action@v1.2.24
+        with:
+          key: docs
+          max-size: 500M
+          evict-old-files: job
       - name: Install documentation tools
         run: python -m pip install -r docs/requirements.txt
       - name: Compile and install matching SHOTpy
         timeout-minutes: 45
         env:
-          CMAKE_BUILD_PARALLEL_LEVEL: '2'
+          CMAKE_BUILD_PARALLEL_LEVEL: '4'
         # Verbose pip streams native build progress instead of buffering it until completion.
         run: python -m pip install --verbose . --config-settings=cmake.define.HAS_CBC=off
       - name: Check guide settings and Python examples

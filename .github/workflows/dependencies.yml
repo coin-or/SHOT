@@ -10,9 +10,22 @@ on:
       - 'cmake/**'
       - 'scripts/**'
       - '.github/workflows/dependencies.yml'
+  push:
+    branches: [master]
+    paths:
+      - 'ThirdParty/**'
+      - 'src/**'
+      - 'CMakeLists.txt'
+      - 'cmake/**'
+      - 'scripts/**'
+      - '.github/workflows/dependencies.yml'
 
 permissions:
   contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   build:
@@ -45,12 +58,40 @@ jobs:
           python-version: '3.13'
       - name: Install build tools
         run: python -m pip install 'cmake==${{ matrix.cmake }}' ninja pytest numpy matplotlib ipython pandas pybind11-stubgen
+      # The apt mirror is sometimes very slow, so keep the downloaded packages between runs.
+      - name: Restore apt packages
+        if: runner.os == 'Linux'
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/apt-archives
+          key: apt-${{ matrix.os }}-dependencies-
+          restore-keys: apt-${{ matrix.os }}-dependencies-
       - name: Install Linux solvers
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y coinor-libcbc-dev coinor-libipopt-dev pkg-config
+        id: apt
+        run: |
+          mkdir -p ~/apt-archives/partial
+          sudo apt-get update
+          sudo apt-get install -y -o Dir::Cache::Archives="$HOME/apt-archives" \
+            coinor-libcbc-dev coinor-libipopt-dev pkg-config ccache
+          sudo chown -R "$USER" ~/apt-archives
+          echo "key=apt-${{ matrix.os }}-dependencies-$(ls ~/apt-archives/*.deb | sha256sum | cut -c1-16)" >> "$GITHUB_OUTPUT"
+      - name: Save apt packages
+        if: runner.os == 'Linux'
+        uses: actions/cache/save@v4
+        continue-on-error: true
+        with:
+          path: ~/apt-archives
+          key: ${{ steps.apt.outputs.key }}
       - name: Install macOS solvers
         if: runner.os == 'macOS'
-        run: brew install cbc ipopt pkg-config
+        run: brew install cbc ipopt pkg-config ccache
+      # CMakeLists.txt uses ccache when it is installed.
+      - uses: hendrikmuhs/ccache-action@v1.2.24
+        with:
+          key: ${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.type }}
+          max-size: 500M
+          evict-old-files: job
       - name: Verify dependency pins
         run: python scripts/check-dependencies.py
       - name: Configure
@@ -66,7 +107,7 @@ jobs:
       - name: Build
         run: cmake --build build --parallel 3
       - name: Test
-        run: ctest --test-dir build --output-on-failure --timeout 300 -E 'FullInstance'
+        run: ctest --test-dir build --parallel "$(getconf _NPROCESSORS_ONLN)" --output-on-failure --timeout 300 -E 'FullInstance'
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4
