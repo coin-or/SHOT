@@ -15,7 +15,7 @@ for how to add entries. Changes in versions before 2.0 are described in the
 - SHOT as a GAMS solver from outside the GAMS distribution uses IPOPT as NLP
   solver ([#335]).
 - In SHOTpy, a number can be raised to a variable or an expression, e.g.,
-  `2 ** x`.
+  `2 ** x` ([#337]).
 
 ### Changed
 
@@ -442,6 +442,7 @@ Changes since SHOT 1.1.
 [#331]: https://github.com/coin-or/SHOT/pull/331
 [#332]: https://github.com/coin-or/SHOT/pull/332
 [#333]: https://github.com/coin-or/SHOT/pull/333
+[#337]: https://github.com/coin-or/SHOT/pull/337
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
