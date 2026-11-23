@@ -473,6 +473,18 @@ class TestSharedExpressions:
         expected = math.sinh(2.0) + math.cosh(1.0) + math.tanh(1.0)
         assert abs(problem.getConstraint("a").calculateFunctionValue([2.0, 1.0]) - expected) < 1e-12
 
+    def test_number_raised_to_variable_or_expression(self):
+        """A number can be raised to a variable or an expression, e.g., 2 ** x."""
+        _, problem, x, y = make_problem()
+        f = 2**x + 3.0 ** (x + y) + 0.5**y
+        problem.addConstraint(f <= 1000, "a")
+        problem.addConstraint(f <= 1000, "b")
+        finalize(problem)
+
+        expected = 2.0**2.0 + 3.0**3.0 + 0.5**1.0
+        for name in ("a", "b"):
+            assert abs(problem.getConstraint(name).calculateFunctionValue([2.0, 1.0]) - expected) < 1e-12
+
     def test_user_expression_is_not_changed(self):
         """Simplifying a constraint does not change the expression object the user keeps."""
         _, problem, x, y = make_problem()

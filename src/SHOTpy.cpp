@@ -1336,6 +1336,11 @@ PYBIND11_MODULE(SHOTpy, m)
         .def(
             "__pow__", [](VariablePtr self, NonlinearExpressionPtr other) -> NonlinearExpressionPtr
             { return std::make_shared<ExpressionPower>(wrapInExpression(self), other); }, py::is_operator())
+        // A number raised to a variable, e.g., 2 ** x
+        .def(
+            "__rpow__", [](VariablePtr self, double base) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionPower>(wrapInExpression(base), wrapInExpression(self)); },
+            py::is_operator())
         .def(
             "__neg__", [](VariablePtr self) -> NonlinearExpressionPtr
             { return std::make_shared<ExpressionNegate>(wrapInExpression(self)); }, py::is_operator());
@@ -1480,6 +1485,10 @@ PYBIND11_MODULE(SHOTpy, m)
         .def(
             "__pow__", [](NonlinearExpressionPtr self, VariablePtr other) -> NonlinearExpressionPtr
             { return std::make_shared<ExpressionPower>(self, wrapInExpression(other)); }, py::is_operator())
+        // A number raised to an expression, e.g., 2 ** (x + y)
+        .def(
+            "__rpow__", [](NonlinearExpressionPtr self, double base) -> NonlinearExpressionPtr
+            { return std::make_shared<ExpressionPower>(wrapInExpression(base), self); }, py::is_operator())
         .def(
             "__neg__", [](NonlinearExpressionPtr self) -> NonlinearExpressionPtr
             { return std::make_shared<ExpressionNegate>(self); }, py::is_operator());
