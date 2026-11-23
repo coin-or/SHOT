@@ -40,6 +40,18 @@ def test_console_script_help(tmp_path):
     assert "Usage: SHOT PROBLEMFILE" in result.stdout
 
 
+def test_console_script_version(tmp_path):
+    import SHOTpy
+
+    for flag in ("--version", "-v"):
+        result = run([shot_script(), flag], tmp_path)
+        assert result.returncode == 0, result.stdout + result.stderr
+        assert result.stdout.strip() == "SHOT " + SHOTpy.__version__
+
+    # Only the version is written, so no log file is created
+    assert not (tmp_path / "SHOT.log").exists()
+
+
 def test_module_help(tmp_path):
     result = run([sys.executable, "-m", "SHOTpy_bin", "--help"], tmp_path)
     assert result.returncode == 0, result.stdout + result.stderr

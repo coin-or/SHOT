@@ -14,6 +14,9 @@ for how to add entries. Changes in versions before 2.0 are described in the
   for GUROBI, and otherwise CPLEX, CBC, or HiGHS as MIP subsolver ([#335]).
 - SHOT as a GAMS solver from outside the GAMS distribution uses IPOPT as NLP
   solver ([#335]).
+- `SHOT --version` (or `-v`) writes the version of SHOT. The version is also
+  given by `Solver::getVersion()` in C++, and by `SHOTpy.__version__` and
+  `SHOTpy.getVersion()` in Python.
 
 ### Changed
 

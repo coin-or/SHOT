@@ -1020,6 +1020,11 @@ PYBIND11_MODULE(SHOTpy, m)
     m.attr("HAS_HIGHS") = false;
 #endif
 
+    // The same version as that of the installed package, e.g., 2.0.0, or 2.0.0rc1 for a prerelease
+    m.attr("__version__") = Solver::getVersion();
+    m.def("getVersion", &Solver::getVersion,
+        "The version of SHOT, e.g., 2.0.0, or 2.0.0rc1 for a prerelease. It is also SHOTpy.__version__");
+
     // Function to get list of supported MIP solvers - uses C++ API directly
     m.def("getSupportedMIPSolvers", &Solver::getSupportedMIPSolvers,
         "Returns a list of MIP solvers supported in this build");

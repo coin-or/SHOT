@@ -21,6 +21,11 @@ precedence and common configurations, see [Configuring SHOT](Configuration.md).
 `PROBLEMFILE` is the only required positional argument. Everything else is
 optional. Run `./SHOT --help` for the built-in usage summary.
 
+`./SHOT --version` (or `-v`, as for AMPL solvers) writes only the version,
+e.g., `SHOT 2.0.0`, and creates no log file. In the APIs, the version is
+given by `Solver::getVersion()` in C++, and by `SHOTpy.__version__` or
+`SHOTpy.getVersion()` in Python.
+
 The SHOTpy pip package (`pip install SHOTpy`, or `pipx install SHOTpy` /
 `uv tool install SHOTpy` for only the command) contains the executable, built
 with Cbc, Ipopt and HiGHS, and installs it as the command `SHOT`, which takes
@@ -130,7 +135,7 @@ limit, still exits with 0, and the status is written to the result files.
 
 | Code | Meaning |
 |------|---------|
-| 0 | The problem was solved (whatever the model status), or `--help`/`--docs` was run |
+| 0 | The problem was solved (whatever the model status), or `--help`/`--docs`/`--version` was run |
 | 1 | Invalid command line, e.g. no problem file given, or `--AMPL` with a problem that is not an AMPL (`.nl`) file |
 | 2 | The problem file or the options file given by `--opt`/`--osol` cannot be found or read |
 | 3 | An error occurred while solving the problem, e.g. a callback failed |

@@ -241,6 +241,9 @@ public:
     // the user instead of detected, empty otherwise
     std::string getUserSpecifiedConvexityDescription();
 
+    // The version of SHOT, e.g., 2.0.0, or 2.0.0rc1 for a prerelease, the same as the version of the SHOTpy package
+    static std::string getVersion();
+
     // Static methods to query available solvers and modeling systems
     static std::vector<ES_ModelingSystem> getSupportedModelingSystems();
     static std::vector<ES_MIPSolver> getSupportedMIPSolvers();
