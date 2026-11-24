@@ -21,6 +21,7 @@
 #include "../Model/Problem.h"
 #include "../Model/ObjectiveFunction.h"
 
+#include "scip/cons_nonlinear.h"
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 
@@ -278,6 +279,7 @@ bool MIPSolverSCIP::addVariable(
 bool MIPSolverSCIP::initializeObjective()
 {
     std::fill(objectiveCoefficients.begin(), objectiveCoefficients.end(), 0.0);
+    objectiveQuadraticTerms.clear();
     objectiveConstant = 0.0;
 
     return (true);
@@ -290,13 +292,12 @@ bool MIPSolverSCIP::addLinearTermToObjective(double coefficient, int variableInd
     return (true);
 }
 
-bool MIPSolverSCIP::addQuadraticTermToObjective([[maybe_unused]] double coefficient,
-    [[maybe_unused]] int firstVariableIndex, [[maybe_unused]] int secondVariableIndex)
+bool MIPSolverSCIP::addQuadraticTermToObjective(double coefficient, int firstVariableIndex, int secondVariableIndex)
 {
-    // The capabilities exclude quadratic objective functions, so they are handled as nonlinear before
-    env->output->outputError("        Quadratic objective functions are not supported in the SCIP interface.");
+    objectiveQuadraticTerms.push_back(QuadraticTerm { firstVariableIndex, secondVariableIndex, coefficient });
+    hasQuadraticObjective = true;
 
-    return (false);
+    return (true);
 }
 
 bool MIPSolverSCIP::finalizeObjective(bool isMinimize, double constant)
@@ -310,6 +311,7 @@ bool MIPSolverSCIP::finalizeObjective(bool isMinimize, double constant)
 bool MIPSolverSCIP::initializeConstraint()
 {
     currentConstraintTerms.clear();
+    currentConstraintQuadraticTerms.clear();
 
     return (true);
 }
@@ -321,13 +323,12 @@ bool MIPSolverSCIP::addLinearTermToConstraint(double coefficient, int variableIn
     return (true);
 }
 
-bool MIPSolverSCIP::addQuadraticTermToConstraint([[maybe_unused]] double coefficient,
-    [[maybe_unused]] int firstVariableIndex, [[maybe_unused]] int secondVariableIndex)
+bool MIPSolverSCIP::addQuadraticTermToConstraint(double coefficient, int firstVariableIndex, int secondVariableIndex)
 {
-    // The capabilities exclude quadratic constraints, so they are handled as nonlinear before
-    env->output->outputError("        Quadratic constraints are not supported in the SCIP interface.");
+    currentConstraintQuadraticTerms.push_back(QuadraticTerm { firstVariableIndex, secondVariableIndex, coefficient });
+    hasQuadraticConstraint = true;
 
-    return (false);
+    return (true);
 }
 
 bool MIPSolverSCIP::finalizeConstraint(std::string name, double valueLHS, double valueRHS, double constant)
@@ -348,7 +349,17 @@ bool MIPSolverSCIP::finalizeConstraint(std::string name, double valueLHS, double
     double lhs = (valueLHS > SHOT_DBL_MIN) ? valueLHS - constant : -1e20;
     double rhs = (valueRHS < SHOT_DBL_MAX) ? valueRHS - constant : 1e20;
 
-    addRow(name, indexes, coefficients, lhs, rhs, false);
+    if(currentConstraintQuadraticTerms.empty())
+    {
+        addRow(name, indexes, coefficients, lhs, rhs, false);
+    }
+    else
+    {
+        quadraticRows.push_back(
+            Row { name, std::move(indexes), std::move(coefficients), lhs, rhs, currentConstraintQuadraticTerms });
+        modelUpdated = true;
+    }
+
     numberOfConstraints++;
 
     return (true);
@@ -388,7 +399,7 @@ void MIPSolverSCIP::initializeSolverSettings() { }
 int MIPSolverSCIP::addRow(const std::string& name, VectorInteger variableIndexes, VectorDouble coefficients, double lhs,
     double rhs, bool allowRepair)
 {
-    rows.push_back(Row { name, std::move(variableIndexes), std::move(coefficients), lhs, rhs });
+    rows.push_back(Row { name, std::move(variableIndexes), std::move(coefficients), lhs, rhs, { } });
     allowRepairOfConstraint.push_back(allowRepair);
     modelUpdated = true;
 
@@ -701,6 +712,27 @@ std::unique_ptr<MIPSolverSCIP::SCIPInstance> MIPSolverSCIP::createInstance(
         SCIP_CHECK(SCIPreleaseCons(scip, &constraint));
     }
 
+    for(auto& row : quadraticRows)
+    {
+        addQuadraticConstraint(scip, result->variables, row.name, row.variableIndexes, row.coefficients,
+            row.quadraticTerms, row.lhs, row.rhs);
+    }
+
+    // SCIP only has a linear objective function, so the quadratic terms are given by a variable z with
+    // quadratic terms - z <= 0 for a minimization problem and >= 0 for a maximization problem
+    if(!isRepair && !objectiveQuadraticTerms.empty())
+    {
+        SCIP_VAR* objectiveVariable = nullptr;
+        SCIP_CHECK(SCIPcreateVarBasic(scip, &objectiveVariable, "shot_quadobjvar", -SCIPinfinity(scip),
+            SCIPinfinity(scip), 1.0, SCIP_VARTYPE_CONTINUOUS));
+        SCIP_CHECK(SCIPaddVar(scip, objectiveVariable));
+
+        addQuadraticConstraint(scip, result->variables, "shot_quadobj", { }, { }, objectiveQuadraticTerms,
+            isMinimizationProblem ? -1e20 : 0.0, isMinimizationProblem ? 0.0 : 1e20, objectiveVariable);
+
+        SCIP_CHECK(SCIPreleaseVar(scip, &objectiveVariable));
+    }
+
     for(size_t i = 0; i < specialOrderedSets.size(); i++)
     {
         auto& set = specialOrderedSets[i];
@@ -746,13 +778,30 @@ std::unique_ptr<MIPSolverSCIP::SCIPInstance> MIPSolverSCIP::createInstance(
 
             double bound = cutOff - objectiveConstant;
 
-            SCIP_CONS* constraint = nullptr;
-            SCIP_CHECK(SCIPcreateConsBasicLinear(scip, &constraint, "CUTOFF_REPAIR",
-                static_cast<int>(constraintVariables.size()), constraintVariables.data(), coefficients.data(),
-                isMinimizationProblem ? -SCIPinfinity(scip) : bound,
-                isMinimizationProblem ? bound : SCIPinfinity(scip)));
-            SCIP_CHECK(SCIPaddCons(scip, constraint));
-            SCIP_CHECK(SCIPreleaseCons(scip, &constraint));
+            if(objectiveQuadraticTerms.empty())
+            {
+                SCIP_CONS* constraint = nullptr;
+                SCIP_CHECK(SCIPcreateConsBasicLinear(scip, &constraint, "CUTOFF_REPAIR",
+                    static_cast<int>(constraintVariables.size()), constraintVariables.data(), coefficients.data(),
+                    isMinimizationProblem ? -SCIPinfinity(scip) : bound,
+                    isMinimizationProblem ? bound : SCIPinfinity(scip)));
+                SCIP_CHECK(SCIPaddCons(scip, constraint));
+                SCIP_CHECK(SCIPreleaseCons(scip, &constraint));
+            }
+            else
+            {
+                VectorInteger indexes;
+
+                for(int i = 0; i < numberOfVariables; i++)
+                {
+                    if(objectiveCoefficients[i] != 0.0)
+                        indexes.push_back(i);
+                }
+
+                addQuadraticConstraint(scip, result->variables, "CUTOFF_REPAIR", indexes, coefficients,
+                    objectiveQuadraticTerms, isMinimizationProblem ? -1e20 : bound,
+                    isMinimizationProblem ? bound : 1e20);
+            }
         }
     }
     else if(hasCutOff && objectiveCoefficientsToRestore.empty())
@@ -811,6 +860,42 @@ std::unique_ptr<MIPSolverSCIP::SCIPInstance> MIPSolverSCIP::createInstance(
     }
 
     return (result);
+}
+
+void MIPSolverSCIP::addQuadraticConstraint(SCIP* scip, const std::vector<SCIP_VAR*>& variables, const std::string& name,
+    const VectorInteger& variableIndexes, const VectorDouble& coefficients,
+    const std::vector<QuadraticTerm>& quadraticTerms, double lhs, double rhs, SCIP_VAR* objectiveVariable)
+{
+    std::vector<SCIP_VAR*> linearVariables;
+    VectorDouble linearCoefficients(coefficients);
+
+    for(int index : variableIndexes)
+        linearVariables.push_back(variables[index]);
+
+    if(objectiveVariable != nullptr)
+    {
+        linearVariables.push_back(objectiveVariable);
+        linearCoefficients.push_back(-1.0);
+    }
+
+    std::vector<SCIP_VAR*> firstVariables;
+    std::vector<SCIP_VAR*> secondVariables;
+    VectorDouble quadraticCoefficients;
+
+    for(auto& term : quadraticTerms)
+    {
+        firstVariables.push_back(variables[term.firstVariableIndex]);
+        secondVariables.push_back(variables[term.secondVariableIndex]);
+        quadraticCoefficients.push_back(term.coefficient);
+    }
+
+    SCIP_CONS* constraint = nullptr;
+    SCIP_CHECK(SCIPcreateConsBasicQuadraticNonlinear(scip, &constraint, name.c_str(),
+        static_cast<int>(linearVariables.size()), linearVariables.data(), linearCoefficients.data(),
+        static_cast<int>(firstVariables.size()), firstVariables.data(), secondVariables.data(),
+        quadraticCoefficients.data(), toSCIPBound(scip, lhs), toSCIPBound(scip, rhs)));
+    SCIP_CHECK(SCIPaddCons(scip, constraint));
+    SCIP_CHECK(SCIPreleaseCons(scip, &constraint));
 }
 
 E_ProblemSolutionStatus MIPSolverSCIP::getSolutionStatus(SCIP* scip)
@@ -1167,20 +1252,25 @@ double MIPSolverSCIP::getObjectiveValue(int solIdx)
 
     // With removed objective coefficients, the value of the original objective function is calculated
     if(!objectiveCoefficientsToRestore.empty())
-    {
-        double value = objectiveConstant;
-        auto& point = currentSolutions[solIdx].point;
-
-        for(int i = 0; i < numberOfVariables; i++)
-            value += objectiveCoefficients[i] * point[i];
-
-        for(auto& coefficient : objectiveCoefficientsToRestore)
-            value += coefficient.value * point[coefficient.index];
-
-        return (value);
-    }
+        return (calculateObjectiveValue(currentSolutions[solIdx].point));
 
     return (currentSolutions[solIdx].objectiveValue);
+}
+
+double MIPSolverSCIP::calculateObjectiveValue(const VectorDouble& point)
+{
+    double value = objectiveConstant;
+
+    for(int i = 0; i < numberOfVariables; i++)
+        value += objectiveCoefficients[i] * point[i];
+
+    for(auto& coefficient : objectiveCoefficientsToRestore)
+        value += coefficient.value * point[coefficient.index];
+
+    for(auto& term : objectiveQuadraticTerms)
+        value += term.coefficient * point[term.firstVariableIndex] * point[term.secondVariableIndex];
+
+    return (value);
 }
 
 void MIPSolverSCIP::activateDiscreteVariables(bool activate)
@@ -1227,6 +1317,14 @@ void MIPSolverSCIP::setCutOffAsConstraint(double cutOff)
 {
     if(cutOff == SHOT_DBL_MAX || cutOff == SHOT_DBL_MIN)
         return;
+
+    // With a quadratic objective function, the objective limit of SCIP is used, since it applies to the whole
+    // objective function, including the variable that gives the quadratic terms
+    if(!objectiveQuadraticTerms.empty())
+    {
+        setCutOff(cutOff);
+        return;
+    }
 
     // The constraint is objective(x) <= cutoff for a minimization problem and -objective(x) <= -cutoff for a
     // maximization problem

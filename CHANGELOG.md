@@ -35,9 +35,10 @@ for how to add entries. Changes in versions before 2.0 are described in the
   which SHOT already read from AMPL and OSiL files ([#341]).
 - SCIP can be used as MIP solver, with the CMake option `HAS_SCIP` (off by
   default) and `SCIP_DIR`, and selected with `--mip=scip` or
-  `Dual.MIP.Solver=4`. It supports special ordered sets and semicontinuous and
-  semiinteger variables with nonnegative intervals, and is set with the
-  `Subsolver.SCIP` settings. The interface was started by Stefan Vigerske.
+  `Dual.MIP.Solver=4`. It supports quadratic objective functions and
+  constraints, also nonconvex ones, which SCIP solves to global optimality,
+  special ordered sets, and semicontinuous and semiinteger variables with
+  nonnegative intervals, and is set with the `Subsolver.SCIP` settings. The interface was started by Stefan Vigerske.
 
 ### Changed
 

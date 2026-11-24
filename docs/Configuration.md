@@ -71,7 +71,7 @@ SHOT problem.osil --mip=highs --nlp=ipopt --tree=multi --threads=1
 
 Use only backends present in your build. `SHOT --help` lists compiled CLI
 choices. Cbc, HiGHS and SCIP support multi-tree; CPLEX and Gurobi also support
-single-tree and native quadratic subproblems. Proprietary backends require the
+single-tree. CPLEX, Gurobi and SCIP solve native quadratic subproblems. Proprietary backends require the
 appropriate installation and license. The NLP solver searches for primal
 solutions; an NLP call is not required in every run.
 

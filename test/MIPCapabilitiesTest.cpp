@@ -82,11 +82,12 @@ bool lookupTest()
         if(!caps)
             continue;
 
-        bool quadratic = backend == ES_MIPSolver::Cplex || backend == ES_MIPSolver::Gurobi;
+        bool singleTree = backend == ES_MIPSolver::Cplex || backend == ES_MIPSolver::Gurobi;
+        bool quadratic = singleTree || backend == ES_MIPSolver::SCIP;
 
         if(caps->convexQuadraticObjective != quadratic || caps->nonconvexQuadraticObjective != quadratic
-            || caps->convexQuadraticConstraints != quadratic || caps->singleTree != quadratic
-            || caps->nonconvexQuadraticConstraints != (backend == ES_MIPSolver::Gurobi)
+            || caps->convexQuadraticConstraints != quadratic || caps->singleTree != singleTree
+            || caps->nonconvexQuadraticConstraints != (backend == ES_MIPSolver::Gurobi || backend == ES_MIPSolver::SCIP)
             || caps->nonconvexObjectiveExcludesQuadraticConstraints != (backend == ES_MIPSolver::Cplex)
             || caps->SOS1 != (backend != ES_MIPSolver::Highs) || caps->SOS2 != (backend != ES_MIPSolver::Highs))
             return false;

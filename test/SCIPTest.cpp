@@ -25,6 +25,7 @@
 #include <iostream>
 #include <map>
 #include <memory>
+#include <tuple>
 
 using namespace SHOT;
 
@@ -372,6 +373,72 @@ bool SCIPContinuousProblemSolutionLimitTest()
     return (true);
 }
 
+// Solves a problem with a quadratic objective function or constraint directly with SCIP, and checks the objective
+// value and the dual bound of the global optimum
+bool SCIPQuadraticTest()
+{
+    // Minimize and maximize x * y, which is nonconvex, with x + y <= 3 and x, y in [0, 2]: the minimum 0 is at x = 0
+    // or y = 0, and the maximum 2.25 at x = y = 1.5
+    for(bool isMinimization : { true, false })
+    {
+        Solver solver;
+        auto env = solver.getEnvironment();
+        auto mip = createMIPSolver(env);
+
+        mip->addVariable("x", E_VariableType::Real, 0.0, 2.0, 0.0);
+        mip->addVariable("y", E_VariableType::Real, 0.0, 2.0, 0.0);
+        mip->initializeObjective();
+        mip->addQuadraticTermToObjective(1.0, 0, 1);
+        mip->finalizeObjective(isMinimization, 1.0);
+        mip->addLinearConstraint({ { 0, 1.0 }, { 1, 1.0 } }, -3.0, "sum", false, false);
+        mip->finalizeProblem();
+        mip->setTimeLimit(10.0);
+
+        double expected = isMinimization ? 1.0 : 3.25;
+
+        if(mip->solveProblem() != E_ProblemSolutionStatus::Optimal
+            || std::abs(mip->getObjectiveValue(0) - expected) > 1e-5
+            || std::abs(mip->getDualObjectiveValue() - expected) > 1e-5)
+        {
+            std::cout << "The " << (isMinimization ? "minimum" : "maximum") << " of the quadratic objective function "
+                      << "is not " << expected << ".\n";
+            return (false);
+        }
+    }
+
+    // Maximize x + y with the nonconvex constraint x^2 + y^2 >= 1 and the convex constraint x^2 + y^2 <= 4, where x
+    // and y are integers in [0, 2]: the maximum 2 is at, e.g., x = y = 1
+    Solver solver;
+    auto env = solver.getEnvironment();
+    auto mip = createMIPSolver(env);
+
+    mip->addVariable("x", E_VariableType::Integer, 0.0, 2.0, 0.0);
+    mip->addVariable("y", E_VariableType::Integer, 0.0, 2.0, 0.0);
+    mip->initializeObjective();
+    mip->addLinearTermToObjective(1.0, 0);
+    mip->addLinearTermToObjective(1.0, 1);
+    mip->finalizeObjective(false);
+
+    for(auto [name, lhs, rhs] : { std::tuple("outside", 1.0, SHOT_DBL_MAX), std::tuple("inside", SHOT_DBL_MIN, 4.0) })
+    {
+        mip->initializeConstraint();
+        mip->addQuadraticTermToConstraint(1.0, 0, 0);
+        mip->addQuadraticTermToConstraint(1.0, 1, 1);
+        mip->finalizeConstraint(name, lhs, rhs);
+    }
+
+    mip->finalizeProblem();
+    mip->setTimeLimit(10.0);
+
+    if(mip->solveProblem() != E_ProblemSolutionStatus::Optimal || std::abs(mip->getObjectiveValue(0) - 2.0) > 1e-5)
+    {
+        std::cout << "The problem with quadratic constraints is not solved to the optimum 2.\n";
+        return (false);
+    }
+
+    return (true);
+}
+
 int SCIPTest(int argc, char* argv[])
 {
     int choice = 1;
@@ -448,6 +515,18 @@ int SCIPTest(int argc, char* argv[])
     case 15:
         std::cout << "Testing that the solution limit does not stop a continuous problem in SCIP.\n";
         passed = SCIPContinuousProblemSolutionLimitTest();
+        break;
+    case 16:
+        std::cout << "Testing quadratic objective functions and constraints in SCIP.\n";
+        passed = SCIPQuadraticTest();
+        break;
+    case 17:
+        std::cout << "Solving a nonconvex MIQCQP problem directly with SCIP.\n";
+        passed = SCIPSolveTest("data/instances/MINLP-nonconvex/edgecross10-010.osil", 1.0);
+        break;
+    case 18:
+        std::cout << "Solving a convex MIQCQP problem directly with SCIP.\n";
+        passed = SCIPSolveTest("data/instances/MIQCQP-convex/nvs10.osil", -310.8);
         break;
     default:
         passed = false;

@@ -72,6 +72,13 @@ control partitioning when these mixed functions are reformulated.
 An explicit request to reformulate integer bilinear terms also takes precedence
 over default native quadratic retention.
 
+Gurobi and SCIP support convex and nonconvex quadratic objectives and
+constraints, which they solve to global optimality. SCIP's adapter moves the
+quadratic terms of the objective to a constraint with an auxiliary variable,
+since SCIP's objective function is linear, and keeps the quadratic constraints
+apart from the linear ones, so that the indexes of the linear constraints, e.g.
+of cuts, are not changed.
+
 CPLEX supports nonconvex quadratic objectives globally with linear constraints,
 and convex quadratic constraints with compatible objectives. The combination
 of a nonconvex objective and quadratic constraints is not generally supported.

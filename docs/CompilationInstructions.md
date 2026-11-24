@@ -417,8 +417,11 @@ cmake -S . -B build -DHAS_SCIP=on -DSCIP_DIR=/opt/homebrew/opt/scip
 `scip-config.cmake`. SCIP is then selected with `--mip=scip` or
 `Dual.MIP.Solver=4`. SHOT creates a new SCIP problem for every MIP solve, since
 SCIP keeps the solutions of a changed problem, which would count towards the
-solution limit of the next solve. SCIP runs with one thread, and quadratic
-terms are passed to it as nonlinear constraints of SHOT.
+solution limit of the next solve. SCIP runs with one thread. Quadratic
+objective functions and constraints, also nonconvex ones, are passed to SCIP,
+which solves them to global optimality; the quadratic terms of the objective
+function are given by an auxiliary variable, since SCIP's objective function
+is linear.
 
 ### Proprietary solvers (GAMS, CPLEX, Gurobi)
 

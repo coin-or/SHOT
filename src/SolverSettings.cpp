@@ -575,9 +575,12 @@ void Solver::initializeSettings()
         "How to treat quadratic functions", enumQPStrategy, 0);
     enumQPStrategy.clear();
 
-    // Gurobi solves problems with nonconvex quadratic terms
+    // Gurobi and SCIP solve problems with nonconvex quadratic terms
     env->settings->addConditionalValue("Model.Reformulation.Quadratics.Strategy",
         { E_SettingCondition::Nonconvex, E_SettingCondition::MIPSolverGurobi },
+        static_cast<int>(ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained));
+    env->settings->addConditionalValue("Model.Reformulation.Quadratics.Strategy",
+        { E_SettingCondition::Nonconvex, E_SettingCondition::MIPSolverSCIP },
         static_cast<int>(ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained));
 
     VectorString enumQPDecomposition;

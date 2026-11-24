@@ -13,6 +13,7 @@
 #include "MIPSolverCapabilities.h"
 #include "MIPSolverCallbackBase.h"
 
+#include <limits>
 #include <map>
 #include <optional>
 #include <string>
@@ -42,10 +43,11 @@ public:
     inline static constexpr MIPSolverCapabilities capabilities = []
     {
         MIPSolverCapabilities result;
-        result.convexQuadraticObjective = false;
-        result.nonconvexQuadraticObjective = false;
-        result.convexQuadraticConstraints = false;
-        result.nonconvexQuadraticConstraints = false;
+        // SCIP solves problems with nonconvex quadratic terms to global optimality
+        result.convexQuadraticObjective = true;
+        result.nonconvexQuadraticObjective = true;
+        result.convexQuadraticConstraints = true;
+        result.nonconvexQuadraticConstraints = true;
         result.nonconvexObjectiveExcludesQuadraticConstraints = false;
         result.SOS1 = true;
         result.SOS2 = true;
@@ -205,7 +207,15 @@ public:
     std::unique_ptr<SCIPTerminationHelper> terminationHelper;
 
 private:
-    // A linear constraint lhs <= sum(coefficients * variables) <= rhs, where infinite sides are SCIP's infinity
+    struct QuadraticTerm
+    {
+        int firstVariableIndex;
+        int secondVariableIndex;
+        double coefficient;
+    };
+
+    // A constraint lhs <= sum(coefficients * variables) + quadratic terms <= rhs, where infinite sides are SCIP's
+    // infinity
     struct Row
     {
         std::string name;
@@ -213,6 +223,7 @@ private:
         VectorDouble coefficients;
         double lhs;
         double rhs;
+        std::vector<QuadraticTerm> quadraticTerms;
     };
 
     struct SpecialOrderedSet
@@ -239,13 +250,20 @@ private:
     VectorDouble objectiveCoefficients;
     double objectiveConstant = 0.0;
 
+    std::vector<QuadraticTerm> objectiveQuadraticTerms;
+
+    // The linear constraints, whose indexes are the constraint indexes in SHOT, e.g., of cuts, and the quadratic
+    // constraints, which are kept separately so that they do not change these indexes
     std::vector<Row> rows;
+    std::vector<Row> quadraticRows;
     std::vector<SpecialOrderedSet> specialOrderedSets;
 
-    // The terms of the constraint being created by addLinearTermToConstraint()
+    // The terms of the constraint being created by addLinearTermToConstraint() and addQuadraticTermToConstraint()
     std::map<int, double> currentConstraintTerms;
+    std::vector<QuadraticTerm> currentConstraintQuadraticTerms;
 
-    long solutionLimit = 1;
+    // No limit until a solution limit strategy sets one, since, e.g., the direct MIQCQP strategy does not use any
+    long solutionLimit = std::numeric_limits<int>::max();
 
     // Whether SCIP's numerics emphasis is used, when a problem is solved again after numerical trouble
     bool useNumericsEmphasis = false;
@@ -276,6 +294,15 @@ private:
     E_ProblemSolutionStatus getSolutionStatus(SCIP* scip);
 
     void restoreObjectiveCoefficients();
+
+    // The value of the objective function, with the removed objective coefficients, in a point
+    double calculateObjectiveValue(const VectorDouble& point);
+
+    // Adds a quadratic constraint lhs <= linear terms + quadratic terms <= rhs to a SCIP instance
+    void addQuadraticConstraint(SCIP* scip, const std::vector<SCIP_VAR*>& variables, const std::string& name,
+        const VectorInteger& variableIndexes, const VectorDouble& coefficients,
+        const std::vector<QuadraticTerm>& quadraticTerms, double lhs, double rhs,
+        SCIP_VAR* objectiveVariable = nullptr);
 
     int addRow(const std::string& name, VectorInteger variableIndexes, VectorDouble coefficients, double lhs,
         double rhs, bool allowRepair);

@@ -96,17 +96,17 @@ SHOT is a [COIN-OR project](https://www.coin-or.org), and won the [COIN-OR Cup 2
 
 ## Dual bound through polyhedral (outer) approximation
 
-SHOT is based on iteratively creating a tighter polyhedral approximation of the nonlinear feasible set by generating supporting hyperplanes or cutting planes. These linearized problems are then solved with a mixed-integer linear programming (MILP) solver such as CPLEX, Gurobi, Cbc, HiGHS or SCIP. If CPLEX or Gurobi is used, the subproblems can also include quadratic and bilinear nonlinearities directly; then MIQP or MIQCQP subproblems are solved. The dual strategy can be run either as a multi-tree search (repeatedly re-solving the MIP relaxation) or, with CPLEX or Gurobi, as a single-tree (branch-and-cut) search that adds cuts via callbacks during one search tree; Cbc, HiGHS and SCIP currently only support the multi-tree strategy.
+SHOT is based on iteratively creating a tighter polyhedral approximation of the nonlinear feasible set by generating supporting hyperplanes or cutting planes. These linearized problems are then solved with a mixed-integer linear programming (MILP) solver such as CPLEX, Gurobi, Cbc, HiGHS or SCIP. If CPLEX, Gurobi or SCIP is used, the subproblems can also include quadratic and bilinear nonlinearities directly; then MIQP or MIQCQP subproblems are solved. The dual strategy can be run either as a multi-tree search (repeatedly re-solving the MIP relaxation) or, with CPLEX or Gurobi, as a single-tree (branch-and-cut) search that adds cuts via callbacks during one search tree; Cbc, HiGHS and SCIP currently only support the multi-tree strategy.
 
 The problem types that can be solved to global optimality depend on which MIP solver is used:
 
 | Problem type | CPLEX | Gurobi | Cbc | HiGHS | SCIP |
 | --- | --- | --- | --- | --- | --- |
-| Convex MIQP | ✓* | ✓* | ✓ | ✓ | ✓ |
-| Convex MIQCQP | ✓* | ✓* | ✓ | ✓ | ✓ |
+| Convex MIQP | ✓* | ✓* | ✓ | ✓ | ✓* |
+| Convex MIQCQP | ✓* | ✓* | ✓ | ✓ | ✓* |
 | Convex MINLP | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Nonconvex MIQP | ✓* | ✓* | ? | ? | ? |
-| Nonconvex MIQCQP | ? | ✓* | ? | ? | ? |
+| Nonconvex MIQP | ✓* | ✓* | ? | ? | ✓* |
+| Nonconvex MIQCQP | ? | ✓* | ? | ? | ✓* |
 | Nonconvex MINLP | ? | ? | ? | ? | ? |
 
 ✓ = solved to global optimality, ? = no guarantee that a solution is found, * = the problem can be handled directly by the subsolver (native quadratic/bilinear support).
