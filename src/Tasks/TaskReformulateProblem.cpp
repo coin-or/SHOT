@@ -20,6 +20,7 @@
 #include "../Utilities.h"
 #include "../Timing.h"
 
+#include "../Model/QuadraticTermsMatrixData.h"
 #include "../Model/Simplifications.h"
 #include "TaskPerformBoundTightening.h"
 
@@ -3031,7 +3032,7 @@ std::optional<LinearTerms> TaskReformulateProblem::doEigenvalueDecomposition(Qua
 
     for(size_t i = 0; i < quadraticTerms.variableMap.size(); i++)
     {
-        double eigenvalue = quadraticTerms.eigenvalues[i];
+        double eigenvalue = quadraticTerms.matrixData->eigenvalues[i];
 
         if(std::abs(eigenvalue) < eigenValueTolerance)
             continue;
@@ -3039,15 +3040,15 @@ std::optional<LinearTerms> TaskReformulateProblem::doEigenvalueDecomposition(Qua
         LinearTerms componentTerms;
 
         double coefficientTolerance
-            = decompositionCoefficientTolerance * quadraticTerms.eigenvectors.col(i).cwiseAbs().maxCoeff();
+            = decompositionCoefficientTolerance * quadraticTerms.matrixData->eigenvectors.col(i).cwiseAbs().maxCoeff();
 
         // The variables of the terms belong to the original problem, so the ones of the reformulated problem
         // are looked up by their index
         for(auto [VAR, j] : quadraticTerms.variableMap)
         {
-            if(std::abs(quadraticTerms.eigenvectors(j, i)) > coefficientTolerance)
+            if(std::abs(quadraticTerms.matrixData->eigenvectors(j, i)) > coefficientTolerance)
                 componentTerms.push_back(std::make_shared<LinearTerm>(
-                    quadraticTerms.eigenvectors(j, i), reformulatedProblem->getVariable(VAR->getIndex())));
+                    quadraticTerms.matrixData->eigenvectors(j, i), reformulatedProblem->getVariable(VAR->getIndex())));
         }
 
         addDecompositionComponent(
@@ -3115,10 +3116,10 @@ std::optional<LinearTerms> TaskReformulateProblem::doLDLDecomposition(QuadraticT
         std::vector<std::pair<int, double>> column;
         double largestElement = 0.0;
 
-        for(Eigen::SparseMatrix<double>::InnerIterator it(quadraticTerms.LDLMatrixL, i); it; ++it)
+        for(Eigen::SparseMatrix<double>::InnerIterator it(quadraticTerms.matrixData->LDLMatrixL, i); it; ++it)
             largestElement = std::max(largestElement, std::abs(it.value()));
 
-        for(Eigen::SparseMatrix<double>::InnerIterator it(quadraticTerms.LDLMatrixL, i); it; ++it)
+        for(Eigen::SparseMatrix<double>::InnerIterator it(quadraticTerms.matrixData->LDLMatrixL, i); it; ++it)
         {
             if(std::abs(it.value()) > decompositionCoefficientTolerance * largestElement)
                 column.emplace_back(it.row(), it.value());

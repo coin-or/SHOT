@@ -12,12 +12,42 @@
 #include "Problem.h"
 #include "../Settings.h"
 #include "../Timing.h"
+#include "QuadraticTermsMatrixData.h"
 
 #include <Eigen/Cholesky>
 #include <Eigen/Sparse>
 
 namespace SHOT
 {
+QuadraticTermsMatrixDataPtr::QuadraticTermsMatrixDataPtr() : pointer(std::make_unique<QuadraticTermsMatrixData>()) { }
+
+QuadraticTermsMatrixDataPtr::QuadraticTermsMatrixDataPtr(const QuadraticTermsMatrixDataPtr& other)
+    : pointer(std::make_unique<QuadraticTermsMatrixData>(*other.pointer))
+{
+}
+
+QuadraticTermsMatrixDataPtr::QuadraticTermsMatrixDataPtr(QuadraticTermsMatrixDataPtr&& other)
+    : pointer(std::make_unique<QuadraticTermsMatrixData>())
+{
+    pointer.swap(other.pointer);
+}
+
+QuadraticTermsMatrixDataPtr& QuadraticTermsMatrixDataPtr::operator=(const QuadraticTermsMatrixDataPtr& other)
+{
+    if(this != &other)
+        *pointer = *other.pointer;
+
+    return (*this);
+}
+
+QuadraticTermsMatrixDataPtr& QuadraticTermsMatrixDataPtr::operator=(QuadraticTermsMatrixDataPtr&& other) noexcept
+{
+    pointer.swap(other.pointer);
+    return (*this);
+}
+
+QuadraticTermsMatrixDataPtr::~QuadraticTermsMatrixDataPtr() = default;
+
 Interval Term::getBounds()
 {
     // The bound vector of the problem is not copied, since this is called for every term, e.g. in bound tightening
@@ -40,8 +70,8 @@ void QuadraticTerms::updateConvexity()
     // The state of the previous calculation is cleared, since the convexity is recalculated when terms have been
     // added. Otherwise the matrix contains both the old and the new elements, and e.g. x^2 merged with -1.5x^2 into
     // the term -0.5x^2 gives the matrix element 2 + (-1) = 1, which is classified as convex.
-    elements.clear();
-    elements.reserve(2 * size());
+    matrixData->elements.clear();
+    matrixData->elements.reserve(2 * size());
 
     minEigenValue = SHOT::SHOT_DBL_MAX;
     maxEigenValue = SHOT::SHOT_DBL_MIN;
@@ -83,7 +113,7 @@ void QuadraticTerms::updateConvexity()
             allNegative = allNegative && T->coefficient <= 0;
             allBilinear = false;
 
-            elements.emplace_back(currentVariableIndex, currentVariableIndex, 2 * T->coefficient);
+            matrixData->elements.emplace_back(currentVariableIndex, currentVariableIndex, 2 * T->coefficient);
         }
         else
         {
@@ -120,13 +150,15 @@ void QuadraticTerms::updateConvexity()
             // Matrix is self adjoint, so only need lower triangular elements
             if(currentFirstVariableIndex > currentSecondVariableIndex)
             {
-                elements.emplace_back(currentFirstVariableIndex, currentSecondVariableIndex, T->coefficient);
+                matrixData->elements.emplace_back(
+                    currentFirstVariableIndex, currentSecondVariableIndex, T->coefficient);
                 // std::cout << currentFirstVariableIndex + 1 << " " << currentSecondVariableIndex + 1 << " "
                 //          << T->coefficient << std::endl;
             }
             else
             {
-                elements.emplace_back(currentSecondVariableIndex, currentFirstVariableIndex, T->coefficient);
+                matrixData->elements.emplace_back(
+                    currentSecondVariableIndex, currentFirstVariableIndex, T->coefficient);
 
                 // std::cout << currentSecondVariableIndex + 1 << " " << currentFirstVariableIndex + 1 << " "
                 //          << T->coefficient << std::endl;
@@ -163,7 +195,7 @@ void QuadraticTerms::updateConvexity()
     int numberOfVariables = variableMap.size();
 
     Eigen::SparseMatrix<double> matrix(numberOfVariables, numberOfVariables);
-    matrix.setFromTriplets(elements.begin(), elements.end());
+    matrix.setFromTriplets(matrixData->elements.begin(), matrixData->elements.end());
 
     // std::cout << matrix.toDense() << std::endl;
 
@@ -236,7 +268,7 @@ void QuadraticTerms::updateConvexity()
         if(auto sharedOwnerProblem = ownerProblem.lock())
             sharedOwnerProblem->env->timing->stopTimer("EigenvalueComputation");
 
-        eigenvalues.resize(0);
+        matrixData->eigenvalues.resize(0);
 
         if(minEigenValueWithinTolerance)
             convexity = E_Convexity::Convex;
@@ -265,7 +297,7 @@ void QuadraticTerms::updateConvexity()
         return;
     }
 
-    eigenvalues = eigenSolver.eigenvalues();
+    matrixData->eigenvalues = eigenSolver.eigenvalues();
     eigenvectorsComputed = false;
 
     if(auto sharedOwnerProblem = ownerProblem.lock())
@@ -282,7 +314,7 @@ void QuadraticTerms::updateConvexity()
 
     for(int i = 0; i < numberOfVariables; i++)
     {
-        double eigenvalue = eigenvalues[i];
+        double eigenvalue = matrixData->eigenvalues[i];
 
         this->minEigenValue = std::min(this->minEigenValue, eigenvalue);
         this->maxEigenValue = std::max(this->maxEigenValue, eigenvalue);
@@ -315,7 +347,7 @@ void QuadraticTerms::computeEigenvectors()
     int numberOfVariables = variableMap.size();
 
     Eigen::SparseMatrix<double> matrix(numberOfVariables, numberOfVariables);
-    matrix.setFromTriplets(elements.begin(), elements.end());
+    matrix.setFromTriplets(matrixData->elements.begin(), matrixData->elements.end());
 
     if(auto sharedOwnerProblem = ownerProblem.lock())
     {
@@ -333,8 +365,8 @@ void QuadraticTerms::computeEigenvectors()
     if(eigenSolver.info() != Eigen::Success)
         return;
 
-    eigenvalues = eigenSolver.eigenvalues();
-    eigenvectors = eigenSolver.eigenvectors();
+    matrixData->eigenvalues = eigenSolver.eigenvalues();
+    matrixData->eigenvectors = eigenSolver.eigenvectors();
     eigenvectorsComputed = true;
 }
 
@@ -403,7 +435,7 @@ void QuadraticTerms::performLDLFactorization(double maximumFill)
 
     // The matrix is symmetric with real elements, so the factorization does not need complex arithmetic
     Eigen::SparseMatrix<double> matrix(numberOfVariables, numberOfVariables);
-    matrix.setFromTriplets(elements.begin(), elements.end());
+    matrix.setFromTriplets(matrixData->elements.begin(), matrixData->elements.end());
 
     SimplicialLDLTWithFactorSize eigenSolverLDL;
 
@@ -447,7 +479,8 @@ void QuadraticTerms::performLDLFactorization(double maximumFill)
     Eigen::SparseMatrix<double> matrixL = eigenSolverLDL.matrixL();
     auto permInv = eigenSolverLDL.permutationPinv();
 
-    LDLMatrixL = (permInv * matrixL).eval();
+    auto& factorL = matrixData->LDLMatrixL;
+    factorL = (permInv * matrixL).eval();
 
     Eigen::VectorXd diagonalD = eigenSolverLDL.vectorD();
 
@@ -473,9 +506,9 @@ void QuadraticTerms::performLDLFactorization(double maximumFill)
     double lowerTriangleSize = 0.5 * numberOfVariables * (numberOfVariables + 1.0);
 
     if(numberOfVariables <= maximumSizeForDenseFactorization
-        && LDLMatrixL.nonZeros() >= minimumDensityForDenseFactorization * lowerTriangleSize)
+        && factorL.nonZeros() >= minimumDensityForDenseFactorization * lowerTriangleSize)
     {
-        Eigen::MatrixXd denseL(LDLMatrixL);
+        Eigen::MatrixXd denseL(factorL);
         Eigen::MatrixXd error = (denseL * diagonalD.asDiagonal()) * denseL.transpose();
 
         for(int k = 0; k < original.outerSize(); ++k)
@@ -489,7 +522,7 @@ void QuadraticTerms::performLDLFactorization(double maximumFill)
     else
     {
         Eigen::SparseMatrix<double> error
-            = Eigen::SparseMatrix<double>(LDLMatrixL * diagonalD.asDiagonal()) * LDLMatrixL.transpose() - original;
+            = Eigen::SparseMatrix<double>(factorL * diagonalD.asDiagonal()) * factorL.transpose() - original;
         error.makeCompressed();
 
         largestError = largestElement(error);

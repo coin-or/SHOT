@@ -6,6 +6,14 @@ for how to add entries. Changes in versions before 2.0 are described in the
 
 ## Unreleased
 
+### Breaking changes
+
+- In the C++ API, the Eigen matrices of `QuadraticTerms` (`elements`,
+  `eigenvalues`, `eigenvectors` and `LDLMatrixL`) are reached through
+  `matrixData->` and are declared in `Model/QuadraticTermsMatrixData.h`, and
+  `Output.h` no longer includes the logger and sinks of spdlog, so that most
+  of SHOT compiles faster. Code that uses them includes these headers itself.
+
 ### Added
 
 - SHOT as a GAMS solver from the GAMS distribution uses a GAMS/CONOPT license
@@ -24,6 +32,10 @@ for how to add entries. Changes in versions before 2.0 are described in the
 
 - `Primal.FixedInteger.NumberOfThreads` also limits the threads of the macOS
   Accelerate framework used by the NLP solvers ([#331]).
+- SHOT compiles faster: the third-party and standard headers are precompiled
+  (CMake option `SHOT_PRECOMPILE_HEADERS`, on by default), ccache also caches
+  files compiled with them, and SHOTpy is linked without link-time
+  optimization, so that it is relinked in seconds after a change in SHOT.
 
 ### Fixed
 

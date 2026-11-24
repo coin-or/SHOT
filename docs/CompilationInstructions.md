@@ -540,6 +540,7 @@ Key options (all `option(...)` declarations live at the top of the root
 | `SHOT_EXTRA_WARNINGS` | `OFF` | Additional GCC/Clang conversion, shadowing, and virtual-function diagnostics |
 | `COMPILE_TESTS` | `OFF` | Build the `test_runner` test suite (“Running the tests”) |
 | `GENERATE_EXE` | `ON` | Build the `./SHOT` console executable |
+| `SHOT_PRECOMPILE_HEADERS` | `ON` | Precompile the third-party and standard headers that most SHOT files include, to speed up compilation |
 | `SIMPLE_OUTPUT_CHARS` | `OFF` | Use only ASCII characters in the console output (always on for MSVC and MinGW) |
 
 `<SOLVER>_DIR` cache variables (`CBC_DIR`, `CPLEX_DIR`, `GUROBI_DIR`,
@@ -583,6 +584,15 @@ This produces the `./SHOT` console executable and `libSHOTSolver` inside
 compiling HiGHS from source (`HAS_HIGHS=on`, the default) can take several
 minutes; pass `-DHAS_HIGHS=off` at configure time if you don't need it and
 want a faster build.
+
+To speed up rebuilds, install [ccache](https://ccache.dev); CMake uses it
+when it is found, unless `CMAKE_<LANG>_COMPILER_LAUNCHER` is set. Most of the
+compile time of a SHOT file is spent on the headers of Eigen, CppAD and
+spdlog, so these and some standard headers are precompiled
+(`SHOT_PRECOMPILE_HEADERS`). If several build directories or worktrees share
+one cache, raise its size (`ccache -M 20G`) and set `base_dir` to a directory
+that contains them all (`ccache -o base_dir=$HOME`), so that their files
+also hit the cache of the others.
 
 If `pybind11-stubgen` is installed in the Python that CMake finds
 (`pip install pybind11-stubgen`), the build also generates the type stubs

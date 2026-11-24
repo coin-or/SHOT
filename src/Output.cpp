@@ -13,10 +13,29 @@
 #include "Environment.h"
 #include "Utilities.h"
 
+#include "spdlog/spdlog.h"
+#include "spdlog/sinks/stdout_sinks.h"
+#include "spdlog/sinks/basic_file_sink.h"
+
 #include <iostream>
+
+#if defined(_WIN32)
+#include <windows.h>
+#endif
 
 namespace SHOT
 {
+bool Output::isTraceActive() const
+{
+#ifdef NDEBUG
+    return (false);
+#else
+    return (logger->should_log(spdlog::level::trace));
+#endif
+}
+
+void Output::flush() { logger->flush(); }
+
 Output::Output()
 {
 

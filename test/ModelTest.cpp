@@ -18,6 +18,7 @@
 
 #include "../src/Model/Variables.h"
 #include "../src/Model/Terms.h"
+#include "../src/Model/QuadraticTermsMatrixData.h"
 #include "../src/Model/Constraints.h"
 #include "../src/Model/NonlinearExpressions.h"
 #include "../src/Model/Problem.h"
@@ -7662,7 +7663,7 @@ bool ModelTestLDLFactorizationScaling()
             double sum = 0.0;
 
             for(auto [variable, j] : terms.variableMap)
-                sum += terms.LDLMatrixL.coeff(j, i) * point[variable->getIndex()];
+                sum += terms.matrixData->LDLMatrixL.coeff(j, i) * point[variable->getIndex()];
 
             decomposedValue += 0.5 * terms.LDLDiag[i] * sum * sum;
         }
@@ -10616,8 +10617,8 @@ bool ModelTestLargeQuadraticConvexity()
     terms->getConvexity();
     terms->computeEigenvectors();
 
-    if(terms->eigenvalues.size() != m * m || !(terms->eigenvalues.minCoeff() < -1e-5)
-        || !(terms->eigenvalues.maxCoeff() > 1e-5))
+    if(terms->matrixData->eigenvalues.size() != m * m || !(terms->matrixData->eigenvalues.minCoeff() < -1e-5)
+        || !(terms->matrixData->eigenvalues.maxCoeff() > 1e-5))
     {
         std::cout << "  FAILED: the eigenvalues computed on demand are wrong.\n";
         passed = false;
