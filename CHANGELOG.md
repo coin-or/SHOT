@@ -28,6 +28,8 @@ for how to add entries. Changes in versions before 2.0 are described in the
   `SHOTpy.getVersion()` in Python ([#336]).
 - In SHOTpy, a number can be raised to a variable or an expression, e.g.,
   `2 ** x` ([#337]).
+- SHOTpy has the inverse hyperbolic functions `asinh`, `acosh` and `atanh`,
+  which SHOT already read from AMPL and OSiL files ([#341]).
 
 ### Changed
 
@@ -462,6 +464,7 @@ Changes since SHOT 1.1.
 [#336]: https://github.com/coin-or/SHOT/pull/336
 [#337]: https://github.com/coin-or/SHOT/pull/337
 [#339]: https://github.com/coin-or/SHOT/pull/339
+[#341]: https://github.com/coin-or/SHOT/pull/341
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
