@@ -515,6 +515,14 @@ For a broader GCC/Clang audit, add `-DSHOT_EXTRA_WARNINGS=ON` to enable
 `-Wconversion -Wsign-conversion -Wshadow -Wnon-virtual-dtor -Woverloaded-virtual`.
 This optional mode may produce substantial diagnostics in existing code; use
 `-DSHOT_WARNINGS_AS_ERRORS=OFF` to collect them all before addressing them.
+
+With MSVC, SHOT is compiled with `/W4`, which already includes conversion and
+shadowing warnings; the CI builds it with `SHOT_WARNINGS_AS_ERRORS=ON`. Four
+warnings are disabled: C4251 and C4275 (standard library types in the DLL
+interface, so users of `SHOTSolver.dll` need the same compiler and runtime),
+C4250 (inheritance via dominance, used on purpose by the NLP solvers) and C4661
+(a member that CppAD declares without defining).
+
 There is no portable "all relevant warnings" switch, and a successful build
 checks only the enabled backends and code paths. Validate both Debug and Release
 with GCC and Clang when changing portability-sensitive code.
