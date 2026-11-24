@@ -16,8 +16,9 @@
 
 #include "Variables.h"
 
-#include <Eigen/Eigenvalues>
-#include <Eigen/Sparse>
+#include <cstddef>
+#include <functional>
+#include <memory>
 #include <unordered_map>
 #include <vector>
 
@@ -530,6 +531,29 @@ inline std::ostream& operator<<(std::ostream& stream, QuadraticTermPtr term)
     return stream;
 }
 
+// The matrix data of quadratic terms is defined in QuadraticTermsMatrixData.h, so that the files that include this
+// header do not need to parse Eigen
+struct QuadraticTermsMatrixData;
+
+// Owns the matrix data of quadratic terms, which is copied with the terms
+class QuadraticTermsMatrixDataPtr
+{
+public:
+    QuadraticTermsMatrixDataPtr();
+    QuadraticTermsMatrixDataPtr(const QuadraticTermsMatrixDataPtr& other);
+    QuadraticTermsMatrixDataPtr(QuadraticTermsMatrixDataPtr&& other);
+    QuadraticTermsMatrixDataPtr& operator=(const QuadraticTermsMatrixDataPtr& other);
+    QuadraticTermsMatrixDataPtr& operator=(QuadraticTermsMatrixDataPtr&& other) noexcept;
+    ~QuadraticTermsMatrixDataPtr();
+
+    QuadraticTermsMatrixData* operator->() const { return (pointer.get()); }
+    QuadraticTermsMatrixData& operator*() const { return (*pointer); }
+
+private:
+    // Never null, also after a move, since the terms can be used again after they have been moved from
+    std::unique_ptr<QuadraticTermsMatrixData> pointer;
+};
+
 class QuadraticTerms : public Terms<QuadraticTermPtr>
 {
 private:
@@ -577,27 +601,23 @@ public:
     static constexpr double minimumDensityForDenseFactorization = 0.1;
     static constexpr int maximumSizeForDenseFactorization = 5000;
 
-    Eigen::VectorXd eigenvalues;
+    // The matrix of the terms, its eigenvalues and eigenvectors, and the factor L of its LDL factorization
+    QuadraticTermsMatrixDataPtr matrixData;
 
-    // Only computed on demand by computeEigenvectors(), since they are only needed by the eigenvalue decomposition
-    Eigen::MatrixXd eigenvectors;
     bool eigenvectorsComputed = false;
-    // Sparse, since a dense one takes O(n^2) memory, e.g., 50 GB for 80000 variables
-    Eigen::SparseMatrix<double> LDLMatrixL;
     VectorDouble LDLDiag;
     bool LDLFactorizationPerformed = false;
     bool LDLFactorizationSuccessful = false;
 
     // The number of nonzeros below the diagonal of L, known from the symbolic factorization, and whether the
     // factorization was skipped since L would have been too dense
-    Eigen::Index LDLFactorNonzeros = 0;
+    std::ptrdiff_t LDLFactorNonzeros = 0;
     bool LDLFactorizationTooDense = false;
 
     // The fill limit of performLDLFactorization() only applies to factors with more nonzeros than this, since smaller
     // ones are fast to calculate even if they are dense
-    static constexpr Eigen::Index minimumNonzerosForLDLFillLimit = 1000000;
+    static constexpr std::ptrdiff_t minimumNonzerosForLDLFillLimit = 1000000;
 
-    std::vector<Eigen::Triplet<double>> elements;
     std::map<VariablePtr, int, VariableIndexComparator> variableMap;
 
     using std::vector<QuadraticTermPtr>::operator[];

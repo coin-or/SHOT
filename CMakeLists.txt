@@ -1,11 +1,18 @@
 cmake_minimum_required(VERSION 3.20)
 include(ExternalProject)
 
-# For ccache
+# Use ccache when it is installed and no other compiler launcher is given. The
+# sloppiness lets ccache cache files compiled with a precompiled header.
 find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "${CCACHE_PROGRAM}")
+    foreach(_lang C CXX)
+        if(NOT DEFINED CMAKE_${_lang}_COMPILER_LAUNCHER)
+            set(CMAKE_${_lang}_COMPILER_LAUNCHER
+                "${CMAKE_COMMAND}" -E env
+                "CCACHE_SLOPPINESS=pch_defines,time_macros,include_file_mtime,include_file_ctime" "${CCACHE_PROGRAM}"
+            )
+        endif()
+    endforeach()
 endif()
 
 # Keep the project/version prefix on one line for the package version readers.
@@ -116,6 +123,12 @@ option(USE_EXTERNAL_HIGHS "Use precompiled, external HiGHS libraries" OFF)
 set(HIGHS_EXTERNAL_DIR
     "/opt/highs"
     CACHE STRING "The external directory where HiGHS is located)."
+)
+
+# Precompile the third-party and standard headers that most SHOT files include
+option(
+    SHOT_PRECOMPILE_HEADERS "Precompile the third-party and standard headers to speed up compilation (not with MSVC)"
+    ON
 )
 
 # Create also the executable
@@ -614,6 +627,45 @@ if(SIMPLE_OUTPUT_CHARS
     target_compile_definitions(SHOTBuildSettings INTERFACE SIMPLE_OUTPUT_CHARS)
 endif()
 
+# Every SHOT target builds its own precompiled header with its own flags. It
+# contains only third-party and standard headers, so changing a SHOT header
+# does not rebuild it. Not with MSVC: SHOTSolver.dll exports all symbols of
+# the object libraries, and the generated export list then also contains the
+# internal symbol of the precompiled header, which cannot be linked.
+if(SHOT_PRECOMPILE_HEADERS AND NOT MSVC)
+    # Only for C++, since some targets also compile C files
+    set(_pch_headers
+        algorithm
+        cmath
+        functional
+        limits
+        map
+        memory
+        optional
+        sstream
+        string
+        unordered_map
+        vector
+        Eigen/Eigenvalues
+        Eigen/Sparse
+        CppAD.h
+        spdlog/spdlog.h
+        spdlog/sinks/stdout_sinks.h
+        spdlog/sinks/basic_file_sink.h
+    )
+    list(TRANSFORM _pch_headers REPLACE "(.+)" "$<$<COMPILE_LANGUAGE:CXX>:<\\1$<ANGLE-R>>")
+    target_precompile_headers(SHOTBuildSettings INTERFACE ${_pch_headers})
+
+    # ccache needs these to cache files compiled with a precompiled header.
+    if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        target_compile_options(
+            SHOTBuildSettings INTERFACE "$<$<COMPILE_LANGUAGE:CXX>:SHELL:-Xclang -fno-pch-timestamp>"
+        )
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        target_compile_options(SHOTBuildSettings INTERFACE "$<$<COMPILE_LANGUAGE:CXX>:-fpch-preprocess>")
+    endif()
+endif()
+
 # Make sure the source file lists are in the correct format
 file(TO_CMAKE_PATH "${SOURCES}" SOURCES)
 file(TO_CMAKE_PATH "${DUAL_SOURCES}" DUAL_SOURCES)
@@ -664,6 +716,10 @@ set(CPPAD_CMAKE_ARGS
 
 set(CPPAD_SOURCE_DIR "${PROJECT_SOURCE_DIR}/${CPPAD_DIR}")
 if(MSVC)
+    # CppAD otherwise uses the first C compiler on PATH, and CMake does not
+    # accept another C compiler than MSVC beside it. Only with MSVC, since a
+    # changed compiler resets the cache of existing CppAD builds.
+    list(APPEND CPPAD_CMAKE_ARGS "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}")
     list(APPEND CPPAD_CMAKE_ARGS "-Dcppad_cxx_flags=/std:c++17 /Zc:__cplusplus")
     # Upstream unconditionally requires pkg-config to discover optional Eigen.
     # SHOT uses Eigen independently of CppAD. Adapt a build-local source copy
@@ -745,6 +801,7 @@ add_library(
     ${PROJECT_SOURCE_DIR}/src/Model/ObjectiveFunction.cpp
     ${PROJECT_SOURCE_DIR}/src/Model/Terms.h
     ${PROJECT_SOURCE_DIR}/src/Model/Terms.cpp
+    ${PROJECT_SOURCE_DIR}/src/Model/QuadraticTermsMatrixData.h
     ${PROJECT_SOURCE_DIR}/src/Model/NonlinearExpressions.h
     ${PROJECT_SOURCE_DIR}/src/Model/NonlinearExpressions.cpp
     ${PROJECT_SOURCE_DIR}/src/Model/Interval.h
@@ -776,9 +833,19 @@ if(HAS_PYTHON)
         CACHE BOOL "Force pybind11 to use FindPython3" FORCE
     )
     add_subdirectory(${PYBIND11_DIR})
-    pybind11_add_module(SHOTpy src/SHOTpy.cpp)
+    # pybind11 links the module with LTO unless CMAKE_INTERPROCEDURAL_OPTIMIZATION is defined. The bindings only call
+    # libSHOTSolver, which is linked without it, and without LTO SHOTpy is relinked in seconds after each change in SHOT.
+    if(DEFINED CMAKE_INTERPROCEDURAL_OPTIMIZATION)
+        pybind11_add_module(SHOTpy src/SHOTpy.cpp)
+    else()
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF)
+        pybind11_add_module(SHOTpy src/SHOTpy.cpp)
+        unset(CMAKE_INTERPROCEDURAL_OPTIMIZATION)
+    endif()
     add_dependencies(SHOTpy cppad)
     target_link_libraries(SHOTpy PRIVATE SHOTSolver SHOTBuildSettings ${CPPAD_LIBRARY})
+    # pybind11 requires Python.h before the standard headers in the precompiled header.
+    set_target_properties(SHOTpy PROPERTIES DISABLE_PRECOMPILE_HEADERS ON)
 
     # Set rpath for finding dynamic libraries. In the build directory they are found where they were built, which the
     # type stubs generated after the build rely on, and when installed, e.g., in a wheel, next to the module, where

@@ -29,6 +29,8 @@ concurrency:
 
 jobs:
   build:
+    # Named explicitly so that cmake_args is not part of the name
+    name: build (${{ matrix.os }}, ${{ matrix.cxx }}, ${{ matrix.cc }}, ${{ matrix.type }}, ${{ matrix.cmake }})
     strategy:
       fail-fast: false
       matrix:
@@ -48,11 +50,49 @@ jobs:
             cc: clang
             type: Release
             cmake: '4.1.2'
+          # Native MSVC build with the Cbc and Ipopt packages of the Windows
+          # wheels. SHOTpy is tested on Windows by the wheel workflow. MSVC's /W4
+          # includes the conversion warnings that GCC and Clang only give with
+          # SHOT_EXTRA_WARNINGS, and SHOT still has some, so they are not errors.
+          - os: windows-2022
+            cxx: cl
+            cc: cl
+            type: Release
+            cmake: '4.1.2'
+            cmake_args: -DHAS_PYTHON=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL -DSHOT_WARNINGS_AS_ERRORS=OFF
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+      - name: Set up MSVC
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $before = [Environment]::GetEnvironmentVariables('Process')
+          $vswhere = "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe"
+          $installation = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if ($LASTEXITCODE -ne 0 -or !$installation) {
+            throw 'No Visual Studio installation with the x64 C++ tools was found.'
+          }
+          Import-Module "$installation/Common7/Tools/Microsoft.VisualStudio.DevShell.dll"
+          Enter-VsDevShell -VsInstallPath $installation -SkipAutomaticLocation -DevCmdArguments '-arch=x64 -host_arch=x64'
+          Get-Command cl.exe -ErrorAction Stop
+          # Keep the developer environment for the following steps. Python and the pinned
+          # CMake are added after this, so that they come before the CMake of Visual Studio.
+          Get-ChildItem Env: | Where-Object {
+            $_.Name -ne 'PATH' -and $before[$_.Name] -cne $_.Value
+          } | ForEach-Object {
+            "$($_.Name)=$($_.Value)" | Add-Content -LiteralPath $env:GITHUB_ENV -Encoding utf8
+          }
+          $originalPath = $before['PATH'] -split ';'
+          $env:PATH -split ';' | Where-Object {
+            $_ -and $_ -notin $originalPath
+          } | Add-Content -LiteralPath $env:GITHUB_PATH -Encoding utf8
+      # CMakeLists.txt uses ccache when it is installed.
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
@@ -86,7 +126,16 @@ jobs:
       - name: Install macOS solvers
         if: runner.os == 'macOS'
         run: brew install cbc ipopt pkg-config ccache
-      # CMakeLists.txt uses ccache when it is installed.
+      - name: Install Windows solvers
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $deps = "$env:RUNNER_TEMP/shot-deps" -replace '\\', '/'
+          ./scripts/prepare-wheel-dependencies.ps1 -Destination $deps
+          $solvers = (Get-Content -LiteralPath ThirdParty/versions.json -Raw | ConvertFrom-Json).external_solvers
+          $cbc = "$deps/Cbc/$($solvers.Cbc.windows.directory)"
+          $ipopt = "$deps/Ipopt/$($solvers.Ipopt.windows.directory)"
+          "SOLVER_ARGS=-DCBC_DIR=$cbc -DIPOPT_DIR=$ipopt" | Add-Content -LiteralPath $env:GITHUB_ENV -Encoding utf8
       - uses: hendrikmuhs/ccache-action@v1.2.24
         with:
           key: ${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.type }}
@@ -104,10 +153,11 @@ jobs:
           -DSHOT_WARNINGS_AS_ERRORS=ON
           -DHAS_GAMS=OFF -DHAS_CPLEX=OFF -DHAS_GUROBI=OFF
           -DHAS_PYTHON=ON -DCOMPILE_TESTS=ON
+          ${{ matrix.cmake_args }} $SOLVER_ARGS
       - name: Build
         run: cmake --build build --parallel 3
       - name: Test
-        run: ctest --test-dir build --parallel "$(getconf _NPROCESSORS_ONLN)" --output-on-failure --timeout 300 -E 'FullInstance'
+        run: ctest --test-dir build --parallel "$(getconf _NPROCESSORS_ONLN 2>/dev/null || nproc)" --output-on-failure --timeout 300 -E 'FullInstance'
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4

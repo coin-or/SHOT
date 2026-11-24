@@ -13,9 +13,19 @@
 #include "Structs.h"
 #include <memory>
 
-#include "spdlog/spdlog.h"
-#include "spdlog/sinks/stdout_sinks.h"
-#include "spdlog/sinks/basic_file_sink.h"
+// The fmt library of spdlog, which SHOT uses to format messages
+#include "spdlog/fmt/fmt.h"
+
+// Declared instead of included, so that the files that include this header do not need to parse spdlog
+namespace spdlog
+{
+class logger;
+
+namespace sinks
+{
+    class sink;
+} // namespace sinks
+} // namespace spdlog
 
 namespace SHOT
 {
@@ -36,14 +46,7 @@ public:
 
     // Whether trace output is written at all, so that the messages are not built when they are not used. Trace
     // output is compiled out in release builds.
-    inline bool isTraceActive() const
-    {
-#ifdef NDEBUG
-        return (false);
-#else
-        return (logger->should_log(spdlog::level::trace));
-#endif
-    }
+    bool isTraceActive() const;
 
     void setLogLevels(E_LogLevel consoleLogLevel, E_LogLevel fileLogLevel);
 
@@ -51,13 +54,13 @@ public:
 
     void setFileSink(std::string filename);
 
-    void flush() { logger->flush(); }
+    void flush();
 
     void setPrefix(std::string prefix);
 
 private:
     std::shared_ptr<spdlog::sinks::sink> consoleSink;
-    std::shared_ptr<spdlog::sinks::basic_file_sink_st> fileSink;
+    std::shared_ptr<spdlog::sinks::sink> fileSink;
 
     std::shared_ptr<spdlog::logger> logger;
 };
