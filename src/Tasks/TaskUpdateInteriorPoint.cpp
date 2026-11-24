@@ -130,7 +130,7 @@ void TaskUpdateInteriorPoint::run()
             == static_cast<int>(ES_AddPrimalPointAsInteriorPoint::OnlyAverage)
         && maxDev.normalizedValue < 0)
     {
-        auto tmpIP = std::make_shared<InteriorPoint>();
+        auto midpointIP = std::make_shared<InteriorPoint>();
 
         for(size_t i = 0; i < tmpPrimalPoint.size(); i++)
             tmpPrimalPoint.at(i) = (0.5 * tmpPrimalPoint.at(i) + 0.5 * env->dualSolver->interiorPts.at(0)->point.at(i));
@@ -140,15 +140,16 @@ void TaskUpdateInteriorPoint::run()
 
         assert(tmpPrimalPoint.size() == static_cast<size_t>(env->reformulatedProblem->properties.numberOfVariables));
 
-        tmpIP->point = tmpPrimalPoint;
+        midpointIP->point = tmpPrimalPoint;
 
-        auto maxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
-            tmpIP->point, env->reformulatedProblem->nonlinearConstraints);
-        tmpIP->maxDeviatingConstraint = PairIndexValue(maxDev.constraint->getIndex(), maxDev.normalizedValue);
+        auto midpointMaxDev = env->reformulatedProblem->getMaxNumericConstraintValue(
+            midpointIP->point, env->reformulatedProblem->nonlinearConstraints);
+        midpointIP->maxDeviatingConstraint
+            = PairIndexValue(midpointMaxDev.constraint->getIndex(), midpointMaxDev.normalizedValue);
 
         env->output->outputDebug("     Interior point replaced with primal solution point.");
 
-        env->dualSolver->interiorPts.back() = tmpIP;
+        env->dualSolver->interiorPts.back() = midpointIP;
     }
 
     env->timing->stopTimer("InteriorPointSearch");

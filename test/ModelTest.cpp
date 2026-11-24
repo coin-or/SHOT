@@ -3929,9 +3929,9 @@ bool ModelTestObjectiveEpigraphStrategy()
         {
             auto [solver, env] = SolveWithEpigraphStrategy(
                 ES_ObjectiveEpigraphStrategy::EpigraphConstraint,
-                [](const std::shared_ptr<SHOT::Environment>& env)
+                [](const std::shared_ptr<SHOT::Environment>& environment)
                 {
-                    auto problem = std::make_shared<SHOT::Problem>(env);
+                    auto problem = std::make_shared<SHOT::Problem>(environment);
                     auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 7.0);
                     problem->add(SHOT::Variables({ var_x }));
 
@@ -3984,9 +3984,9 @@ bool ModelTestObjectiveEpigraphStrategy()
 
             auto [solver, env] = SolveWithEpigraphStrategy(
                 ES_ObjectiveEpigraphStrategy::EpigraphConstraint,
-                [isMaximize, ub](const std::shared_ptr<SHOT::Environment>& env)
+                [isMaximize, ub](const std::shared_ptr<SHOT::Environment>& environment)
                 {
-                    auto problem = std::make_shared<SHOT::Problem>(env);
+                    auto problem = std::make_shared<SHOT::Problem>(environment);
                     auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, ub);
                     problem->add(SHOT::Variables({ var_x }));
 
@@ -4046,9 +4046,9 @@ bool ModelTestObjectiveEpigraphStrategy()
 
             auto [solver, env] = SolveWithEpigraphStrategy(
                 ES_ObjectiveEpigraphStrategy::EpigraphConstraint,
-                [isMaximize, lb, ub](const std::shared_ptr<SHOT::Environment>& env)
+                [isMaximize, lb, ub](const std::shared_ptr<SHOT::Environment>& environment)
                 {
-                    auto problem = std::make_shared<SHOT::Problem>(env);
+                    auto problem = std::make_shared<SHOT::Problem>(environment);
                     auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, lb, ub);
                     problem->add(SHOT::Variables({ var_x }));
 
@@ -4098,9 +4098,9 @@ bool ModelTestObjectiveEpigraphStrategy()
         {
             auto [solver, env] = SolveWithEpigraphStrategy(
                 ES_ObjectiveEpigraphStrategy::ObjectiveFunction,
-                [](const std::shared_ptr<SHOT::Environment>& env)
+                [](const std::shared_ptr<SHOT::Environment>& environment)
                 {
-                    auto problem = std::make_shared<SHOT::Problem>(env);
+                    auto problem = std::make_shared<SHOT::Problem>(environment);
                     auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.0, 2.0);
                     problem->add(SHOT::Variables({ var_x }));
 
@@ -4153,9 +4153,9 @@ bool ModelTestObjectiveEpigraphStrategy()
         {
             auto [solver, env] = SolveWithEpigraphStrategy(
                 ES_ObjectiveEpigraphStrategy::ObjectiveFunction,
-                [](const std::shared_ptr<SHOT::Environment>& env)
+                [](const std::shared_ptr<SHOT::Environment>& environment)
                 {
-                    auto problem = std::make_shared<SHOT::Problem>(env);
+                    auto problem = std::make_shared<SHOT::Problem>(environment);
                     auto var_x = std::make_shared<SHOT::Variable>("x", SHOT::E_VariableType::Real, 0.1, 5.0);
                     problem->add(SHOT::Variables({ var_x }));
 
@@ -4317,9 +4317,9 @@ bool ModelTestObjectiveEpigraphStrategy()
 
             auto [solver, env] = SolveWithEpigraphStrategy(
                 ES_ObjectiveEpigraphStrategy::Unchanged,
-                [isQuadratic](const std::shared_ptr<SHOT::Environment>& env)
+                [isQuadratic](const std::shared_ptr<SHOT::Environment>& environment)
                 {
-                    auto problem = std::make_shared<SHOT::Problem>(env);
+                    auto problem = std::make_shared<SHOT::Problem>(environment);
 
                     if(isQuadratic)
                     {
@@ -8061,8 +8061,8 @@ bool AreVariableBoundsEqual(const Variables& variables, const Variables& referen
 
 int CountTightenedVariables(const Variables& variables)
 {
-    return (std::count_if(variables.begin(), variables.end(), [](const VariablePtr& V)
-        { return (V->properties.hasLowerBoundBeenTightened || V->properties.hasUpperBoundBeenTightened); }));
+    return (static_cast<int>(std::count_if(variables.begin(), variables.end(), [](const VariablePtr& V)
+        { return (V->properties.hasLowerBoundBeenTightened || V->properties.hasUpperBoundBeenTightened); })));
 }
 
 // A problem with all the kinds of terms bound tightening handles, generated from a seed so that the same problem can be
@@ -12226,18 +12226,19 @@ bool ModelTestSHOTFixedNLPResolve()
     {
         nlpSolver->fixVariables({ binaryIndex }, { value });
         auto status = nlpSolver->solveProblem();
-        double objective = nlpSolver->getObjectiveValue();
+        double nlpObjective = nlpSolver->getObjectiveValue();
         nlpSolver->unfixVariables();
 
-        if(status != E_NLPSolutionStatus::Optimal || std::abs(objective - expectedObjective) > 1e-4)
+        if(status != E_NLPSolutionStatus::Optimal || std::abs(nlpObjective - expectedObjective) > 1e-4)
         {
             std::cout << "  FAILED: with b = " << value << " the status is " << static_cast<int>(status)
-                      << " and the objective " << objective << ", expected optimal and " << expectedObjective << ".\n";
+                      << " and the objective " << nlpObjective << ", expected optimal and " << expectedObjective
+                      << ".\n";
             passed = false;
         }
         else
         {
-            std::cout << "  with b = " << value << " the objective is " << objective << " as expected.\n";
+            std::cout << "  with b = " << value << " the objective is " << nlpObjective << " as expected.\n";
         }
     }
 #endif
@@ -12775,16 +12776,16 @@ bool ModelTestAntiEpigraphEligibility()
 
                         auto [solver, env] = SolveWithEpigraphStrategy(ES_ObjectiveEpigraphStrategy::ObjectiveFunction,
                             buildProblem, false, mipSolver,
-                            [=](Solver& solver)
+                            [=](Solver& setupSolver)
                             {
-                                solver.updateSetting("Dual.MIP.NumberOfThreads", 1);
-                                solver.updateSetting("Termination.TimeLimit", 5.0);
-                                solver.updateSetting("Termination.ObjectiveGap.Absolute", 1e-5);
-                                solver.updateSetting("Termination.ObjectiveGap.Relative", 1e-5);
-                                solver.updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
-                                solver.updateSetting("Model.Reformulation.Constraint.PartitionQuadraticTerms",
+                                setupSolver.updateSetting("Dual.MIP.NumberOfThreads", 1);
+                                setupSolver.updateSetting("Termination.TimeLimit", 5.0);
+                                setupSolver.updateSetting("Termination.ObjectiveGap.Absolute", 1e-5);
+                                setupSolver.updateSetting("Termination.ObjectiveGap.Relative", 1e-5);
+                                setupSolver.updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+                                setupSolver.updateSetting("Model.Reformulation.Constraint.PartitionQuadraticTerms",
                                     static_cast<int>(partitioning));
-                                solver.updateSetting("Model.Reformulation.Constraint.PartitionNonlinearTerms",
+                                setupSolver.updateSetting("Model.Reformulation.Constraint.PartitionNonlinearTerms",
                                     static_cast<int>(partitioning));
                             });
 
@@ -12934,19 +12935,19 @@ bool ModelTestAntiEpigraphReconstruction()
 
                         auto [solver, env] = SolveWithEpigraphStrategy(ES_ObjectiveEpigraphStrategy::ObjectiveFunction,
                             buildProblem, false, mipSolver,
-                            [=](Solver& solver)
+                            [=](Solver& setupSolver)
                             {
-                                solver.updateSetting("Dual.MIP.NumberOfThreads", 1);
-                                solver.updateSetting("Termination.TimeLimit", 5.0);
-                                solver.updateSetting("Termination.ObjectiveGap.Absolute", 1e-6);
-                                solver.updateSetting("Termination.ObjectiveGap.Relative", 1e-6);
-                                solver.updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
-                                solver.updateSetting("Primal.FixedInteger.Use", useNLP);
-                                solver.updateSetting("Primal.PolishSolution.NumberOfPoints", 0);
-                                solver.updateSetting("Primal.FixedInteger.SourceProblem", 1);
-                                solver.updateSetting("Primal.FixedInteger.CallStrategy", 0);
-                                solver.updateSetting("Primal.FixedInteger.Enumeration.UseInitially", useNLP);
-                                solver.updateSetting("Dual.TreeStrategy",
+                                setupSolver.updateSetting("Dual.MIP.NumberOfThreads", 1);
+                                setupSolver.updateSetting("Termination.TimeLimit", 5.0);
+                                setupSolver.updateSetting("Termination.ObjectiveGap.Absolute", 1e-6);
+                                setupSolver.updateSetting("Termination.ObjectiveGap.Relative", 1e-6);
+                                setupSolver.updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+                                setupSolver.updateSetting("Primal.FixedInteger.Use", useNLP);
+                                setupSolver.updateSetting("Primal.PolishSolution.NumberOfPoints", 0);
+                                setupSolver.updateSetting("Primal.FixedInteger.SourceProblem", 1);
+                                setupSolver.updateSetting("Primal.FixedInteger.CallStrategy", 0);
+                                setupSolver.updateSetting("Primal.FixedInteger.Enumeration.UseInitially", useNLP);
+                                setupSolver.updateSetting("Dual.TreeStrategy",
                                     useNLP && (mipSolver == ES_MIPSolver::Cplex || mipSolver == ES_MIPSolver::Gurobi)
                                         ? 0
                                         : 1);

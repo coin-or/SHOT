@@ -218,7 +218,7 @@ namespace
                 std::pair<int, int> pair(std::min(i, j), std::max(i, j));
                 if(hessianPositions.count(pair))
                     continue;
-                hessianPositions[pair] = rows.size();
+                hessianPositions[pair] = static_cast<int>(rows.size());
                 rows.push_back(pair.second);
                 cols.push_back(pair.first);
             }
@@ -304,7 +304,7 @@ namespace
 
             for(size_t i = 0; i < n; ++i)
             {
-                auto& variable = getVariable(i);
+                auto& variable = getVariable(static_cast<int>(i));
                 variable.lower = conoptBound(lower[i]);
                 variable.upper = conoptBound(upper[i]);
                 variable.curr = initial[i];

@@ -43,40 +43,40 @@ bool Variable::tightenBounds(const Interval bound)
     // they exceed an integer by more than a tolerance, since, e.g., 1e-8 would otherwise make the lower bound of a
     // binary variable one. Adding zero turns a negative zero into zero.
     double integerTolerance = 1e-5;
-    double lowerBound = isDiscreteType ? std::ceil(bound.l() - integerTolerance) + 0.0 : bound.l();
-    double upperBound = isDiscreteType ? std::floor(bound.u() + integerTolerance) + 0.0 : bound.u();
+    double newLowerBound = isDiscreteType ? std::ceil(bound.l() - integerTolerance) + 0.0 : bound.l();
+    double newUpperBound = isDiscreteType ? std::floor(bound.u() + integerTolerance) + 0.0 : bound.u();
 
-    if(lowerBound > this->lowerBound + epsTolerance && lowerBound <= this->upperBound)
+    if(newLowerBound > this->lowerBound + epsTolerance && newLowerBound <= this->upperBound)
     {
         tightened = true;
         this->properties.hasLowerBoundBeenTightened = true;
         this->properties.hasArtificialLowerBound = false;
 
-        if(lowerBound == 0.0 && std::signbit(lowerBound))
+        if(newLowerBound == 0.0 && std::signbit(newLowerBound))
         {
             // Special logic for negative zero
-            this->lowerBound = -lowerBound;
+            this->lowerBound = -newLowerBound;
         }
         else
         {
-            this->lowerBound = lowerBound;
+            this->lowerBound = newLowerBound;
         }
     }
 
-    if(upperBound < this->upperBound - epsTolerance && upperBound >= this->lowerBound)
+    if(newUpperBound < this->upperBound - epsTolerance && newUpperBound >= this->lowerBound)
     {
         tightened = true;
         this->properties.hasUpperBoundBeenTightened = true;
         this->properties.hasArtificialUpperBound = false;
 
-        if(upperBound == 0.0 && std::signbit(upperBound))
+        if(newUpperBound == 0.0 && std::signbit(newUpperBound))
         {
             // Special logic for negative zero
-            this->upperBound = -upperBound;
+            this->upperBound = -newUpperBound;
         }
         else
         {
-            this->upperBound = upperBound;
+            this->upperBound = newUpperBound;
         }
     }
 

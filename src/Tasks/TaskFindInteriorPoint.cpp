@@ -291,7 +291,7 @@ void TaskFindInteriorPoint::finalizeInteriorPoints()
         }
     }
 
-    env->solutionStatistics.numberOfOriginalInteriorPoints = env->dualSolver->interiorPts.size();
+    env->solutionStatistics.numberOfOriginalInteriorPoints = static_cast<int>(env->dualSolver->interiorPts.size());
 
     if(env->dualSolver->interiorPts.empty())
         env->output->outputError(" No interior point found!");
@@ -351,7 +351,7 @@ void TaskFindInteriorPoint::setCallbackInteriorPoints(const std::vector<VectorDo
         i++;
     }
 
-    env->solutionStatistics.numberOfOriginalInteriorPoints = env->dualSolver->interiorPts.size();
+    env->solutionStatistics.numberOfOriginalInteriorPoints = static_cast<int>(env->dualSolver->interiorPts.size());
 }
 
 std::string TaskFindInteriorPoint::getType()

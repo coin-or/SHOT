@@ -259,7 +259,7 @@ void CallbackContext::validatePoint(
 {
     int originalSize = originalProblem ? originalProblem->properties.numberOfVariables : -1;
     int reformulatedSize = reformulatedProblem ? reformulatedProblem->properties.numberOfVariables : -1;
-    int size = point.size();
+    int size = static_cast<int>(point.size());
 
     if(!((allowOriginal && size == originalSize) || (allowReformulated && size == reformulatedSize)))
     {
@@ -642,7 +642,7 @@ void BoundTighteningContext::setVariableBounds(int variableIndex, double lowerBo
 {
     checkValid();
 
-    int numberOfVariables = boundedProblem->allVariables.size();
+    int numberOfVariables = static_cast<int>(boundedProblem->allVariables.size());
 
     if(variableIndex < 0 || variableIndex >= numberOfVariables)
     {
@@ -706,7 +706,7 @@ void BoundTighteningContext::setVariableBounds(const VectorDouble& lowerBounds, 
     try
     {
         for(size_t i = 0; i < lowerBounds.size(); i++)
-            setVariableBounds(i, lowerBounds[i], upperBounds[i]);
+            setVariableBounds(static_cast<int>(i), lowerBounds[i], upperBounds[i]);
     }
     catch(...)
     {

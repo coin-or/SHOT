@@ -56,6 +56,6 @@ private:
     VectorDouble solution;
     double objectiveValue = NAN;
 
-    bool createProblem(IMIPSolver* destinationProblem, ProblemPtr sourceProblem);
+    bool createProblem(IMIPSolver* destinationProblem, ProblemPtr source);
 };
 } // namespace SHOT

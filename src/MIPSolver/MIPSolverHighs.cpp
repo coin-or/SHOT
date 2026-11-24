@@ -10,7 +10,9 @@
 
 #include "MIPSolverHighs.h"
 
+#include <algorithm>
 #include <fstream>
+#include <limits>
 #include <mutex>
 #include "MIPSolverCallbackBase.h"
 
@@ -338,7 +340,7 @@ bool MIPSolverHighs::finalizeConstraint(std::string name, double valueLHS, doubl
 
     constraintNames.push_back(name);
 
-    aMatrixStart.push_back(aMatrixStart.back() + currentConstraintTerms.size());
+    aMatrixStart.push_back(aMatrixStart.back() + static_cast<int>(currentConstraintTerms.size()));
 
     for(auto const& [variableIndex, coefficient] : currentConstraintTerms)
     {
@@ -543,7 +545,7 @@ VectorInteger MIPSolverHighs::addLinearConstraints(const std::vector<std::map<in
 
     for(size_t i = 0; i < elements.size(); i++)
     {
-        rowStarts.push_back(variableIndexes.size());
+        rowStarts.push_back(static_cast<int>(variableIndexes.size()));
 
         for(auto& E : elements[i])
         {
@@ -557,8 +559,8 @@ VectorInteger MIPSolverHighs::addLinearConstraints(const std::vector<std::map<in
 
     int numConstraintsBefore = highsInstance.getNumRow();
 
-    highsInstance.addRows(elements.size(), lowerBounds.data(), upperBounds.data(), variableIndexes.size(),
-        rowStarts.data(), variableIndexes.data(), coefficients.data());
+    highsInstance.addRows(static_cast<HighsInt>(elements.size()), lowerBounds.data(), upperBounds.data(),
+        static_cast<HighsInt>(variableIndexes.size()), rowStarts.data(), variableIndexes.data(), coefficients.data());
 
     if(highsInstance.getNumRow() != numConstraintsBefore + (int)elements.size())
     {
@@ -570,7 +572,7 @@ VectorInteger MIPSolverHighs::addLinearConstraints(const std::vector<std::map<in
 
     for(size_t i = 0; i < elements.size(); i++)
     {
-        int constraintIndex = numConstraintsBefore + i;
+        int constraintIndex = numConstraintsBefore + static_cast<int>(i);
         highsInstance.passRowName(constraintIndex, names[i]);
         allowRepairOfConstraint.push_back(allowRepair);
         constraintIndexes.push_back(constraintIndex);
@@ -596,13 +598,13 @@ int MIPSolverHighs::addLinearConstraint(
     // Adds the cutting plane
     if(isGreaterThan)
     {
-        highsInstance.addRow(-constant, highsInstance.getInfinity(), variableIndexes.size(), variableIndexes.data(),
-            coefficients.data());
+        highsInstance.addRow(-constant, highsInstance.getInfinity(), static_cast<HighsInt>(variableIndexes.size()),
+            variableIndexes.data(), coefficients.data());
     }
     else
     {
-        highsInstance.addRow(-highsInstance.getInfinity(), -constant, variableIndexes.size(), variableIndexes.data(),
-            coefficients.data());
+        highsInstance.addRow(-highsInstance.getInfinity(), -constant, static_cast<HighsInt>(variableIndexes.size()),
+            variableIndexes.data(), coefficients.data());
     }
 
     if(highsInstance.getNumRow() > numConstraintsBefore)
@@ -1255,7 +1257,7 @@ int MIPSolverHighs::increaseSolutionLimit(int increment)
 {
     this->solutionLimit += increment;
 
-    return (this->solutionLimit);
+    return (static_cast<int>(std::min<long>(this->solutionLimit, std::numeric_limits<int>::max())));
 }
 
 void MIPSolverHighs::setSolutionLimit(long int limit)
@@ -1270,7 +1272,10 @@ void MIPSolverHighs::setSolutionLimit(long int limit)
     }
 }
 
-int MIPSolverHighs::getSolutionLimit() { return (this->solutionLimit); }
+int MIPSolverHighs::getSolutionLimit()
+{
+    return (static_cast<int>(std::min<long>(this->solutionLimit, std::numeric_limits<int>::max())));
+}
 
 void MIPSolverHighs::setTimeLimit(double seconds)
 {
@@ -1307,7 +1312,7 @@ void MIPSolverHighs::setCutOffAsConstraint(double cutOff)
         {
             if(variableCosts[i] != 0.0)
             {
-                variableIndexes.push_back(i);
+                variableIndexes.push_back(static_cast<int>(i));
                 coefficients.push_back(variableCosts[i]);
             }
         }
@@ -1315,14 +1320,14 @@ void MIPSolverHighs::setCutOffAsConstraint(double cutOff)
         if(isMinimizationProblem)
         {
             highsInstance.addRow(-highsInstance.getInfinity(), (cutOff - this->objectiveConstant),
-                variableIndexes.size(), variableIndexes.data(), coefficients.data());
+                static_cast<HighsInt>(variableIndexes.size()), variableIndexes.data(), coefficients.data());
             env->output->outputDebug(
                 "        Setting cutoff constraint to " + Utilities::toString(cutOff) + " for minimization.");
         }
         else
         {
-            highsInstance.addRow(cutOff - this->objectiveConstant, highsInstance.getInfinity(), variableIndexes.size(),
-                variableIndexes.data(), coefficients.data());
+            highsInstance.addRow(cutOff - this->objectiveConstant, highsInstance.getInfinity(),
+                static_cast<HighsInt>(variableIndexes.size()), variableIndexes.data(), coefficients.data());
             env->output->outputDebug(
                 "        Setting cutoff constraint value to " + Utilities::toString(cutOff) + " for maximization.");
         }
@@ -1482,7 +1487,7 @@ bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
     bool allowIntegerCutRepair = env->settings->getSetting<bool>("Dual.MIP.InfeasibilityRepair.IntegerCuts");
 
     int numConstraintsBefore = highsInstance.getNumRow();
-    int constraintCounter = highsInstance.getNumRow();
+    int rowIndex = highsInstance.getNumRow();
 
     // Verify that no integer values are outside of variable bounds
     for(size_t i = 0; i < integerCut.variableIndexes.size(); i++)
@@ -1532,16 +1537,15 @@ bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
 
             // The sum of the variables that are one minus those that are zero is at most the number of ones minus one,
             // which only excludes the given combination
-            highsInstance.addRow(-highsInstance.getInfinity(), numberOfOnes - 1.0, cutIndexes.size(), cutIndexes.data(),
-                cutCoeffs.data());
+            highsInstance.addRow(-highsInstance.getInfinity(), numberOfOnes - 1.0,
+                static_cast<HighsInt>(cutIndexes.size()), cutIndexes.data(), cutCoeffs.data());
 
             if(highsInstance.getNumRow() > tmpNumConstraints)
             {
-                highsInstance.passRowName(
-                    constraintCounter, fmt::format("IC_{}", env->solutionStatistics.numberOfIntegerCuts));
+                highsInstance.passRowName(rowIndex, fmt::format("IC_{}", env->solutionStatistics.numberOfIntegerCuts));
                 allowRepairOfConstraint.push_back(allowIntegerCutRepair);
-                integerCuts.push_back(constraintCounter);
-                constraintCounter++;
+                integerCuts.push_back(rowIndex);
+                rowIndex++;
             }
         }
         else // Integer cut for problem with general integers
@@ -1618,64 +1622,64 @@ bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
                     VectorInteger cut1aIndexes = { VAR->getIndex(), wIndex };
                     VectorDouble cut1aCoeffs = { 1.0, 1.0 };
                     int tmpNumConstraints = highsInstance.getNumRow();
-                    highsInstance.addRow(variableValue, highsInstance.getInfinity(), cut1aIndexes.size(),
-                        cut1aIndexes.data(), cut1aCoeffs.data());
+                    highsInstance.addRow(variableValue, highsInstance.getInfinity(),
+                        static_cast<HighsInt>(cut1aIndexes.size()), cut1aIndexes.data(), cut1aCoeffs.data());
 
                     if(highsInstance.getNumRow() > tmpNumConstraints)
                     {
-                        highsInstance.passRowName(constraintCounter,
-                            fmt::format("IC{}_{}_1a", env->solutionStatistics.numberOfIntegerCuts, index));
+                        highsInstance.passRowName(
+                            rowIndex, fmt::format("IC{}_{}_1a", env->solutionStatistics.numberOfIntegerCuts, index));
                         allowRepairOfConstraint.push_back(false);
-                        integerCuts.push_back(constraintCounter);
-                        constraintCounter++;
+                        integerCuts.push_back(rowIndex);
+                        rowIndex++;
                     }
 
                     // Constraint 1b: x - w <= variableValue
                     VectorInteger cut1bIndexes = { VAR->getIndex(), wIndex };
                     VectorDouble cut1bCoeffs = { 1.0, -1.0 };
                     tmpNumConstraints = highsInstance.getNumRow();
-                    highsInstance.addRow(-highsInstance.getInfinity(), variableValue, cut1bIndexes.size(),
-                        cut1bIndexes.data(), cut1bCoeffs.data());
+                    highsInstance.addRow(-highsInstance.getInfinity(), variableValue,
+                        static_cast<HighsInt>(cut1bIndexes.size()), cut1bIndexes.data(), cut1bCoeffs.data());
 
                     if(highsInstance.getNumRow() > tmpNumConstraints)
                     {
-                        highsInstance.passRowName(constraintCounter,
-                            fmt::format("IC{}_{}_1b", env->solutionStatistics.numberOfIntegerCuts, index));
+                        highsInstance.passRowName(
+                            rowIndex, fmt::format("IC{}_{}_1b", env->solutionStatistics.numberOfIntegerCuts, index));
                         allowRepairOfConstraint.push_back(false);
-                        integerCuts.push_back(constraintCounter);
-                        constraintCounter++;
+                        integerCuts.push_back(rowIndex);
+                        rowIndex++;
                     }
 
                     // Constraint 2: w - x + M1*v <= -variableValue + M1
                     VectorInteger cut2Indexes = { wIndex, VAR->getIndex(), vIndex };
                     VectorDouble cut2Coeffs = { 1.0, -1.0, M1 };
                     tmpNumConstraints = highsInstance.getNumRow();
-                    highsInstance.addRow(-highsInstance.getInfinity(), -variableValue + M1, cut2Indexes.size(),
-                        cut2Indexes.data(), cut2Coeffs.data());
+                    highsInstance.addRow(-highsInstance.getInfinity(), -variableValue + M1,
+                        static_cast<HighsInt>(cut2Indexes.size()), cut2Indexes.data(), cut2Coeffs.data());
 
                     if(highsInstance.getNumRow() > tmpNumConstraints)
                     {
-                        highsInstance.passRowName(constraintCounter,
-                            fmt::format("IC{}_{}_2", env->solutionStatistics.numberOfIntegerCuts, index));
+                        highsInstance.passRowName(
+                            rowIndex, fmt::format("IC{}_{}_2", env->solutionStatistics.numberOfIntegerCuts, index));
                         allowRepairOfConstraint.push_back(false);
-                        integerCuts.push_back(constraintCounter);
-                        constraintCounter++;
+                        integerCuts.push_back(rowIndex);
+                        rowIndex++;
                     }
 
                     // Constraint 3: w + x - M2*v <= variableValue
                     VectorInteger cut3Indexes = { wIndex, VAR->getIndex(), vIndex };
                     VectorDouble cut3Coeffs = { 1.0, 1.0, -M2 };
                     tmpNumConstraints = highsInstance.getNumRow();
-                    highsInstance.addRow(-highsInstance.getInfinity(), variableValue, cut3Indexes.size(),
-                        cut3Indexes.data(), cut3Coeffs.data());
+                    highsInstance.addRow(-highsInstance.getInfinity(), variableValue,
+                        static_cast<HighsInt>(cut3Indexes.size()), cut3Indexes.data(), cut3Coeffs.data());
 
                     if(highsInstance.getNumRow() > tmpNumConstraints)
                     {
-                        highsInstance.passRowName(constraintCounter,
-                            fmt::format("IC{}_{}_3", env->solutionStatistics.numberOfIntegerCuts, index));
+                        highsInstance.passRowName(
+                            rowIndex, fmt::format("IC{}_{}_3", env->solutionStatistics.numberOfIntegerCuts, index));
                         allowRepairOfConstraint.push_back(false);
-                        integerCuts.push_back(constraintCounter);
-                        constraintCounter++;
+                        integerCuts.push_back(rowIndex);
+                        rowIndex++;
                     }
                 }
 
@@ -1684,20 +1688,19 @@ bool MIPSolverHighs::createIntegerCut(IntegerCut& integerCut)
 
             // Final constraint: sum >= 1 - sumLB - sumUB
             int tmpNumConstraints = highsInstance.getNumRow();
-            highsInstance.addRow(
-                1 - sumLB - sumUB, highsInstance.getInfinity(), cutIndexes.size(), cutIndexes.data(), cutCoeffs.data());
+            highsInstance.addRow(1 - sumLB - sumUB, highsInstance.getInfinity(),
+                static_cast<HighsInt>(cutIndexes.size()), cutIndexes.data(), cutCoeffs.data());
 
             if(highsInstance.getNumRow() > tmpNumConstraints)
             {
-                highsInstance.passRowName(
-                    constraintCounter, fmt::format("IC{}_4", env->solutionStatistics.numberOfIntegerCuts));
+                highsInstance.passRowName(rowIndex, fmt::format("IC{}_4", env->solutionStatistics.numberOfIntegerCuts));
                 allowRepairOfConstraint.push_back(allowIntegerCutRepair);
-                integerCuts.push_back(constraintCounter);
-                constraintCounter++;
+                integerCuts.push_back(rowIndex);
+                rowIndex++;
             }
         }
 
-        if(constraintCounter == numConstraintsBefore)
+        if(rowIndex == numConstraintsBefore)
         {
             env->output->outputDebug("        Integer cut not added by HiGHS");
             return (false);
@@ -1833,7 +1836,7 @@ double MIPSolverHighs::getDualObjectiveValue()
 
 void MIPSolverHighs::checkParameters() { }
 
-int MIPSolverHighs::getNumberOfExploredNodes() { return (highsInstance.getInfo().mip_node_count); }
+int MIPSolverHighs::getNumberOfExploredNodes() { return (static_cast<int>(highsInstance.getInfo().mip_node_count)); }
 
 int MIPSolverHighs::getNumberOfThreads() { return (env->settings->getSetting<int>("Dual.MIP.NumberOfThreads")); }
 

@@ -89,7 +89,7 @@ void MIPSolverGurobiSingleTree::setSolutionLimit(long limit)
     if(limit > GRB_MAXINT)
         gurobiModel->set(GRB_IntParam_SolutionLimit, GRB_MAXINT);
     else
-        gurobiModel->set(GRB_IntParam_SolutionLimit, limit);
+        gurobiModel->set(GRB_IntParam_SolutionLimit, static_cast<int>(limit));
 }
 
 int MIPSolverGurobiSingleTree::getSolutionLimit() { return (gurobiModel->get(GRB_IntParam_SolutionLimit)); }
@@ -301,7 +301,7 @@ void GurobiCallbackSingleTree::callback()
             if(env->results->getCurrentIteration()->relaxedLazyHyperplanesAdded
                 < env->settings->getSetting<int>("Dual.Relaxation.MaxLazyConstraints"))
             {
-                int waitingListSize = env->dualSolver->hyperplaneWaitingList.size();
+                int waitingListSize = static_cast<int>(env->dualSolver->hyperplaneWaitingList.size());
 
                 int numModelVars = static_cast<MIPSolverGurobiSingleTree*>(env->dualSolver->MIPSolver.get())
                                        ->gurobiModel->get(GRB_IntAttr_NumVars);

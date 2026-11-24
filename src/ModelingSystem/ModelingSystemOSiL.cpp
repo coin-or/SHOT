@@ -621,8 +621,8 @@ E_ProblemCreationStatus ModelingSystemOSiL::createProblem(ProblemPtr& problem, c
 
                 for(auto VAR = S->FirstChildElement("var"); VAR != nullptr; VAR = VAR->NextSiblingElement("var"))
                 {
-                    int variableIndex = std::stoi(VAR->Attribute("idx"));
-                    variables.push_back(problem->getVariable(variableIndex));
+                    int sosVariableIndex = std::stoi(VAR->Attribute("idx"));
+                    variables.push_back(problem->getVariable(sosVariableIndex));
                 }
 
                 problem->add(

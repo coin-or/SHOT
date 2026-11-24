@@ -22,7 +22,9 @@
 
 #include "../Model/Problem.h"
 
+#include <algorithm>
 #include <chrono>
+#include <limits>
 #include <thread>
 
 #include "CoinBuild.hpp"
@@ -336,7 +338,7 @@ void MIPSolverCbc::initializeSolverSettings()
         usedSolutionLimit = solLimit;
     }
 
-    cbcModel->setMaximumSolutions(usedSolutionLimit);
+    cbcModel->setMaximumSolutions(static_cast<int>(std::min<long>(usedSolutionLimit, std::numeric_limits<int>::max())));
     cbcModel->setMaximumSavedSolutions(env->settings->getSetting<int>("Dual.MIP.SolutionPool.Capacity"));
 
     // Set number of threads
@@ -443,7 +445,7 @@ void MIPSolverCbc::addBranchingObjects()
     if(cbcobjects.empty())
         return;
 
-    cbcModel->addObjects(cbcobjects.size(), cbcobjects.data());
+    cbcModel->addObjects(static_cast<int>(cbcobjects.size()), cbcobjects.data());
 
     for(CbcObject* o : cbcobjects)
         delete o;
@@ -458,7 +460,7 @@ bool MIPSolverCbc::addSpecialOrderedSet(E_SOSType type, VectorInteger variableIn
             variableWeights.resize(variableIndexes.size());
 
             for(size_t i = 0; i < variableIndexes.size(); i++)
-                variableWeights[i] = i;
+                variableWeights[i] = static_cast<double>(i);
         }
 
         assert(variableWeights.size() == variableIndexes.size());
@@ -784,7 +786,7 @@ E_ProblemSolutionStatus MIPSolverCbc::solveProblem()
                 // Cbc counts the completed partial start as a solution, so the solve would otherwise stop at the start
                 // when the limit is one
                 if(partialMIPStartAdded && usedSolutionLimit < 2100000000)
-                    cbcModel->setMaximumSolutions(usedSolutionLimit + 1);
+                    cbcModel->setMaximumSolutions(static_cast<int>(usedSolutionLimit) + 1);
             }
 
             // The partial start is only for this solve, the primal start is given again in the next iteration
@@ -1352,12 +1354,15 @@ int MIPSolverCbc::increaseSolutionLimit(int increment)
 
     this->setSolutionLimit(this->solLimit);
 
-    return (this->solLimit);
+    return (static_cast<int>(std::min<long>(this->solLimit, std::numeric_limits<int>::max())));
 }
 
 void MIPSolverCbc::setSolutionLimit(long int limit) { this->solLimit = limit; }
 
-int MIPSolverCbc::getSolutionLimit() { return (this->solLimit); }
+int MIPSolverCbc::getSolutionLimit()
+{
+    return (static_cast<int>(std::min<long>(this->solLimit, std::numeric_limits<int>::max())));
+}
 
 void MIPSolverCbc::setTimeLimit(double seconds)
 {
@@ -1374,22 +1379,22 @@ void MIPSolverCbc::setTimeLimit(double seconds)
         osiInterface->getModelPtr()->setMaximumSeconds(timeLimit);
 }
 
-void MIPSolverCbc::setCutOff(double cutOff)
+void MIPSolverCbc::setCutOff(double value)
 {
-    if(cutOff == SHOT_DBL_MAX || cutOff == SHOT_DBL_MIN)
+    if(value == SHOT_DBL_MAX || value == SHOT_DBL_MIN)
         return;
 
     // Cbc minimizes also when the problem is maximized, with the signs of the objective changed, and the cutoff is
     // on the objective it minimizes. The cutoff given already includes the tolerance Dual.MIP.CutOff.Tolerance
-    this->cutOff = isMinimizationProblem ? cutOff : -cutOff;
+    this->cutOff = isMinimizationProblem ? value : -value;
 
     env->output->outputDebug(fmt::format(
-        "        Setting cutoff value to {} for {}.", cutOff, isMinimizationProblem ? "minimization" : "maximization"));
+        "        Setting cutoff value to {} for {}.", value, isMinimizationProblem ? "minimization" : "maximization"));
 }
 
-void MIPSolverCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
+void MIPSolverCbc::setCutOffAsConstraint([[maybe_unused]] double value)
 {
-    if(cutOff == SHOT_DBL_MAX || cutOff == SHOT_DBL_MIN)
+    if(value == SHOT_DBL_MAX || value == SHOT_DBL_MIN)
         return;
 
     try
@@ -1399,18 +1404,18 @@ void MIPSolverCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
             if(isMinimizationProblem)
             {
                 osiInterface->addRow(objectiveLinearExpression, -osiInterface->getInfinity(),
-                    (cutOff - this->objectiveConstant), "CUTOFF_C");
+                    (value - this->objectiveConstant), "CUTOFF_C");
 
                 env->output->outputDebug(
-                    "        Setting cutoff constraint to " + Utilities::toString(cutOff) + " for minimization.");
+                    "        Setting cutoff constraint to " + Utilities::toString(value) + " for minimization.");
             }
             else
             {
                 osiInterface->addRow(objectiveLinearExpression, -osiInterface->getInfinity(),
-                    -1.0 * (cutOff - this->objectiveConstant), "CUTOFF_C");
+                    -1.0 * (value - this->objectiveConstant), "CUTOFF_C");
 
                 env->output->outputDebug(
-                    "        Setting cutoff constraint value to " + Utilities::toString(cutOff) + " for maximization.");
+                    "        Setting cutoff constraint value to " + Utilities::toString(value) + " for maximization.");
             }
 
             allowRepairOfConstraint.push_back(false);
@@ -1424,17 +1429,17 @@ void MIPSolverCbc::setCutOffAsConstraint([[maybe_unused]] double cutOff)
         {
             if(isMinimizationProblem)
             {
-                osiInterface->setRowUpper(cutOffConstraintIndex, cutOff - this->objectiveConstant);
+                osiInterface->setRowUpper(cutOffConstraintIndex, value - this->objectiveConstant);
 
                 env->output->outputDebug(
-                    "        Setting cutoff constraint value to " + Utilities::toString(cutOff) + " for minimization.");
+                    "        Setting cutoff constraint value to " + Utilities::toString(value) + " for minimization.");
             }
             else
             {
-                osiInterface->setRowUpper(cutOffConstraintIndex, -(cutOff - this->objectiveConstant));
+                osiInterface->setRowUpper(cutOffConstraintIndex, -(value - this->objectiveConstant));
 
                 env->output->outputDebug(
-                    "        Setting cutoff constraint value to " + Utilities::toString(cutOff) + " for maximization.");
+                    "        Setting cutoff constraint value to " + Utilities::toString(value) + " for maximization.");
             }
 
             modelUpdated = true;
@@ -1544,7 +1549,7 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
     bool allowIntegerCutRepair = env->settings->getSetting<bool>("Dual.MIP.InfeasibilityRepair.IntegerCuts");
 
     int numConstraintsBefore = osiInterface->getNumRows();
-    int constraintCounter = osiInterface->getNumRows();
+    int rowIndex = osiInterface->getNumRows();
 
     // Verify that no integer values are outside of variable bounds
     for(size_t i = 0; i < integerCut.variableIndexes.size(); i++)
@@ -1595,8 +1600,8 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
             if(osiInterface->getNumRows() > tmpNumConstraints)
             {
                 allowRepairOfConstraint.push_back(allowIntegerCutRepair);
-                integerCuts.push_back(constraintCounter);
-                constraintCounter++;
+                integerCuts.push_back(rowIndex);
+                rowIndex++;
             }
         }
         else // Integer cut for problem with general integers
@@ -1668,8 +1673,8 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
                     if(osiInterface->getNumRows() > tmpNumConstraints)
                     {
                         allowRepairOfConstraint.push_back(false);
-                        integerCuts.push_back(constraintCounter);
-                        constraintCounter++;
+                        integerCuts.push_back(rowIndex);
+                        rowIndex++;
                     }
 
                     tmpNumConstraints = osiInterface->getNumRows();
@@ -1682,8 +1687,8 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
                     if(osiInterface->getNumRows() > tmpNumConstraints)
                     {
                         allowRepairOfConstraint.push_back(false);
-                        integerCuts.push_back(constraintCounter);
-                        constraintCounter++;
+                        integerCuts.push_back(rowIndex);
+                        rowIndex++;
                     }
 
                     tmpNumConstraints = osiInterface->getNumRows();
@@ -1696,8 +1701,8 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
                     if(osiInterface->getNumRows() > tmpNumConstraints)
                     {
                         allowRepairOfConstraint.push_back(false);
-                        integerCuts.push_back(constraintCounter);
-                        constraintCounter++;
+                        integerCuts.push_back(rowIndex);
+                        rowIndex++;
                     }
 
                     tmpNumConstraints = osiInterface->getNumRows();
@@ -1710,8 +1715,8 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
                     if(osiInterface->getNumRows() > tmpNumConstraints)
                     {
                         allowRepairOfConstraint.push_back(false);
-                        integerCuts.push_back(constraintCounter);
-                        constraintCounter++;
+                        integerCuts.push_back(rowIndex);
+                        rowIndex++;
                     }
 
                     osiInterface->setContinuous(wIndex);
@@ -1733,12 +1738,12 @@ bool MIPSolverCbc::createIntegerCut(IntegerCut& integerCut)
             if(osiInterface->getNumRows() > tmpNumConstraints)
             {
                 allowRepairOfConstraint.push_back(allowIntegerCutRepair);
-                integerCuts.push_back(constraintCounter);
-                constraintCounter++;
+                integerCuts.push_back(rowIndex);
+                rowIndex++;
             }
         }
 
-        if(constraintCounter == numConstraintsBefore)
+        if(rowIndex == numConstraintsBefore)
         {
             env->output->outputDebug("        Integer cut not added by Cbc");
             return (false);
@@ -1960,14 +1965,14 @@ int MIPSolverCbc::getNumberOfThreads()
     if(!cbcModel || !cbcModel->haveMultiThreadSupport())
         return (1);
 
-    int numberOfThreads = env->settings->getSetting<int>("Dual.MIP.NumberOfThreads");
+    int threads = env->settings->getSetting<int>("Dual.MIP.NumberOfThreads");
 
     // Cbc runs serially if zero threads are given, so the automatic number of threads is one per logical core, as
     // with the other MIP solvers
-    if(numberOfThreads == 0)
-        numberOfThreads = std::max(1, static_cast<int>(std::thread::hardware_concurrency()));
+    if(threads == 0)
+        threads = std::max(1, static_cast<int>(std::thread::hardware_concurrency()));
 
-    return (numberOfThreads);
+    return (threads);
 }
 
 int CbcMessageHandler::print()

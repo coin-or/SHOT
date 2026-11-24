@@ -49,7 +49,7 @@ void saveVariablePointVectorToFile(
 
     std::stringstream str;
 
-    int number = std::min(point.size(), variables.size());
+    int number = static_cast<int>(std::min(point.size(), variables.size()));
 
     for(int i = 0; i < number; i++)
     {
@@ -321,8 +321,8 @@ VectorDouble calculateBoxCenterPoint(
 
 VectorDouble calculateCenterPoint(const std::vector<VectorDouble>& pts)
 {
-    int ptSize = pts.at(0).size();
-    int numPts = pts.size();
+    int ptSize = static_cast<int>(pts.at(0).size());
+    int numPts = static_cast<int>(pts.size());
 
     VectorDouble newPt(ptSize, 0.0);
 

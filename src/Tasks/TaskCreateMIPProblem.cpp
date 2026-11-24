@@ -44,9 +44,9 @@ void TaskCreateMIPProblem::run()
     env->output->outputDebug(" MIP problem created");
 }
 
-bool TaskCreateMIPProblem::createProblem(MIPSolverPtr destination, ProblemPtr sourceProblem)
+bool TaskCreateMIPProblem::createProblem(MIPSolverPtr destination, ProblemPtr source)
 {
-    if(auto feature = getUnsupportedMIPFeature(capabilities, *sourceProblem))
+    if(auto feature = getUnsupportedMIPFeature(capabilities, *source))
     {
         env->output->outputError(" MIP backend does not support " + *feature + ".");
         return false;
@@ -56,7 +56,7 @@ bool TaskCreateMIPProblem::createProblem(MIPSolverPtr destination, ProblemPtr so
 
     bool variablesInitialized = true;
 
-    for(auto& V : sourceProblem->allVariables)
+    for(auto& V : source->allVariables)
     {
         PairDouble bounds { V->lowerBound, V->upperBound };
         if(V->properties.isAuxiliary)
@@ -70,11 +70,11 @@ bool TaskCreateMIPProblem::createProblem(MIPSolverPtr destination, ProblemPtr so
     if(!variablesInitialized)
         return false;
 
-    if(sourceProblem->auxiliaryObjectiveVariable) // The source problem already has a nonlinear objective variable
+    if(source->auxiliaryObjectiveVariable) // The source problem already has a nonlinear objective variable
     {
-        destination->setDualAuxiliaryObjectiveVariableIndex(sourceProblem->auxiliaryObjectiveVariable->getIndex());
+        destination->setDualAuxiliaryObjectiveVariableIndex(source->auxiliaryObjectiveVariable->getIndex());
     }
-    else if(sourceProblem->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
+    else if(source->objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic)
     {
         double objVarBound = env->settings->getSetting<double>("Model.Variables.NonlinearObjectiveVariable.Bound");
 
@@ -82,14 +82,14 @@ bool TaskCreateMIPProblem::createProblem(MIPSolverPtr destination, ProblemPtr so
 
         try
         {
-            objectiveBound = sourceProblem->objectiveFunction->getBounds();
+            objectiveBound = source->objectiveFunction->getBounds();
         }
         catch(IntervalError&)
         {
             objectiveBound = Interval(-objVarBound, objVarBound);
         }
 
-        destination->setDualAuxiliaryObjectiveVariableIndex(sourceProblem->properties.numberOfVariables);
+        destination->setDualAuxiliaryObjectiveVariableIndex(source->properties.numberOfVariables);
 
         auto bounds = MIPSolverBase::getAuxiliaryVariableBoundsForSolver(
             objectiveBound.l(), objectiveBound.u(), destination->getUnboundedVariableBoundValue());
@@ -99,7 +99,7 @@ bool TaskCreateMIPProblem::createProblem(MIPSolverPtr destination, ProblemPtr so
 
         env->output->outputDebug(fmt::format(
             "         SHOT internal dual objective variable created with index {} and bounds [{},{}] created.",
-            sourceProblem->properties.numberOfVariables, bounds.first, bounds.second));
+            source->properties.numberOfVariables, bounds.first, bounds.second));
     }
 
     // Now creating the objective function
@@ -113,23 +113,23 @@ bool TaskCreateMIPProblem::createProblem(MIPSolverPtr destination, ProblemPtr so
         objectiveInitialized = objectiveInitialized
             && destination->addLinearTermToObjective(1.0, destination->getDualAuxiliaryObjectiveVariableIndex());
 
-        objectiveInitialized = objectiveInitialized
-            && destination->finalizeObjective(sourceProblem->objectiveFunction->properties.isMinimize);
+        objectiveInitialized
+            = objectiveInitialized && destination->finalizeObjective(source->objectiveFunction->properties.isMinimize);
     }
     else
     {
         // Linear terms
-        for(auto& T : std::dynamic_pointer_cast<LinearObjectiveFunction>(sourceProblem->objectiveFunction)->linearTerms)
+        for(auto& T : std::dynamic_pointer_cast<LinearObjectiveFunction>(source->objectiveFunction)->linearTerms)
         {
             objectiveInitialized = objectiveInitialized
                 && destination->addLinearTermToObjective(T->coefficient, T->variable->getIndex());
         }
 
         // Quadratic terms
-        if(sourceProblem->objectiveFunction->properties.hasQuadraticTerms)
+        if(source->objectiveFunction->properties.hasQuadraticTerms)
         {
             for(auto& T :
-                std::dynamic_pointer_cast<QuadraticObjectiveFunction>(sourceProblem->objectiveFunction)->quadraticTerms)
+                std::dynamic_pointer_cast<QuadraticObjectiveFunction>(source->objectiveFunction)->quadraticTerms)
             {
                 objectiveInitialized = objectiveInitialized
                     && destination->addQuadraticTermToObjective(
@@ -139,7 +139,7 @@ bool TaskCreateMIPProblem::createProblem(MIPSolverPtr destination, ProblemPtr so
 
         objectiveInitialized = objectiveInitialized
             && destination->finalizeObjective(
-                sourceProblem->objectiveFunction->properties.isMinimize, sourceProblem->objectiveFunction->constant);
+                source->objectiveFunction->properties.isMinimize, source->objectiveFunction->constant);
     }
 
     if(!objectiveInitialized)
@@ -149,7 +149,7 @@ bool TaskCreateMIPProblem::createProblem(MIPSolverPtr destination, ProblemPtr so
 
     bool constraintsInitialized = true;
 
-    for(auto& C : sourceProblem->linearConstraints)
+    for(auto& C : source->linearConstraints)
     {
         constraintsInitialized = constraintsInitialized && destination->initializeConstraint();
 
@@ -166,7 +166,7 @@ bool TaskCreateMIPProblem::createProblem(MIPSolverPtr destination, ProblemPtr so
             = constraintsInitialized && destination->finalizeConstraint(C->name, C->valueLHS, C->valueRHS, C->constant);
     }
 
-    for(auto& C : sourceProblem->quadraticConstraints)
+    for(auto& C : source->quadraticConstraints)
     {
         constraintsInitialized = constraintsInitialized && destination->initializeConstraint();
 
@@ -198,7 +198,7 @@ bool TaskCreateMIPProblem::createProblem(MIPSolverPtr destination, ProblemPtr so
 
     bool SOSInitialized = true;
 
-    for(auto& S : sourceProblem->specialOrderedSets)
+    for(auto& S : source->specialOrderedSets)
     {
         std::vector<int> variableIndexes;
         std::vector<double> variableWeights;

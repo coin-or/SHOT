@@ -247,10 +247,10 @@ void checkAndConvertObjectivesAndConstraints(
         {
             if(newConstraintSet.find(C) != newConstraintSet.end())
             {
-                if(auto constraint = std::dynamic_pointer_cast<QuadraticConstraint>(C))
-                    problem->quadraticConstraints.push_back(constraint);
-                else if(auto constraint = std::dynamic_pointer_cast<LinearConstraint>(C))
-                    problem->linearConstraints.push_back(constraint);
+                if(auto quadraticConstraint = std::dynamic_pointer_cast<QuadraticConstraint>(C))
+                    problem->quadraticConstraints.push_back(quadraticConstraint);
+                else if(auto linearConstraint = std::dynamic_pointer_cast<LinearConstraint>(C))
+                    problem->linearConstraints.push_back(linearConstraint);
             }
         }
     }

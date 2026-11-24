@@ -533,6 +533,11 @@ if(MSVC)
     target_compile_options(
         SHOTBuildSettings INTERFACE "$<$<COMPILE_LANGUAGE:CXX>:/W4;/permissive-;/Zc:__cplusplus;/utf-8>"
     )
+    # The classes of SHOTSolver.dll have standard library members and bases (C4251,
+    # C4275), so its users need the same compiler and runtime, as for every C++ DLL.
+    # The NLP solvers inherit solveProblem() through virtual inheritance on purpose
+    # (C4250), and CppAD declares a member of ADFun that it does not define (C4661).
+    target_compile_options(SHOTBuildSettings INTERFACE "$<$<COMPILE_LANGUAGE:CXX>:/wd4251;/wd4275;/wd4250;/wd4661>")
     if(SHOT_WARNINGS_AS_ERRORS)
         target_compile_options(SHOTBuildSettings INTERFACE "$<$<COMPILE_LANGUAGE:CXX>:/WX>")
     endif()

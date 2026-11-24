@@ -60,7 +60,7 @@ public:
 
     double operator()(const double x)
     {
-        int length = firstPt.size();
+        int length = static_cast<int>(firstPt.size());
         VectorDouble ptNew(length);
 
         for(int i = 0; i < length; i++)
@@ -135,8 +135,8 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
 
     // Sets the maximal number of iterations
     int maxIter = env->settings->getSetting<int>("Dual.ESH.InteriorPoint.CuttingPlane.IterationLimit");
-    double timeLimit = env->settings->getSetting<double>("Dual.ESH.InteriorPoint.CuttingPlane.TimeLimit");
-    LPSolver->setTimeLimit(timeLimit);
+    double cuttingPlaneTimeLimit = env->settings->getSetting<double>("Dual.ESH.InteriorPoint.CuttingPlane.TimeLimit");
+    LPSolver->setTimeLimit(cuttingPlaneTimeLimit);
 
     double termObjTolAbs
         = env->settings->getSetting<double>("Dual.ESH.InteriorPoint.CuttingPlane.TerminationToleranceAbs");
@@ -180,7 +180,8 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         }
 
         // Updates the time limit for the LP solver with the time remaining of the interior point search
-        LPSolver->setTimeLimit(std::max(0.0, timeLimit - env->timing->getElapsedTime("InteriorPointSearch")));
+        LPSolver->setTimeLimit(
+            std::max(0.0, cuttingPlaneTimeLimit - env->timing->getElapsedTime("InteriorPointSearch")));
 
         // Solves the problem and obtains the solution
         auto solStatus = LPSolver->solveProblem();
@@ -303,7 +304,7 @@ E_NLPSolutionStatus NLPSolverCuttingPlaneMinimax::solveProblemInstance()
         // cut. The cuts created so far are still added.
         auto isOutOfTime = [&]()
         {
-            return (env->timing->getElapsedTime("InteriorPointSearch") > timeLimit
+            return (env->timing->getElapsedTime("InteriorPointSearch") > cuttingPlaneTimeLimit
                 || env->timing->getElapsedTime("Total") > env->settings->getSetting<double>("Termination.TimeLimit"));
         };
 
@@ -468,12 +469,12 @@ VectorDouble NLPSolverCuttingPlaneMinimax::getSolution() { return (solution); }
 double NLPSolverCuttingPlaneMinimax::getObjectiveValue() { return (objectiveValue); }
 
 // Creates the minimax problem in the LP solver
-bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver* destination, ProblemPtr sourceProblem)
+bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver* destination, ProblemPtr source)
 {
     // Now creating the variables
     bool variablesInitialized = true;
 
-    for(auto& V : sourceProblem->allVariables)
+    for(auto& V : source->allVariables)
     {
         variablesInitialized = variablesInitialized
             && destination->addVariable(V->name, V->properties.type, V->lowerBound, V->upperBound, V->semiBound);
@@ -505,8 +506,8 @@ bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver* destination, Proble
 
     objectiveInitialized = objectiveInitialized && destination->initializeObjective();
 
-    objectiveInitialized = objectiveInitialized
-        && destination->addLinearTermToObjective(1.0, sourceProblem->properties.numberOfVariables);
+    objectiveInitialized
+        = objectiveInitialized && destination->addLinearTermToObjective(1.0, source->properties.numberOfVariables);
 
     objectiveInitialized = objectiveInitialized && destination->finalizeObjective(true);
 
@@ -517,7 +518,7 @@ bool NLPSolverCuttingPlaneMinimax::createProblem(IMIPSolver* destination, Proble
 
     bool constraintsInitialized = true;
 
-    for(auto& C : sourceProblem->linearConstraints)
+    for(auto& C : source->linearConstraints)
     {
         constraintsInitialized = constraintsInitialized && destination->initializeConstraint();
 

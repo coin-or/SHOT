@@ -428,7 +428,7 @@ E_ProblemCreationStatus ModelingSystemGAMS::createProblem(ProblemPtr& problem)
 
 void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
 {
-    char buffer[GMS_SSSIZE];
+    char messageBuffer[GMS_SSSIZE];
     int rc;
 
     assert(modelingObject == nullptr);
@@ -541,11 +541,11 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
             msg = "GAMS ran out of disk space.";
             break;
         default: /* other errors, I don't want to handle each of them here... */
-            snprintf(buffer, sizeof(buffer),
+            snprintf(messageBuffer, sizeof(messageBuffer),
                 "GAMS call returned with exit code %d (see also "
                 "https://www.gams.com/latest/docs/UG_GAMSReturnCodes.html#UG_GAMSReturnCodes_ListOfErrorCodes).",
                 WEXITSTATUS(rc));
-            msg = buffer;
+            msg = messageBuffer;
             break;
         }
 
@@ -576,16 +576,17 @@ void ModelingSystemGAMS::createModelFromProblemFile(const std::string& filename)
 
 void ModelingSystemGAMS::createModelFromGAMSModel(const std::string& filename)
 {
-    char buffer[GMS_SSSIZE];
+    char messageBuffer[GMS_SSSIZE];
 
     /* initialize GMO and GEV libraries */
 #ifdef GAMSDIR
-    if(!gmoCreateDD(&modelingObject, GAMSDIR, buffer, sizeof(buffer))
-        || !gevCreateDD(&modelingEnvironment, GAMSDIR, buffer, sizeof(buffer)))
+    if(!gmoCreateDD(&modelingObject, GAMSDIR, messageBuffer, sizeof(messageBuffer))
+        || !gevCreateDD(&modelingEnvironment, GAMSDIR, messageBuffer, sizeof(messageBuffer)))
 #else
-    if(!gmoCreate(&modelingObject, buffer, sizeof(buffer)) || !gevCreate(&modelingEnvironment, buffer, sizeof(buffer)))
+    if(!gmoCreate(&modelingObject, messageBuffer, sizeof(messageBuffer))
+        || !gevCreate(&modelingEnvironment, messageBuffer, sizeof(messageBuffer)))
 #endif
-        throw std::logic_error(buffer);
+        throw std::logic_error(messageBuffer);
 
     createdgmo = true;
 
@@ -597,14 +598,14 @@ void ModelingSystemGAMS::createModelFromGAMSModel(const std::string& filename)
         throw std::logic_error("Could not load control file loadgms.tmp/gamscntr.dat.");
     }
 
-    if(gmoRegisterEnvironment(modelingObject, modelingEnvironment, buffer))
+    if(gmoRegisterEnvironment(modelingObject, modelingEnvironment, messageBuffer))
     {
         gmoFree(&modelingObject);
         gevFree(&modelingEnvironment);
-        throw std::logic_error(std::string("Error registering GAMS Environment: ") + buffer);
+        throw std::logic_error(std::string("Error registering GAMS Environment: ") + messageBuffer);
     }
 
-    if(gmoLoadDataLegacy(modelingObject, buffer))
+    if(gmoLoadDataLegacy(modelingObject, messageBuffer))
     {
         gmoFree(&modelingObject);
         gevFree(&modelingEnvironment);
@@ -830,8 +831,8 @@ void ModelingSystemGAMS::finalizeSolution()
             void* handle;
             bool error = false;
 
-            handle
-                = gmoPrepareSolPoolMerge(modelingObject, solfile.c_str(), r->primalSolutions.size() - 1, "soln_shot_p");
+            handle = gmoPrepareSolPoolMerge(
+                modelingObject, solfile.c_str(), static_cast<int>(r->primalSolutions.size()) - 1, "soln_shot_p");
 
             if(handle != NULL)
             {
@@ -843,7 +844,7 @@ void ModelingSystemGAMS::finalizeSolution()
                     {
                         gmoSetVarL(modelingObject, &r->primalSolutions[i].point[0]);
 
-                        if(gmoUnloadSolPoolSolution(modelingObject, handle, i - 1))
+                        if(gmoUnloadSolPoolSolution(modelingObject, handle, static_cast<int>(i) - 1))
                         {
                             env->output->outputError(" Problems unloading solution point " + std::to_string(i)
                                 + " symbol " + std::to_string(k));
@@ -2501,19 +2502,20 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
             case fnbinomial:
             {
                 debugout << "nr. " << address + 1 << " - unsupported. Error." << std::endl;
-                char buffer[256];
-                snprintf(
-                    buffer, sizeof(buffer), "Error: Unsupported GAMS function %s.\n", GamsFuncCodeName[address + 1]);
-                gevLogStatPChar(modelingEnvironment, buffer);
+                char messageBuffer[256];
+                snprintf(messageBuffer, sizeof(messageBuffer), "Error: Unsupported GAMS function %s.\n",
+                    GamsFuncCodeName[address + 1]);
+                gevLogStatPChar(modelingEnvironment, messageBuffer);
                 throw OperationNotImplementedException(
                     fmt::format("Error: Unsupported GAMS function {}", GamsFuncCodeName[address + 1]));
             }
             default:
             {
                 debugout << "nr. " << address + 1 << " - unsupported. Error." << std::endl;
-                char buffer[256];
-                snprintf(buffer, sizeof(buffer), "Error: Unsupported new GAMS function %d.\n", address + 1);
-                gevLogStatPChar(modelingEnvironment, buffer);
+                char messageBuffer[256];
+                snprintf(
+                    messageBuffer, sizeof(messageBuffer), "Error: Unsupported new GAMS function %d.\n", address + 1);
+                gevLogStatPChar(modelingEnvironment, messageBuffer);
                 throw OperationNotImplementedException(fmt::format("Error: Unsupported new GAMS function {}", address));
             }
             }
@@ -2523,10 +2525,11 @@ NonlinearExpressionPtr ModelingSystemGAMS::parseGamsInstructions(int codelen, /*
         default:
         {
             debugout << "opcode " << opcode << " - unsuppored. Error." << std::endl;
-            char buffer[256];
-            snprintf(buffer, sizeof(buffer), "Error: Unsupported GAMS opcode %s.\n", GamsOpCodeName[opcode]);
-            gevLogStatPChar(modelingEnvironment, buffer);
-            throw OperationNotImplementedException(fmt::format("Error: Unsupported GAMS opcode {}", buffer));
+            char messageBuffer[256];
+            snprintf(
+                messageBuffer, sizeof(messageBuffer), "Error: Unsupported GAMS opcode %s.\n", GamsOpCodeName[opcode]);
+            gevLogStatPChar(modelingEnvironment, messageBuffer);
+            throw OperationNotImplementedException(fmt::format("Error: Unsupported GAMS opcode {}", messageBuffer));
         }
         }
     }

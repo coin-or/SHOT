@@ -22,6 +22,9 @@
 
 #include "../Model/Problem.h"
 
+#include <algorithm>
+#include <limits>
+
 namespace SHOT
 {
 
@@ -197,14 +200,14 @@ bool CplexCallback::handleRelaxation(const IloCplex::Callback::Context& context)
         >= env->settings->getSetting<int>("Dual.Relaxation.MaxLazyConstraints"))
         return (true);
 
-    int waitingListSize = env->dualSolver->hyperplaneWaitingList.size();
+    int waitingListSize = static_cast<int>(env->dualSolver->hyperplaneWaitingList.size());
 
     IloNumArray tmpVals(context.getEnv());
 
     context.getRelaxationPoint(cplexVars, tmpVals);
 
-    int numberOfVariables
-        = (env->dualSolver->hasObjectiveVariableOnlyInMIPSolver()) ? tmpVals.getSize() - 1 : tmpVals.getSize();
+    int numberOfVariables = static_cast<int>(
+        (env->dualSolver->hasObjectiveVariableOnlyInMIPSolver()) ? tmpVals.getSize() - 1 : tmpVals.getSize());
 
     VectorDouble solution(numberOfVariables);
 
@@ -1036,7 +1039,8 @@ int MIPSolverCplexSingleTree::increaseSolutionLimit(int increment)
     {
         cplexInstance.setParam(IloCplex::Param::MIP::Limits::Solutions,
             cplexInstance.getParam(IloCplex::Param::MIP::Limits::Solutions) + increment);
-        sollim = cplexInstance.getParam(IloCplex::Param::MIP::Limits::Solutions);
+        sollim = static_cast<int>(std::min<CPXLONG>(
+            cplexInstance.getParam(IloCplex::Param::MIP::Limits::Solutions), std::numeric_limits<int>::max()));
     }
     catch(IloException& e)
     {
@@ -1064,7 +1068,8 @@ int MIPSolverCplexSingleTree::getSolutionLimit()
 
     try
     {
-        solLim = cplexInstance.getParam(IloCplex::Param::MIP::Limits::Solutions);
+        solLim = static_cast<int>(std::min<CPXLONG>(
+            cplexInstance.getParam(IloCplex::Param::MIP::Limits::Solutions), std::numeric_limits<int>::max()));
     }
     catch(IloException& e)
     {

@@ -492,7 +492,7 @@ int main(int argc, char* argv[])
         {
             solver.updateSetting("Dual.MIP.NumberOfThreads", std::stoi(argValue), E_SettingPriority::UserAPI);
         }
-        catch(const std::exception& e)
+        catch(const std::exception&)
         {
             env->output->outputCritical(" Cannot read value for parameter 'threads'");
         }
@@ -504,7 +504,7 @@ int main(int argc, char* argv[])
         {
             solver.updateSetting("Termination.ObjectiveGap.Absolute", std::stod(argValue), E_SettingPriority::UserAPI);
         }
-        catch(const std::exception& e)
+        catch(const std::exception&)
         {
             env->output->outputCritical(" Cannot read value for parameter 'absgap'");
         }
@@ -516,7 +516,7 @@ int main(int argc, char* argv[])
         {
             solver.updateSetting("Termination.ObjectiveGap.Relative", std::stod(argValue), E_SettingPriority::UserAPI);
         }
-        catch(const std::exception& e)
+        catch(const std::exception&)
         {
             env->output->outputCritical(" Cannot read value for parameter 'relgap'");
         }
@@ -528,7 +528,7 @@ int main(int argc, char* argv[])
         {
             solver.updateSetting("Termination.TimeLimit", std::stod(argValue), E_SettingPriority::UserAPI);
         }
-        catch(const std::exception& e)
+        catch(const std::exception&)
         {
             env->output->outputCritical(" Cannot read value for parameter 'timelimit'");
         }
@@ -595,7 +595,7 @@ int main(int argc, char* argv[])
                 {
                     solver.updateSetting(settingName, std::stoi(value), E_SettingPriority::UserAPI);
                 }
-                catch(const std::exception& e)
+                catch(const std::exception&)
                 {
                     env->output->outputCritical(" Cannot read integer option in " + ARG);
                 }
@@ -616,7 +616,7 @@ int main(int argc, char* argv[])
                 {
                     solver.updateSetting(settingName, std::stoi(value), E_SettingPriority::UserAPI);
                 }
-                catch(const std::exception& e)
+                catch(const std::exception&)
                 {
                     env->output->outputCritical(" Cannot read integer option in " + ARG);
                 }
@@ -637,7 +637,7 @@ int main(int argc, char* argv[])
                 {
                     solver.updateSetting(settingName, std::stod(value), E_SettingPriority::UserAPI);
                 }
-                catch(const std::exception& e)
+                catch(const std::exception&)
                 {
                     env->output->outputCritical(" Cannot read numeric option in " + ARG);
                 }

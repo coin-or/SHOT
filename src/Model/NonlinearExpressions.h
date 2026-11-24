@@ -376,7 +376,7 @@ public:
     FactorableFunction getFactorableFunction() override = 0;
     E_NonlinearExpressionTypes getType() const override = 0;
 
-    inline int getNumberOfChildren() const override { return children.size(); }
+    inline int getNumberOfChildren() const override { return static_cast<int>(children.size()); }
 
     inline void appendNonlinearVariables(Variables& nonlinearVariables) override
     {
@@ -3314,14 +3314,14 @@ public:
         if(children.size() == 2)
         {
             bool isConvex = false;
-            bool isValid = true;
+            bool isLinearProduct = true;
 
             NonlinearExpressionPtr otherFactor;
             NonlinearExpressionPtr linearFactor;
 
             double linearCoefficient = 0.0;
             VariablePtr linearVariable;
-            double constant = 0.0;
+            double linearConstant = 0.0;
 
             // Check for and get linear factor and other factor
             for(auto& C : children)
@@ -3334,14 +3334,14 @@ public:
                     {
                         if(linearFactor) // Double linear factor found
                         {
-                            isValid = false;
+                            isLinearProduct = false;
                             isConvex = false;
                             break;
                         }
 
                         linearCoefficient = std::get<0>(*linearTermAndConstant);
                         linearVariable = std::get<1>(*linearTermAndConstant);
-                        constant = std::get<2>(*linearTermAndConstant);
+                        linearConstant = std::get<2>(*linearTermAndConstant);
 
                         linearFactor = C;
                         continue;
@@ -3350,7 +3350,7 @@ public:
 
                 if(otherFactor) // Double other factor found
                 {
-                    isValid = false;
+                    isLinearProduct = false;
                     isConvex = false;
                     break;
                 }
@@ -3359,7 +3359,7 @@ public:
             }
 
             // The perspective is only convex if the linear factor is positive
-            if(isValid && linearFactor && otherFactor && linearFactor->getBounds().l() > 0)
+            if(isLinearProduct && linearFactor && otherFactor && linearFactor->getBounds().l() > 0)
             {
                 isConvex = true;
                 NonlinearExpressions terms;
@@ -3371,7 +3371,8 @@ public:
 
                 for(auto& T : terms)
                 {
-                    isConvex = isConvex && checkPerspectiveConvexity(T, linearCoefficient, linearVariable, constant);
+                    isConvex
+                        = isConvex && checkPerspectiveConvexity(T, linearCoefficient, linearVariable, linearConstant);
 
                     if(!isConvex)
                         break;

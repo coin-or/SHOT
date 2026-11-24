@@ -60,15 +60,15 @@ double Test::operator()(const double x)
 
     auto currentConstraints = getActiveConstraints();
 
-    std::vector<NumericConstraint*> activeConstraints;
+    std::vector<NumericConstraint*> newActiveConstraints;
 
-    auto constraintValue = problem->getMaxNumericConstraintValue(ptNew, currentConstraints, activeConstraints);
+    auto constraintValue = problem->getMaxNumericConstraintValue(ptNew, currentConstraints, newActiveConstraints);
     double calculatedValue = constraintValue.normalizedValue;
 
     if(!constraintValue.isFulfilled && calculatedValue <= lastActiveConstraintUpdateValue
-        && activeConstraints.size() < currentConstraints.size())
+        && newActiveConstraints.size() < currentConstraints.size())
     {
-        setActiveConstraints(activeConstraints);
+        setActiveConstraints(newActiveConstraints);
         lastActiveConstraintUpdateValue = calculatedValue;
     }
 

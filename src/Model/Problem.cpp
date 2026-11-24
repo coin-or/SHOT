@@ -566,17 +566,17 @@ void Problem::updateProperties()
     env->output->outputTrace("Updating convexity");
     updateConvexity();
 
-    properties.numberOfVariables = allVariables.size();
-    properties.numberOfRealVariables = realVariables.size();
-    properties.numberOfBinaryVariables = binaryVariables.size();
-    properties.numberOfIntegerVariables = integerVariables.size();
-    properties.numberOfSemicontinuousVariables = semicontinuousVariables.size();
-    properties.numberOfSemiintegerVariables = semiintegerVariables.size();
+    properties.numberOfVariables = static_cast<int>(allVariables.size());
+    properties.numberOfRealVariables = static_cast<int>(realVariables.size());
+    properties.numberOfBinaryVariables = static_cast<int>(binaryVariables.size());
+    properties.numberOfIntegerVariables = static_cast<int>(integerVariables.size());
+    properties.numberOfSemicontinuousVariables = static_cast<int>(semicontinuousVariables.size());
+    properties.numberOfSemiintegerVariables = static_cast<int>(semiintegerVariables.size());
     properties.numberOfDiscreteVariables = properties.numberOfBinaryVariables + properties.numberOfIntegerVariables
         + properties.numberOfSemiintegerVariables;
-    properties.numberOfNonlinearVariables = nonlinearVariables.size();
-    properties.numberOfVariablesInNonlinearExpressions = nonlinearExpressionVariables.size();
-    properties.numberOfAuxiliaryVariables = auxiliaryVariables.size();
+    properties.numberOfNonlinearVariables = static_cast<int>(nonlinearVariables.size());
+    properties.numberOfVariablesInNonlinearExpressions = static_cast<int>(nonlinearExpressionVariables.size());
+    properties.numberOfAuxiliaryVariables = static_cast<int>(auxiliaryVariables.size());
 
     if(auxiliaryObjectiveVariable)
         properties.numberOfAuxiliaryVariables++;
@@ -585,8 +585,8 @@ void Problem::updateProperties()
         == properties.numberOfRealVariables + properties.numberOfDiscreteVariables
             + properties.numberOfSemicontinuousVariables);
 
-    properties.numberOfNumericConstraints = numericConstraints.size();
-    properties.numberOfLinearConstraints = linearConstraints.size();
+    properties.numberOfNumericConstraints = static_cast<int>(numericConstraints.size());
+    properties.numberOfLinearConstraints = static_cast<int>(linearConstraints.size());
 
     bool isObjNonlinear = (objectiveFunction->properties.classification > E_ObjectiveFunctionClassification::Quadratic
         && (objectiveFunction->properties.hasQuadraticTerms || objectiveFunction->properties.hasMonomialTerms
@@ -648,7 +648,7 @@ void Problem::updateProperties()
     bool areConstrsNonlinear = (properties.numberOfNonlinearConstraints > 0);
     bool areConstrsQuadratic = (properties.numberOfQuadraticConstraints > 0);
 
-    properties.numberOfSpecialOrderedSets = specialOrderedSets.size();
+    properties.numberOfSpecialOrderedSets = static_cast<int>(specialOrderedSets.size());
 
     properties.isDiscrete = (properties.numberOfDiscreteVariables > 0 || properties.numberOfSemicontinuousVariables > 0
         || properties.numberOfSpecialOrderedSets > 0 || properties.numberOfSemiintegerVariables > 0);
@@ -946,7 +946,7 @@ void Problem::add(const Variables& variables)
 
 void Problem::add(VariablePtr variable)
 {
-    variable->index = allVariables.size();
+    variable->index = static_cast<int>(allVariables.size());
     allVariables.push_back(variable);
 
     switch(variable->properties.type)
@@ -989,7 +989,7 @@ void Problem::add(const AuxiliaryVariables& variables)
 
 void Problem::add(AuxiliaryVariablePtr variable)
 {
-    variable->index = allVariables.size();
+    variable->index = static_cast<int>(allVariables.size());
     allVariables.push_back(std::dynamic_pointer_cast<Variable>(variable));
 
     if(variable->properties.auxiliaryType == E_AuxiliaryVariableType::NonlinearObjectiveFunction)
@@ -1027,7 +1027,7 @@ void Problem::add(AuxiliaryVariablePtr variable)
 
 void Problem::add(NumericConstraintPtr constraint)
 {
-    constraint->index = numericConstraints.size();
+    constraint->index = static_cast<int>(numericConstraints.size());
     numericConstraints.push_back(constraint);
 
     if(constraint->properties.hasNonlinearExpression || constraint->properties.hasMonomialTerms
@@ -1057,7 +1057,7 @@ void Problem::add(NumericConstraintPtr constraint)
 
 void Problem::add(LinearConstraintPtr constraint)
 {
-    constraint->index = numericConstraints.size();
+    constraint->index = static_cast<int>(numericConstraints.size());
     numericConstraints.push_back(std::dynamic_pointer_cast<NumericConstraint>(constraint));
     linearConstraints.push_back(constraint);
 
@@ -1069,7 +1069,7 @@ void Problem::add(LinearConstraintPtr constraint)
 
 void Problem::add(QuadraticConstraintPtr constraint)
 {
-    constraint->index = numericConstraints.size();
+    constraint->index = static_cast<int>(numericConstraints.size());
     numericConstraints.push_back(std::dynamic_pointer_cast<NumericConstraint>(constraint));
     quadraticConstraints.push_back(constraint);
 
@@ -1081,7 +1081,7 @@ void Problem::add(QuadraticConstraintPtr constraint)
 
 void Problem::add(NonlinearConstraintPtr constraint)
 {
-    constraint->index = numericConstraints.size();
+    constraint->index = static_cast<int>(numericConstraints.size());
     numericConstraints.push_back(std::dynamic_pointer_cast<NumericConstraint>(constraint));
     nonlinearConstraints.push_back(constraint);
 
@@ -1852,8 +1852,8 @@ void Problem::doFBBT()
     double timeLeft = env->settings->getSetting<double>("Termination.TimeLimit") - env->timing->getElapsedTime("Total");
     double timeEnd = startTime + std::min(timeLimit, std::max(timeLeft, 0.0));
 
-    int numberOfTightenedVariablesBefore = std::count_if(allVariables.begin(), allVariables.end(),
-        [](auto V) { return (V->properties.hasLowerBoundBeenTightened || V->properties.hasUpperBoundBeenTightened); });
+    int numberOfTightenedVariablesBefore = static_cast<int>(std::count_if(allVariables.begin(), allVariables.end(),
+        [](auto V) { return (V->properties.hasLowerBoundBeenTightened || V->properties.hasUpperBoundBeenTightened); }));
 
     int numberOfPasses = 0;
     bool anyBoundsUpdated = false;
@@ -1929,12 +1929,12 @@ void Problem::doFBBT()
             double upperBound = std::min(original->upperBound, allVariables[k]->upperBound);
 
             if(lowerBound != original->lowerBound || upperBound != original->upperBound)
-                env->problem->setVariableBounds(k, lowerBound, upperBound);
+                env->problem->setVariableBounds(static_cast<int>(k), lowerBound, upperBound);
         }
     }
 
-    int numberOfTightenedVariablesAfter = std::count_if(allVariables.begin(), allVariables.end(),
-        [](auto V) { return (V->properties.hasLowerBoundBeenTightened || V->properties.hasUpperBoundBeenTightened); });
+    int numberOfTightenedVariablesAfter = static_cast<int>(std::count_if(allVariables.begin(), allVariables.end(),
+        [](auto V) { return (V->properties.hasLowerBoundBeenTightened || V->properties.hasUpperBoundBeenTightened); }));
 
     if(properties.isReformulated)
     {

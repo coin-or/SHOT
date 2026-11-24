@@ -223,12 +223,12 @@ TaskReformulateProblem::TaskReformulateProblem(EnvironmentPtr envPtr) : TaskBase
     if(env->settings->getSetting<int>("Dual.MIP.Solver") == (int)ES_MIPSolver::Cplex
         && reformulatedProblem->quadraticConstraints.size() > 0)
     {
-        if(auto objective
+        if(auto quadraticObjective
             = std::dynamic_pointer_cast<QuadraticObjectiveFunction>(reformulatedProblem->objectiveFunction);
-            objective
-            && objective->quadraticTerms.getConvexity()
-                != (objective->properties.isMinimize ? E_Convexity::Convex : E_Convexity::Concave)
-            && objective->quadraticTerms.getConvexity() != E_Convexity::Linear)
+            quadraticObjective
+            && quadraticObjective->quadraticTerms.getConvexity()
+                != (quadraticObjective->properties.isMinimize ? E_Convexity::Convex : E_Convexity::Concave)
+            && quadraticObjective->quadraticTerms.getConvexity() != E_Convexity::Linear)
             isQuadraticObjectiveUnsupported = true;
     }
 
@@ -2601,7 +2601,7 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
         }
         else if(T->isBinary && monomialFormulation == static_cast<int>(ES_ReformulationBinaryMonomials::CostaLiberti))
         {
-            int k = T->variables.size();
+            int k = static_cast<int>(T->variables.size());
 
             AuxiliaryVariables lambdas;
 
@@ -3656,14 +3656,14 @@ bool TaskReformulateProblem::isAbsoluteValueBoundedFromAbove(const AbsoluteValue
 
         int outerIndex = outer->variable->getIndex();
 
-        auto isMonotone = [alpha = alpha](std::optional<double> beta, std::optional<double> gamma)
+        auto isMonotone = [outerAlpha = alpha](std::optional<double> beta, std::optional<double> gamma)
         {
             if(!beta || *beta == 0.0)
                 return (true);
 
             double gammaValue = gamma.value_or(0.0);
 
-            return (gammaValue * *beta > 0.0 && std::abs(gammaValue) >= (1.0 - 1e-9) * std::abs(*beta) * alpha);
+            return (gammaValue * *beta > 0.0 && std::abs(gammaValue) >= (1.0 - 1e-9) * std::abs(*beta) * outerAlpha);
         };
 
         for(auto& C : reformulatedProblem->numericConstraints)
@@ -4416,6 +4416,9 @@ void TaskReformulateProblem::reformulateIntegerBilinearTerm(
 
     for(auto i = discretizationVariable->lowerBound; i <= discretizationVariable->upperBound; i++)
     {
+        // The bounds of the discrete variable are integers, so the difference is exact
+        auto binaryIndex = static_cast<std::size_t>(i - discretizationVariable->lowerBound);
+
         auto auxConstraint1
             = std::make_shared<LinearConstraint>("s_blw1_" + std::to_string(auxConstraintCounter), SHOT_DBL_MIN, M);
 
@@ -4430,11 +4433,9 @@ void TaskReformulateProblem::reformulateIntegerBilinearTerm(
         auxConstraint1->add(std::make_shared<LinearTerm>(i, nonDiscretizationVariable));
         auxConstraint2->add(std::make_shared<LinearTerm>(-i, nonDiscretizationVariable));
 
-        auxConstraint1->add(
-            std::make_shared<LinearTerm>(M, discretizationBinaries[i - discretizationVariable->lowerBound]));
+        auxConstraint1->add(std::make_shared<LinearTerm>(M, discretizationBinaries[binaryIndex]));
 
-        auxConstraint2->add(
-            std::make_shared<LinearTerm>(M, discretizationBinaries[i - discretizationVariable->lowerBound]));
+        auxConstraint2->add(std::make_shared<LinearTerm>(M, discretizationBinaries[binaryIndex]));
 
         reformulatedProblem->add(std::move(auxConstraint1));
         reformulatedProblem->add(std::move(auxConstraint2));

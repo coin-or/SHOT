@@ -244,15 +244,15 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                     if(NCV.constraint->properties.convexity != E_Convexity::Convex)
                     {
-                        auto numericConstraintValues = NumericConstraintValues();
-                        numericConstraintValues.push_back(NCV);
-                        nonconvexSelectedNumericValues.emplace_back(i, j, numericConstraintValues);
+                        auto nonconvexValues = NumericConstraintValues();
+                        nonconvexValues.push_back(NCV);
+                        nonconvexSelectedNumericValues.emplace_back(i, j, nonconvexValues);
                         continue;
                     }
 
-                    auto numericConstraintValues = NumericConstraintValues();
-                    numericConstraintValues.push_back(NCV);
-                    selectedNumericValues.emplace_back(i, j, numericConstraintValues);
+                    auto selectedValues = NumericConstraintValues();
+                    selectedValues.push_back(NCV);
+                    selectedNumericValues.emplace_back(i, j, selectedValues);
                 }
             }
         }

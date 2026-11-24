@@ -873,7 +873,7 @@ void NLPSolverUno::setStartingPoint(VectorInteger variableIndexes, VectorDouble 
     startingPointVariableIndexes = variableIndexes;
     startingPointVariableValues = variableValues;
 
-    int startingPointSize = startingPointVariableIndexes.size();
+    int startingPointSize = static_cast<int>(startingPointVariableIndexes.size());
 
     if(startingPointSize == 0)
         return;
@@ -930,7 +930,7 @@ void NLPSolverUno::fixVariables(VectorInteger variableIndexes, VectorDouble vari
     fixedVariableIndexes = variableIndexes;
     fixedVariableValues = variableValues;
 
-    int size = fixedVariableIndexes.size();
+    int size = static_cast<int>(fixedVariableIndexes.size());
 
     if(size == 0)
         return;

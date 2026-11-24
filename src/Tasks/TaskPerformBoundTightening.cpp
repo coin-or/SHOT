@@ -146,7 +146,7 @@ bool TaskPerformBoundTightening::applyBoundsFromCallbacks()
             double upperBound = std::min(original->upperBound, sourceProblem->allVariables[k]->upperBound);
 
             if(lowerBound != original->lowerBound || upperBound != original->upperBound)
-                env->problem->setVariableBounds(k, lowerBound, upperBound);
+                env->problem->setVariableBounds(static_cast<int>(k), lowerBound, upperBound);
         }
     }
 
@@ -503,8 +503,9 @@ void TaskPerformBoundTightening::createPOA()
     if(hyperplaneCounter > 0)
     {
         sourceProblem->properties.numberOfAddedLinearizations = hyperplaneCounter;
-        sourceProblem->properties.numberOfNumericConstraints = sourceProblem->numericConstraints.size();
-        sourceProblem->properties.numberOfLinearConstraints = sourceProblem->linearConstraints.size();
+        sourceProblem->properties.numberOfNumericConstraints
+            = static_cast<int>(sourceProblem->numericConstraints.size());
+        sourceProblem->properties.numberOfLinearConstraints = static_cast<int>(sourceProblem->linearConstraints.size());
     }
 
     env->timing->stopTimer("BoundTighteningPOA");

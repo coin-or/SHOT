@@ -1266,8 +1266,8 @@ public:
             interval = bound;
 
             // Signed n-th root -- see the matching comment in getBounds().
-            auto nthRoot = [power = this->power](double x)
-            { return (x < 0.0 ? -std::pow(-x, 1.0 / power) : std::pow(x, 1.0 / power)); };
+            auto nthRoot = [exponent = this->power](double x)
+            { return (x < 0.0 ? -std::pow(-x, 1.0 / exponent) : std::pow(x, 1.0 / exponent)); };
 
             double lower = nthRoot(interval.l());
             double upper = nthRoot(interval.u());

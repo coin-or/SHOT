@@ -965,7 +965,7 @@ void TaskSelectPrimalCandidatesFromNLP::createIntegerCut(VectorDouble variableSo
     integerCut.variableIndexes = discreteVariableIndexes;
 
     for(auto& I : discreteVariableIndexes)
-        integerCut.variableValues.push_back(round(variableSolution.at(I)));
+        integerCut.variableValues.push_back(static_cast<int>(std::round(variableSolution.at(I))));
 
     env->dualSolver->addIntegerCut(integerCut);
 }
