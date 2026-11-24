@@ -126,7 +126,9 @@ set(HIGHS_EXTERNAL_DIR
 )
 
 # Precompile the third-party and standard headers that most SHOT files include
-option(SHOT_PRECOMPILE_HEADERS "Precompile the third-party and standard headers to speed up compilation" ON)
+option(SHOT_PRECOMPILE_HEADERS "Precompile the third-party and standard headers to speed up compilation (not with MSVC)"
+       ON
+)
 
 # Create also the executable
 option(
@@ -626,8 +628,10 @@ endif()
 
 # Every SHOT target builds its own precompiled header with its own flags. It
 # contains only third-party and standard headers, so changing a SHOT header
-# does not rebuild it.
-if(SHOT_PRECOMPILE_HEADERS)
+# does not rebuild it. Not with MSVC: SHOTSolver.dll exports all symbols of
+# the object libraries, and the generated export list then also contains the
+# internal symbol of the precompiled header, which cannot be linked.
+if(SHOT_PRECOMPILE_HEADERS AND NOT MSVC)
     # Only for C++, since some targets also compile C files
     set(_pch_headers
         algorithm

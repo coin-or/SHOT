@@ -34,10 +34,10 @@ for how to add entries. Changes in versions before 2.0 are described in the
 - `Primal.FixedInteger.NumberOfThreads` also limits the threads of the macOS
   Accelerate framework used by the NLP solvers ([#331]).
 - SHOT compiles faster: the third-party and standard headers are precompiled
-  (CMake option `SHOT_PRECOMPILE_HEADERS`, on by default), ccache also caches
-  files compiled with them, and SHOTpy is linked without link-time
-  optimization, so that it is relinked in seconds after a change in SHOT
-  ([#339]).
+  (CMake option `SHOT_PRECOMPILE_HEADERS`, on by default, except with MSVC),
+  ccache also caches files compiled with them, and SHOTpy is linked without
+  link-time optimization, so that it is relinked in seconds after a change in
+  SHOT ([#339]).
 
 ### Fixed
 
