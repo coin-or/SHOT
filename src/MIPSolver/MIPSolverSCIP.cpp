@@ -371,12 +371,12 @@ bool MIPSolverSCIP::finalizeProblem()
     if(env->settings->getSetting<bool>("Dual.TreeStrategy.Multi.Reinitialize"))
     {
         int setSolLimit;
-        bool discreteVariablesActivated = getDiscreteVariableStatus();
+        bool isMIP = getDiscreteVariableStatus();
 
         if(env->results->getNumberOfIterations() > 0)
         {
             setSolLimit = env->results->getCurrentIteration()->usedMIPSolutionLimit;
-            discreteVariablesActivated = env->results->getCurrentIteration()->isMIP();
+            isMIP = env->results->getCurrentIteration()->isMIP();
         }
         else
         {
@@ -385,7 +385,7 @@ bool MIPSolverSCIP::finalizeProblem()
 
         setSolutionLimit(setSolLimit);
 
-        if(!discreteVariablesActivated)
+        if(!isMIP)
             activateDiscreteVariables(false);
     }
 
@@ -1301,36 +1301,36 @@ int MIPSolverSCIP::getSolutionLimit()
 
 void MIPSolverSCIP::setTimeLimit(double seconds) { timeLimit = (seconds > 0) ? seconds : 0.0; }
 
-void MIPSolverSCIP::setCutOff(double cutOff)
+void MIPSolverSCIP::setCutOff(double value)
 {
-    if(std::abs(cutOff) > 1e20)
+    if(std::abs(value) > 1e20)
         return;
 
     // The cutoff given already includes the tolerance Dual.MIP.CutOff.Tolerance
-    this->cutOff = cutOff;
+    this->cutOff = value;
     cutOffDefined = true;
 
     env->output->outputDebug(fmt::format(
-        "        Setting cutoff value to {} for {}.", cutOff, isMinimizationProblem ? "minimization" : "maximization"));
+        "        Setting cutoff value to {} for {}.", value, isMinimizationProblem ? "minimization" : "maximization"));
 }
 
-void MIPSolverSCIP::setCutOffAsConstraint(double cutOff)
+void MIPSolverSCIP::setCutOffAsConstraint(double value)
 {
-    if(cutOff == SHOT_DBL_MAX || cutOff == SHOT_DBL_MIN)
+    if(value == SHOT_DBL_MAX || value == SHOT_DBL_MIN)
         return;
 
     // With a quadratic objective function, the objective limit of SCIP is used, since it applies to the whole
     // objective function, including the variable that gives the quadratic terms
     if(!objectiveQuadraticTerms.empty())
     {
-        setCutOff(cutOff);
+        setCutOff(value);
         return;
     }
 
     // The constraint is objective(x) <= cutoff for a minimization problem and -objective(x) <= -cutoff for a
     // maximization problem
     double sign = isMinimizationProblem ? 1.0 : -1.0;
-    double rhs = sign * (cutOff - objectiveConstant);
+    double rhs = sign * (value - objectiveConstant);
 
     if(!cutOffConstraintDefined)
     {
@@ -1355,7 +1355,7 @@ void MIPSolverSCIP::setCutOffAsConstraint(double cutOff)
         modelUpdated = true;
     }
 
-    env->output->outputDebug(fmt::format("        Setting cutoff constraint to {} for {}.", cutOff,
+    env->output->outputDebug(fmt::format("        Setting cutoff constraint to {} for {}.", value,
         isMinimizationProblem ? "minimization" : "maximization"));
 }
 

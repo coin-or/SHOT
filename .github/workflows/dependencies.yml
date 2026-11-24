@@ -161,7 +161,8 @@ jobs:
           deb="scipoptsuite_${SCIP_VERSION}-1+noble_amd64.deb"
           curl -fsSL -o "$RUNNER_TEMP/$deb" "https://github.com/scipopt/scip/releases/download/v${SCIP_VERSION}/$deb"
           echo "$SCIP_LINUX_SHA256  $RUNNER_TEMP/$deb" | sha256sum -c -
-          sudo apt-get install -y "$RUNNER_TEMP/$deb"
+          # libscip.so needs dgemmt_, which OpenBLAS has but the reference BLAS that -lblas otherwise links does not
+          sudo apt-get install -y "$RUNNER_TEMP/$deb" libopenblas-dev
       - uses: hendrikmuhs/ccache-action@v1.2.24
         with:
           key: ${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.type }}

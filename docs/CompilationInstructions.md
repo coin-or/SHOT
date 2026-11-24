@@ -423,7 +423,9 @@ packages also requires the headers of GMP and MPFR, so SHOT otherwise finds
 SCIP by `include/scip/scip.h` and its library in `SCIP_DIR`. The Linux library
 contains Ipopt 3.14 and exports its symbols, so it cannot be used together
 with another Ipopt version, e.g., Ubuntu's Ipopt 3.11, in the same build;
-configure such a build with `-DHAS_IPOPT=off` or use Ipopt 3.14. SCIP is then selected with `--mip=scip` or
+configure such a build with `-DHAS_IPOPT=off` or use Ipopt 3.14. It also
+needs `dgemmt_` from OpenBLAS, so on Ubuntu install `libopenblas-dev`, since
+`-lblas` otherwise links the reference BLAS. SCIP is then selected with `--mip=scip` or
 `Dual.MIP.Solver=4`. SHOT creates a new SCIP problem for every MIP solve, since
 SCIP keeps the solutions of a changed problem, which would count towards the
 solution limit of the next solve. SCIP runs with one thread. Quadratic
