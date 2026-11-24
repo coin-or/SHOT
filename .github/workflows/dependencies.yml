@@ -51,13 +51,15 @@ jobs:
             type: Release
             cmake: '4.1.2'
           # Native MSVC build with the Cbc and Ipopt packages of the Windows
-          # wheels. SHOTpy is tested on Windows by the wheel workflow.
+          # wheels. SHOTpy is tested on Windows by the wheel workflow. MSVC's /W4
+          # includes the conversion warnings that GCC and Clang only give with
+          # SHOT_EXTRA_WARNINGS, and SHOT still has some, so they are not errors.
           - os: windows-2022
             cxx: cl
             cc: cl
             type: Release
             cmake: '4.1.2'
-            cmake_args: -DHAS_PYTHON=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL
+            cmake_args: -DHAS_PYTHON=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL -DSHOT_WARNINGS_AS_ERRORS=OFF
     runs-on: ${{ matrix.os }}
     defaults:
       run:
