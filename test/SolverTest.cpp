@@ -42,6 +42,7 @@
 #include "../src/Iteration.h"
 
 #include <functional>
+#include <iostream>
 #include <optional>
 #include <set>
 #include <stdexcept>

@@ -17,6 +17,7 @@
 #include "Variables.h"
 
 #include <cstddef>
+#include <functional>
 #include <memory>
 #include <unordered_map>
 #include <vector>

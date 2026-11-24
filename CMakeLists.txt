@@ -126,8 +126,9 @@ set(HIGHS_EXTERNAL_DIR
 )
 
 # Precompile the third-party and standard headers that most SHOT files include
-option(SHOT_PRECOMPILE_HEADERS "Precompile the third-party and standard headers to speed up compilation (not with MSVC)"
-       ON
+option(
+    SHOT_PRECOMPILE_HEADERS "Precompile the third-party and standard headers to speed up compilation (not with MSVC)"
+    ON
 )
 
 # Create also the executable
@@ -704,7 +705,6 @@ if(CMAKE_BUILD_TYPE AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 set(CPPAD_CMAKE_ARGS
     -DCMAKE_BUILD_TYPE=${CPPAD_BUILD_TYPE}
-    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
     -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
     -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE}
     -DCMAKE_POLICY_VERSION_MINIMUM=3.5
@@ -716,6 +716,10 @@ set(CPPAD_CMAKE_ARGS
 
 set(CPPAD_SOURCE_DIR "${PROJECT_SOURCE_DIR}/${CPPAD_DIR}")
 if(MSVC)
+    # CppAD otherwise uses the first C compiler on PATH, and CMake does not
+    # accept another C compiler than MSVC beside it. Only with MSVC, since a
+    # changed compiler resets the cache of existing CppAD builds.
+    list(APPEND CPPAD_CMAKE_ARGS "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}")
     list(APPEND CPPAD_CMAKE_ARGS "-Dcppad_cxx_flags=/std:c++17 /Zc:__cplusplus")
     # Upstream unconditionally requires pkg-config to discover optional Eigen.
     # SHOT uses Eigen independently of CppAD. Adapt a build-local source copy

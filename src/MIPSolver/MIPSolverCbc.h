@@ -12,7 +12,9 @@
 #include "MIPSolverBase.h"
 #include "MIPSolverCapabilities.h"
 
+#include <array>
 #include <optional>
+#include <tuple>
 
 #include "CoinPackedVector.hpp"
 #include "CoinMessageHandler.hpp"

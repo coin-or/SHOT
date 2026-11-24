@@ -31,9 +31,11 @@
 #include "../src/NLPSolver/NLPSolverSHOT.h"
 
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <functional>
 #include <iomanip>
+#include <iostream>
 #include <random>
 #include <set>
 #include <sstream>

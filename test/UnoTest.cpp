@@ -27,6 +27,7 @@
 #endif
 
 #include <cmath>
+#include <iostream>
 #include <map>
 
 using namespace SHOT;

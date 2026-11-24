@@ -14,6 +14,8 @@
 
 #include "spdlog/fmt/fmt.h"
 
+#include <set>
+
 namespace SHOT
 {
 
