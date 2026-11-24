@@ -119,7 +119,7 @@ namespace
             return;
         }
 
-        auto data = SCIPmessagehdlrGetData(messagehdlr);
+        auto data = (SCIPmessagehdlrGetData(messagehdlr));
 
         if(data == nullptr)
             return;
@@ -144,7 +144,8 @@ namespace
 
     SCIP_DECL_MESSAGEHDLRFREE(messageFreeSHOT)
     {
-        delete SCIPmessagehdlrGetData(messagehdlr);
+        // SCIPmessagehdlrGetData is a macro without outer parentheses in optimized builds of SCIP
+        delete(SCIPmessagehdlrGetData(messagehdlr));
         SCIP_CALL(SCIPmessagehdlrSetData(messagehdlr, nullptr));
 
         return (SCIP_OKAY);

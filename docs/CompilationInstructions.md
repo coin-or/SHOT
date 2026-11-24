@@ -414,7 +414,16 @@ cmake -S . -B build -DHAS_SCIP=on -DSCIP_DIR=/opt/homebrew/opt/scip
 ```
 
 `SCIP_DIR` is the installation directory of SCIP, or the directory of its
-`scip-config.cmake`. SCIP is then selected with `--mip=scip` or
+`scip-config.cmake`. SHOT requires SCIP 10 or newer. On Linux and Windows, the
+packages of SCIP's [GitHub releases](https://github.com/scipopt/scip/releases)
+can be used, e.g., `scipoptsuite_10.1.0-1+noble_amd64.deb` for Ubuntu 24.04
+(`-DSCIP_DIR=/usr`) and `scipoptsuite-10.1.0-win-x64.zip` for Windows, whose
+`bin` directory must then be in `PATH`. SCIP's CMake configuration in these
+packages also requires the headers of GMP and MPFR, so SHOT otherwise finds
+SCIP by `include/scip/scip.h` and its library in `SCIP_DIR`. The Linux library
+contains Ipopt 3.14 and exports its symbols, so it cannot be used together
+with another Ipopt version, e.g., Ubuntu's Ipopt 3.11, in the same build;
+configure such a build with `-DHAS_IPOPT=off` or use Ipopt 3.14. SCIP is then selected with `--mip=scip` or
 `Dual.MIP.Solver=4`. SHOT creates a new SCIP problem for every MIP solve, since
 SCIP keeps the solutions of a changed problem, which would count towards the
 solution limit of the next solve. SCIP runs with one thread. Quadratic

@@ -40,25 +40,36 @@ jobs:
             cc: gcc
             type: Release
             cmake: '3.20.5'
+          # With SCIP from its Ubuntu package, whose library contains and exports Ipopt 3.14, which would clash with
+          # Ubuntu's Ipopt 3.11 in the same process, so this job is built without Ipopt
           - os: ubuntu-24.04
             cxx: clang++
             cc: clang
             type: Debug
             cmake: '4.1.2'
+            cmake_args: -DHAS_SCIP=ON -DSCIP_DIR=/usr -DHAS_IPOPT=OFF
+          # With SCIP from Homebrew
           - os: macos-15
             cxx: clang++
             cc: clang
             type: Release
             cmake: '4.1.2'
+            cmake_args: -DHAS_SCIP=ON -DSCIP_DIR=$(brew --prefix scip)
           # Native MSVC build with the Cbc and Ipopt packages of the Windows
-          # wheels. SHOTpy is tested on Windows by the wheel workflow.
+          # wheels, and SCIP's Windows package. SHOTpy is tested on Windows by the
+          # wheel workflow.
           - os: windows-2022
             cxx: cl
             cc: cl
             type: Release
             cmake: '4.1.2'
-            cmake_args: -DHAS_PYTHON=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL
+            cmake_args: -DHAS_PYTHON=OFF -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreadedDLL -DHAS_SCIP=ON
     runs-on: ${{ matrix.os }}
+    # SCIP's packages for Ubuntu 24.04 and Windows from its GitHub release, which do not include readline
+    env:
+      SCIP_VERSION: '10.1.0'
+      SCIP_LINUX_SHA256: bdcc5c83587c84959f12fd58b40ca116c97626032fa3e2a0eaa2225f9b7abb2a
+      SCIP_WINDOWS_SHA256: E71BAFB8CE3C26386AE0D93CDD51867F21EB74B70986BBD696B7B864A3C355FF
     defaults:
       run:
         shell: bash
@@ -123,7 +134,7 @@ jobs:
           key: ${{ steps.apt.outputs.key }}
       - name: Install macOS solvers
         if: runner.os == 'macOS'
-        run: brew install cbc ipopt pkg-config ccache
+        run: brew install cbc ipopt pkg-config ccache scip
       - name: Install Windows solvers
         if: runner.os == 'Windows'
         shell: pwsh
@@ -133,7 +144,24 @@ jobs:
           $solvers = (Get-Content -LiteralPath ThirdParty/versions.json -Raw | ConvertFrom-Json).external_solvers
           $cbc = "$deps/Cbc/$($solvers.Cbc.windows.directory)"
           $ipopt = "$deps/Ipopt/$($solvers.Ipopt.windows.directory)"
-          "SOLVER_ARGS=-DCBC_DIR=$cbc -DIPOPT_DIR=$ipopt" | Add-Content -LiteralPath $env:GITHUB_ENV -Encoding utf8
+          # SCIP's Windows package. Its Ipopt DLL has the same name and version as the one SHOT uses, which Windows
+          # loads from the directory of the program, before the directories in PATH.
+          $scipArchive = "$deps/scipoptsuite-$env:SCIP_VERSION-win-x64.zip"
+          Invoke-WebRequest -Uri "https://github.com/scipopt/scip/releases/download/v$env:SCIP_VERSION/scipoptsuite-$env:SCIP_VERSION-win-x64.zip" -OutFile $scipArchive
+          if ((Get-FileHash -LiteralPath $scipArchive -Algorithm SHA256).Hash -ne $env:SCIP_WINDOWS_SHA256) {
+            throw "Checksum mismatch for $scipArchive"
+          }
+          Expand-Archive -LiteralPath $scipArchive -DestinationPath "$deps/SCIP" -Force
+          $scip = "$deps/SCIP/scipoptsuite-$env:SCIP_VERSION-win-x64"
+          "$scip/bin" -replace '/', '\' | Add-Content -LiteralPath $env:GITHUB_PATH -Encoding utf8
+          "SOLVER_ARGS=-DCBC_DIR=$cbc -DIPOPT_DIR=$ipopt -DSCIP_DIR=$scip" | Add-Content -LiteralPath $env:GITHUB_ENV -Encoding utf8
+      - name: Install SCIP on Linux
+        if: runner.os == 'Linux' && contains(matrix.cmake_args, 'HAS_SCIP=ON')
+        run: |
+          deb="scipoptsuite_${SCIP_VERSION}-1+noble_amd64.deb"
+          curl -fsSL -o "$RUNNER_TEMP/$deb" "https://github.com/scipopt/scip/releases/download/v${SCIP_VERSION}/$deb"
+          echo "$SCIP_LINUX_SHA256  $RUNNER_TEMP/$deb" | sha256sum -c -
+          sudo apt-get install -y "$RUNNER_TEMP/$deb"
       - uses: hendrikmuhs/ccache-action@v1.2.24
         with:
           key: ${{ matrix.os }}-${{ matrix.cc }}-${{ matrix.type }}
