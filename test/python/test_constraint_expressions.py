@@ -485,12 +485,7 @@ class TestSharedExpressions:
         finalize(problem)
 
         expected = (
-            math.asinh(2.0)
-            + math.asinh(1.0)
-            + math.acosh(2.0)
-            + math.acosh(3.0)
-            + math.atanh(0.25)
-            + math.atanh(0.5)
+            math.asinh(2.0) + math.asinh(1.0) + math.acosh(2.0) + math.acosh(3.0) + math.atanh(0.25) + math.atanh(0.5)
         )
         for name in ("a", "b"):
             assert abs(problem.getConstraint(name).calculateFunctionValue([2.0, 1.0]) - expected) < 1e-12
