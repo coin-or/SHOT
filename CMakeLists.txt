@@ -464,6 +464,13 @@ endif(HAS_UNO)
 
 if(HAS_AMPL)
     list(APPEND MODELING_SOURCES "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemAMPL.cpp")
+    if(MSVC)
+        # The templates of the AMPL .nl reader contain unreachable code (C4702), which MSVC reports where they are
+        # instantiated, also when the header is included as a system header
+        set_source_files_properties(
+            "${PROJECT_SOURCE_DIR}/src/ModelingSystem/ModelingSystemAMPL.cpp" PROPERTIES COMPILE_OPTIONS "/wd4702"
+        )
+    endif()
     set(AMPL_SOURCES
         "${AMPL_DIR}/src/expr-info.cc"
         "${AMPL_DIR}/src/format.cc"

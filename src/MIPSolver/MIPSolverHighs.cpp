@@ -276,7 +276,6 @@ bool MIPSolverHighs::addQuadraticTermToObjective([[maybe_unused]] double coeffic
 {
     // TODO: Not implemented
     throw OperationNotImplementedException("Quadratic objective functions not yet implemented in HiGHS interface.");
-    return (false);
 }
 
 bool MIPSolverHighs::finalizeObjective(bool isMinimize, double constant)
@@ -322,7 +321,6 @@ bool MIPSolverHighs::addQuadraticTermToConstraint([[maybe_unused]] double coeffi
 {
     // TODO: Not implemented
     throw OperationNotImplementedException("Quadratic constraints not yet implemented in HiGHS interface.");
-    return (false);
 }
 
 bool MIPSolverHighs::finalizeConstraint(std::string name, double valueLHS, double valueRHS, double constant)
