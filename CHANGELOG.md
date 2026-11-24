@@ -12,7 +12,8 @@ for how to add entries. Changes in versions before 2.0 are described in the
   `eigenvalues`, `eigenvectors` and `LDLMatrixL`) are reached through
   `matrixData->` and are declared in `Model/QuadraticTermsMatrixData.h`, and
   `Output.h` no longer includes the logger and sinks of spdlog, so that most
-  of SHOT compiles faster. Code that uses them includes these headers itself.
+  of SHOT compiles faster. Code that uses them includes these headers itself
+  ([#339]).
 
 ### Added
 
@@ -35,7 +36,8 @@ for how to add entries. Changes in versions before 2.0 are described in the
 - SHOT compiles faster: the third-party and standard headers are precompiled
   (CMake option `SHOT_PRECOMPILE_HEADERS`, on by default), ccache also caches
   files compiled with them, and SHOTpy is linked without link-time
-  optimization, so that it is relinked in seconds after a change in SHOT.
+  optimization, so that it is relinked in seconds after a change in SHOT
+  ([#339]).
 
 ### Fixed
 
@@ -459,6 +461,7 @@ Changes since SHOT 1.1.
 [#333]: https://github.com/coin-or/SHOT/pull/333
 [#336]: https://github.com/coin-or/SHOT/pull/336
 [#337]: https://github.com/coin-or/SHOT/pull/337
+[#339]: https://github.com/coin-or/SHOT/pull/339
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
