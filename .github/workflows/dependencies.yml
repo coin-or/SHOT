@@ -30,7 +30,7 @@ concurrency:
 jobs:
   build:
     # Named explicitly so that cmake_args is not part of the name
-    name: build (${{ matrix.os }}, ${{ matrix.cxx }}, ${{ matrix.cc }}, ${{ matrix.type }}, ${{ matrix.cmake }})
+    name: build (${{ matrix.os }}, ${{ matrix.cxx }}, ${{ matrix.cc }}, ${{ matrix.type }}, ${{ matrix.cmake }}${{ matrix.name_suffix }})
     strategy:
       fail-fast: false
       matrix:
@@ -40,14 +40,22 @@ jobs:
             cc: gcc
             type: Release
             cmake: '3.20.5'
-          # With SCIP from its Ubuntu package, whose library contains and exports Ipopt 3.14, which would clash with
-          # Ubuntu's Ipopt 3.11 in the same process, so this job is built without Ipopt
           - os: ubuntu-24.04
             cxx: clang++
             cc: clang
             type: Debug
             cmake: '4.1.2'
-            cmake_args: -DHAS_SCIP=ON -DSCIP_DIR=/usr -DHAS_IPOPT=OFF
+          # SCIP from its Ubuntu package, whose library contains and exports Ipopt 3.14, which would clash with Ubuntu's
+          # Ipopt 3.11 in the same process. The job is therefore built without Ipopt and only runs the tests of SCIP,
+          # since some other tests need Ipopt.
+          - os: ubuntu-24.04
+            cxx: clang++
+            cc: clang
+            type: Release
+            cmake: '4.1.2'
+            name_suffix: ', SCIP'
+            cmake_args: -DHAS_SCIP=ON -DSCIP_DIR=/usr -DHAS_IPOPT=OFF -DHAS_PYTHON=OFF
+            ctest_args: -R "^(SCIP_|Instance_13$|MIPCapabilities_|DualBound_|Determinism_)"
           # With SCIP from Homebrew
           - os: macos-15
             cxx: clang++
@@ -184,7 +192,7 @@ jobs:
       - name: Build
         run: cmake --build build --parallel 3
       - name: Test
-        run: ctest --test-dir build --parallel "$(getconf _NPROCESSORS_ONLN 2>/dev/null || nproc)" --output-on-failure --timeout 300 -E 'FullInstance'
+        run: ctest --test-dir build --parallel "$(getconf _NPROCESSORS_ONLN 2>/dev/null || nproc)" --output-on-failure --timeout 300 -E 'FullInstance' ${{ matrix.ctest_args }}
       - name: Upload diagnostics
         if: always()
         uses: actions/upload-artifact@v4
