@@ -28,6 +28,8 @@ for how to add entries. Changes in versions before 2.0 are described in the
   `SHOTpy.getVersion()` in Python ([#336]).
 - In SHOTpy, a number can be raised to a variable or an expression, e.g.,
   `2 ** x` ([#337]).
+- SHOTpy has the inverse hyperbolic functions `asinh`, `acosh` and `atanh`,
+  which SHOT already read from AMPL and OSiL files.
 
 ### Changed
 

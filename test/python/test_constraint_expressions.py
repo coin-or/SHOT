@@ -473,6 +473,28 @@ class TestSharedExpressions:
         expected = math.sinh(2.0) + math.cosh(1.0) + math.tanh(1.0)
         assert abs(problem.getConstraint("a").calculateFunctionValue([2.0, 1.0]) - expected) < 1e-12
 
+    def test_inverse_hyperbolic_functions(self):
+        """asinh, acosh and atanh are available in Python, also of an expression shared by two constraints."""
+        import SHOTpy
+
+        _, problem, x, y = make_problem()
+        f = SHOTpy.asinh(x) + SHOTpy.asinh(x - y) + SHOTpy.acosh(x) + SHOTpy.acosh(x + y) + SHOTpy.atanh(y / 4)
+        f = f + SHOTpy.atanh((x - y) / 2)
+        problem.addConstraint(f <= 100, "a")
+        problem.addConstraint(f <= 100, "b")
+        finalize(problem)
+
+        expected = (
+            math.asinh(2.0)
+            + math.asinh(1.0)
+            + math.acosh(2.0)
+            + math.acosh(3.0)
+            + math.atanh(0.25)
+            + math.atanh(0.5)
+        )
+        for name in ("a", "b"):
+            assert abs(problem.getConstraint(name).calculateFunctionValue([2.0, 1.0]) - expected) < 1e-12
+
     def test_number_raised_to_variable_or_expression(self):
         """A number can be raised to a variable or an expression, e.g., 2 ** x."""
         _, problem, x, y = make_problem()

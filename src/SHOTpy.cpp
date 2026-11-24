@@ -1675,6 +1675,31 @@ PYBIND11_MODULE(SHOTpy, m)
         "tanh", [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr
         { return std::make_shared<ExpressionTanh>(expr); }, "Hyperbolic tangent", py::arg("x"));
 
+    // The inverse hyperbolic functions are given by logarithms and square roots, as in the AMPL and OSiL readers
+    m.def(
+        "asinh", [](VariablePtr var) -> NonlinearExpressionPtr { return createArcSinh(wrapInExpression(var)); },
+        "Inverse hyperbolic sine, ln(x + sqrt(x^2 + 1))", py::arg("x"));
+
+    m.def(
+        "asinh", [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr { return createArcSinh(expr); },
+        "Inverse hyperbolic sine, ln(x + sqrt(x^2 + 1))", py::arg("x"));
+
+    m.def(
+        "acosh", [](VariablePtr var) -> NonlinearExpressionPtr { return createArcCosh(wrapInExpression(var)); },
+        "Inverse hyperbolic cosine, ln(x + sqrt(x^2 - 1)), defined for x >= 1", py::arg("x"));
+
+    m.def(
+        "acosh", [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr { return createArcCosh(expr); },
+        "Inverse hyperbolic cosine, ln(x + sqrt(x^2 - 1)), defined for x >= 1", py::arg("x"));
+
+    m.def(
+        "atanh", [](VariablePtr var) -> NonlinearExpressionPtr { return createArcTanh(wrapInExpression(var)); },
+        "Inverse hyperbolic tangent, ln((1 + x)/(1 - x))/2, defined for -1 < x < 1", py::arg("x"));
+
+    m.def(
+        "atanh", [](NonlinearExpressionPtr expr) -> NonlinearExpressionPtr { return createArcTanh(expr); },
+        "Inverse hyperbolic tangent, ln((1 + x)/(1 - x))/2, defined for -1 < x < 1", py::arg("x"));
+
     m.def(
         "errorf", [](VariablePtr var) -> NonlinearExpressionPtr
         { return std::make_shared<ExpressionErrorFunction>(wrapInExpression(var)); },
