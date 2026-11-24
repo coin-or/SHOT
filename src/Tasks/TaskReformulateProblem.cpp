@@ -2570,7 +2570,7 @@ std::tuple<LinearTerms, MonomialTerms> TaskReformulateProblem::reformulateMonomi
 
             auxConstraint1->linearTerms.reserve(N + 1);
             auxConstraint2->linearTerms.reserve(N + 1);
-            auxConstraint1->add(std::make_shared<LinearTerm>(N, auxbVar));
+            auxConstraint1->add(std::make_shared<LinearTerm>(static_cast<double>(N), auxbVar));
             auxConstraint2->add(std::make_shared<LinearTerm>(-1.0, auxbVar));
 
             // The variables of the term belong to the original problem
@@ -3122,7 +3122,7 @@ std::optional<LinearTerms> TaskReformulateProblem::doLDLDecomposition(QuadraticT
         for(Eigen::SparseMatrix<double>::InnerIterator it(quadraticTerms.matrixData->LDLMatrixL, i); it; ++it)
         {
             if(std::abs(it.value()) > decompositionCoefficientTolerance * largestElement)
-                column.emplace_back(it.row(), it.value());
+                column.emplace_back(static_cast<int>(it.row()), it.value());
         }
 
         std::sort(column.begin(), column.end(), [&rowOrder](const auto& first, const auto& second)

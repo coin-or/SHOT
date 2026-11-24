@@ -116,11 +116,11 @@ void TaskSelectHyperplanesECP::run(std::vector<SolutionPoint> solPoints)
 
             if(NCV.constraint->properties.convexity != E_Convexity::Convex)
             {
-                nonconvexSelectedNumericValues.emplace_back(i, NCV);
+                nonconvexSelectedNumericValues.emplace_back(static_cast<int>(i), NCV);
                 continue;
             }
 
-            selectedNumericValues.emplace_back(i, NCV);
+            selectedNumericValues.emplace_back(static_cast<int>(i), NCV);
         }
     }
 
