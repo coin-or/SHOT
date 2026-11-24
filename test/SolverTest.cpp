@@ -1661,10 +1661,10 @@ bool TestCallbackBoundTightening()
         bool problemsMatch = true;
 
         auto [solver, env] = MakeEx1223bSolver(false,
-            [&](SHOT::Solver& solver)
+            [&](SHOT::Solver& setupSolver)
             {
-                silence(solver);
-                solver.registerCallback<BoundTighteningContext>(
+                silence(setupSolver);
+                setupSolver.registerCallback<BoundTighteningContext>(
                     [&](BoundTighteningContext& context)
                     {
                         isReformulated.push_back(context.isReformulatedProblem());
@@ -1701,11 +1701,11 @@ bool TestCallbackBoundTightening()
         VectorDouble proposedLowerBounds;
 
         auto [solver, env] = MakeEx1223bSolver(false,
-            [&](SHOT::Solver& solver)
+            [&](SHOT::Solver& setupSolver)
             {
-                silence(solver);
-                solver.updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
-                solver.registerCallback<BoundTighteningContext>(
+                silence(setupSolver);
+                setupSolver.updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+                setupSolver.registerCallback<BoundTighteningContext>(
                     [&](BoundTighteningContext& context)
                     {
                         if(context.isReformulatedProblem())
@@ -1777,11 +1777,11 @@ bool TestCallbackBoundTightening()
     // objective is 20 with all variables fixed to zero
     {
         auto [solver, env] = MakeEx1223bSolver(false,
-            [&](SHOT::Solver& solver)
+            [&](SHOT::Solver& setupSolver)
             {
-                silence(solver);
-                solver.updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
-                solver.registerCallback<BoundTighteningContext>(
+                silence(setupSolver);
+                setupSolver.updateSetting("Model.BoundTightening.FeasibilityBased.Use", false);
+                setupSolver.registerCallback<BoundTighteningContext>(
                     [&](BoundTighteningContext& context)
                     {
                         if(!context.isReformulatedProblem())
@@ -1896,10 +1896,10 @@ bool TestPrimalSolutionPool()
         return (solution);
     };
 
-    auto check = [&passed, &env = env](const std::string& step, std::vector<double> expectedObjectives,
+    auto check = [&passed, &checkEnv = env](const std::string& step, std::vector<double> expectedObjectives,
                      double expectedIncumbentFirstValue)
     {
-        auto& pool = env->results->primalSolutions;
+        auto& pool = checkEnv->results->primalSolutions;
 
         std::vector<double> objectives;
         for(auto& S : pool)
@@ -1912,8 +1912,8 @@ bool TestPrimalSolutionPool()
             return;
         }
 
-        if(env->results->getPrimalBound() != expectedObjectives.front()
-            || env->results->primalSolution.at(0) != expectedIncumbentFirstValue
+        if(checkEnv->results->getPrimalBound() != expectedObjectives.front()
+            || checkEnv->results->primalSolution.at(0) != expectedIncumbentFirstValue
             || pool.front().point.at(0) != expectedIncumbentFirstValue)
         {
             std::cout << step << ": the incumbent or the primal bound is not the expected one\n";

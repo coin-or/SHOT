@@ -112,7 +112,7 @@ double maxError(ProblemPtr problem, const VectorDouble& point)
 // Calls the function for all points of a grid over the bounds of the variables of the problem
 void forGridPoints(ProblemPtr problem, int pointsPerVariable, const std::function<void(const VectorDouble&)>& function)
 {
-    int numberOfVariables = problem->allVariables.size();
+    int numberOfVariables = static_cast<int>(problem->allVariables.size());
     VectorInteger position(numberOfVariables, 0);
 
     while(true)

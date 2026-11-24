@@ -173,14 +173,14 @@ inline NonlinearExpressionPtr simplifyExpression(std::shared_ptr<ExpressionInver
 
         if(expression->child->getType() == E_NonlinearExpressionTypes::Power)
         {
-            auto child = std::dynamic_pointer_cast<ExpressionPower>(expression->child);
+            auto powerChild = std::dynamic_pointer_cast<ExpressionPower>(expression->child);
 
-            if(child->secondChild->getType() == E_NonlinearExpressionTypes::Constant)
+            if(powerChild->secondChild->getType() == E_NonlinearExpressionTypes::Constant)
             {
-                auto power = std::dynamic_pointer_cast<ExpressionConstant>(child->secondChild);
+                auto power = std::dynamic_pointer_cast<ExpressionConstant>(powerChild->secondChild);
                 power->constant *= -1.0;
 
-                return child;
+                return powerChild;
             }
         }
         else if(child->getType() == E_NonlinearExpressionTypes::Constant)
@@ -1795,20 +1795,20 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
     {
         auto square = std::dynamic_pointer_cast<ExpressionSquare>(expression);
 
-        if(auto optional = convertSquareToQuadraticTerm(square); optional && extractQuadratics)
+        if(auto quadraticTerm = convertSquareToQuadraticTerm(square); quadraticTerm && extractQuadratics)
         {
-            quadraticTerms.add(optional.value());
+            quadraticTerms.add(quadraticTerm.value());
         }
-        else if(auto optional = convertSquareToUnivariateQuadraticExpression(square);
-            optional && extractQuadratics && extractLinears)
+        else if(auto univariateQuadratic = convertSquareToUnivariateQuadraticExpression(square);
+            univariateQuadratic && extractQuadratics && extractLinears)
         {
-            quadraticTerms.add(std::get<0>(optional.value()));
-            linearTerms.add(std::get<1>(optional.value()));
-            constant += std::get<2>(optional.value());
+            quadraticTerms.add(std::get<0>(univariateQuadratic.value()));
+            linearTerms.add(std::get<1>(univariateQuadratic.value()));
+            constant += std::get<2>(univariateQuadratic.value());
         }
-        else if(auto optional = convertExpressionToSignomialTerm(square); optional && extractSignomials)
+        else if(auto signomialTerm = convertExpressionToSignomialTerm(square); signomialTerm && extractSignomials)
         {
-            signomialTerms.add(optional.value());
+            signomialTerms.add(signomialTerm.value());
         }
         else
         {
@@ -1909,17 +1909,17 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
     {
         auto power = std::dynamic_pointer_cast<ExpressionPower>(expression);
 
-        if(auto optional = convertPowerToLinearTerm(power); optional && extractLinears)
+        if(auto linearTerm = convertPowerToLinearTerm(power); linearTerm && extractLinears)
         {
-            linearTerms.add(optional.value());
+            linearTerms.add(linearTerm.value());
         }
-        else if(auto optional = convertPowerToQuadraticTerm(power); optional && extractQuadratics)
+        else if(auto quadraticTerm = convertPowerToQuadraticTerm(power); quadraticTerm && extractQuadratics)
         {
-            quadraticTerms.add(optional.value());
+            quadraticTerms.add(quadraticTerm.value());
         }
-        else if(auto optional = convertExpressionToSignomialTerm(power); optional && extractSignomials)
+        else if(auto signomialTerm = convertExpressionToSignomialTerm(power); signomialTerm && extractSignomials)
         {
-            signomialTerms.add(optional.value());
+            signomialTerms.add(signomialTerm.value());
         }
         else
         {
@@ -1930,25 +1930,25 @@ inline std::tuple<LinearTerms, QuadraticTerms, MonomialTerms, SignomialTerms, No
     {
         auto product = std::dynamic_pointer_cast<ExpressionProduct>(expression);
 
-        if(auto optional = convertProductToLinearTerm(product); optional && extractLinears)
+        if(auto linearTerm = convertProductToLinearTerm(product); linearTerm && extractLinears)
         {
-            linearTerms.add(optional.value());
+            linearTerms.add(linearTerm.value());
         }
-        else if(auto optional = convertProductToConstant(product); optional)
+        else if(auto productConstant = convertProductToConstant(product); productConstant)
         {
-            constant += optional.value();
+            constant += productConstant.value();
         }
-        else if(auto optional = convertProductToQuadraticTerm(product); optional && extractQuadratics)
+        else if(auto quadraticTerm = convertProductToQuadraticTerm(product); quadraticTerm && extractQuadratics)
         {
-            quadraticTerms.add(optional.value());
+            quadraticTerms.add(quadraticTerm.value());
         }
-        else if(auto optional = convertProductToMonomialTerm(product); optional && extractMonomials)
+        else if(auto monomialTerm = convertProductToMonomialTerm(product); monomialTerm && extractMonomials)
         {
-            monomialTerms.add(optional.value());
+            monomialTerms.add(monomialTerm.value());
         }
-        else if(auto optional = convertExpressionToSignomialTerm(product); optional && extractSignomials)
+        else if(auto signomialTerm = convertExpressionToSignomialTerm(product); signomialTerm && extractSignomials)
         {
-            signomialTerms.add(optional.value());
+            signomialTerms.add(signomialTerm.value());
         }
         else
         {

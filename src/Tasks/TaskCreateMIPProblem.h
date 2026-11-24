@@ -26,7 +26,7 @@ public:
     std::string getType() override;
 
 private:
-    bool createProblem(MIPSolverPtr destinationProblem, ProblemPtr sourceProblem);
+    bool createProblem(MIPSolverPtr destinationProblem, ProblemPtr source);
 
     MIPSolverCapabilities capabilities;
     MIPSolverPtr MIPSolver;

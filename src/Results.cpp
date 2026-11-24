@@ -994,7 +994,7 @@ std::string Results::getResultsOSrL()
 
     auto solutionNode = osrlDocument.NewElement("solution");
 
-    int numPrimalSols = primalSolutions.size();
+    int numPrimalSols = static_cast<int>(primalSolutions.size());
 
     int numSaveSolutions = std::min(env->settings->getSetting<int>("Output.SaveNumberOfSolutions"), numPrimalSols);
 
@@ -1646,7 +1646,7 @@ std::optional<IterationPtr> Results::getLastFeasibleIteration()
     return iteration;
 }
 
-int Results::getNumberOfIterations() { return (iterations.size()); }
+int Results::getNumberOfIterations() { return (static_cast<int>(iterations.size())); }
 
 double Results::getPrimalBound()
 {

@@ -115,10 +115,10 @@ bool IpoptProblem::get_nlp_info(Index& n, Index& m, Index& nnz_jac_g, Index& nnz
 
     for(auto& E : *sourceProblem->getConstraintsJacobianSparsityPattern())
     {
-        nnz_jac_g += E.second.size();
+        nnz_jac_g += static_cast<Ipopt::Index>(E.second.size());
     }
 
-    nnz_h_lag = sourceProblem->getLagrangianHessianSparsityPattern()->size();
+    nnz_h_lag = static_cast<Ipopt::Index>(sourceProblem->getLagrangianHessianSparsityPattern()->size());
 
     // use the C style indexing (0-based)
     index_style = TNLP::C_STYLE;
@@ -1007,7 +1007,7 @@ void NLPSolverIpoptBase::setStartingPoint(VectorInteger variableIndexes, VectorD
     ipoptProblem->startingPointVariableIndexes = variableIndexes;
     ipoptProblem->startingPointVariableValues = variableValues;
 
-    int startingPointSize = ipoptProblem->startingPointVariableIndexes.size();
+    int startingPointSize = static_cast<int>(ipoptProblem->startingPointVariableIndexes.size());
 
     if(startingPointSize == 0)
         return;
@@ -1304,7 +1304,7 @@ void NLPSolverIpoptBase::fixVariables(VectorInteger variableIndexes, VectorDoubl
     ipoptProblem->fixedVariableIndexes = variableIndexes;
     ipoptProblem->fixedVariableValues = variableValues;
 
-    int size = ipoptProblem->fixedVariableIndexes.size();
+    int size = static_cast<int>(ipoptProblem->fixedVariableIndexes.size());
 
     if(size == 0)
         return;

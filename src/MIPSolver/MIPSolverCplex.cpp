@@ -20,6 +20,9 @@
 
 #include "../Model/Problem.h"
 
+#include <algorithm>
+#include <limits>
+
 namespace SHOT
 {
 
@@ -504,7 +507,7 @@ int MIPSolverCplex::addLinearConstraint(
 {
     try
     {
-        int numConstraintsBefore = cplexInstance.getNrows();
+        int numConstraintsBefore = static_cast<int>(cplexInstance.getNrows());
 
         IloExpr expr(cplexEnv);
 
@@ -564,7 +567,7 @@ int MIPSolverCplex::addLinearConstraint(
 
     // The index is used for cplexConstrs, which also contains the quadratic constraints, while CPLEX only counts the
     // linear rows
-    return (cplexConstrs.getSize() - 1);
+    return (static_cast<int>(cplexConstrs.getSize()) - 1);
 }
 
 bool MIPSolverCplex::addSpecialOrderedSet(E_SOSType type, VectorInteger variableIndexes, VectorDouble variableWeights)
@@ -1021,7 +1024,7 @@ bool MIPSolverCplex::repairInfeasibility()
 
         IloNumArray relax(cplexEnv);
 
-        int numCurrConstraints = cplexConstrs.getSize();
+        int numCurrConstraints = static_cast<int>(cplexConstrs.getSize());
         int numOrigConstraints = env->reformulatedProblem->properties.numberOfLinearConstraints
             + env->reformulatedProblem->properties.numberOfConvexQuadraticConstraints;
 
@@ -1135,7 +1138,8 @@ int MIPSolverCplex::increaseSolutionLimit(int increment)
     {
         cplexInstance.setParam(IloCplex::Param::MIP::Limits::Solutions,
             cplexInstance.getParam(IloCplex::Param::MIP::Limits::Solutions) + increment);
-        sollim = cplexInstance.getParam(IloCplex::Param::MIP::Limits::Solutions);
+        sollim = static_cast<int>(std::min<CPXLONG>(
+            cplexInstance.getParam(IloCplex::Param::MIP::Limits::Solutions), std::numeric_limits<int>::max()));
     }
     catch(IloException& e)
     {
@@ -1166,7 +1170,8 @@ int MIPSolverCplex::getSolutionLimit()
 
     try
     {
-        solLim = cplexInstance.getParam(IloCplex::Param::MIP::Limits::Solutions);
+        solLim = static_cast<int>(std::min<CPXLONG>(
+            cplexInstance.getParam(IloCplex::Param::MIP::Limits::Solutions), std::numeric_limits<int>::max()));
     }
     catch(IloException& e)
     {
@@ -1179,7 +1184,7 @@ int MIPSolverCplex::getSolutionLimit()
 VectorDouble MIPSolverCplex::getVariableSolution(int solIdx)
 {
     bool isMIP = getDiscreteVariableStatus() && isProblemDiscrete;
-    int numVar = cplexVars.getSize();
+    int numVar = static_cast<int>(cplexVars.getSize());
     VectorDouble solution(numVar);
 
     IloNumArray tmpSolsCplex(cplexEnv);
@@ -1222,7 +1227,7 @@ int MIPSolverCplex::getNumberOfSolutions()
     {
         if(isProblemDiscrete && isMIP)
         {
-            numSols = cplexInstance.getSolnPoolNsolns();
+            numSols = static_cast<int>(cplexInstance.getSolnPoolNsolns());
         }
         else
         {
@@ -1352,7 +1357,7 @@ void MIPSolverCplex::setCutOffAsConstraint(double cutOff)
                     "        Setting cutoff constraint to " + Utilities::toString(cutOff) + " for minimization.");
             }
 
-            cutOffConstraintIndex = cplexConstrs.getSize() - 1;
+            cutOffConstraintIndex = static_cast<int>(cplexConstrs.getSize()) - 1;
 
             modelUpdated = true;
 
@@ -1765,7 +1770,7 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
 
     try
     {
-        int numConstraintsBefore = cplexInstance.getNrows();
+        int numConstraintsBefore = static_cast<int>(cplexInstance.getNrows());
         IloExpr expr(cplexEnv);
         size_t index = 0;
 
@@ -1818,7 +1823,7 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
                 double M1 = 2 * (variableValue - VAR->lowerBound);
                 double M2 = 2 * (VAR->upperBound - variableValue);
 
-                int tmpNumConstraints = cplexInstance.getNrows();
+                int tmpNumConstraints = static_cast<int>(cplexInstance.getNrows());
                 IloRange cut1(cplexEnv, -IloInfinity, -w - variable, -variableValue,
                     fmt::format("IC{}_{}_1a", env->solutionStatistics.numberOfIntegerCuts, index).c_str());
                 cplexModel.add(cut1);
@@ -1826,12 +1831,12 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
                 if(cplexInstance.getNrows() > tmpNumConstraints)
                 {
                     extractModel();
-                    integerCuts.push_back(numConstraintsBefore + index);
+                    integerCuts.push_back(numConstraintsBefore + static_cast<int>(index));
                     cplexConstrs.add(cut1);
                     allowRepairOfConstraint.push_back(false);
                 }
 
-                tmpNumConstraints = cplexInstance.getNrows();
+                tmpNumConstraints = static_cast<int>(cplexInstance.getNrows());
                 IloRange cut2(cplexEnv, -variableValue, w - variable, IloInfinity,
                     fmt::format("IC{}_{}_1b", env->solutionStatistics.numberOfIntegerCuts, index).c_str());
                 cplexModel.add(cut2);
@@ -1839,12 +1844,12 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
                 if(cplexInstance.getNrows() > tmpNumConstraints)
                 {
                     extractModel();
-                    integerCuts.push_back(numConstraintsBefore + index);
+                    integerCuts.push_back(numConstraintsBefore + static_cast<int>(index));
                     cplexConstrs.add(cut2);
                     allowRepairOfConstraint.push_back(false);
                 }
 
-                tmpNumConstraints = cplexInstance.getNrows();
+                tmpNumConstraints = static_cast<int>(cplexInstance.getNrows());
                 IloRange cut3(cplexEnv, -IloInfinity, w - variable + M1 * v, -variableValue + M1,
                     fmt::format("IC{}_{}_2", env->solutionStatistics.numberOfIntegerCuts, index).c_str());
                 cplexModel.add(cut3);
@@ -1852,12 +1857,12 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
                 if(cplexInstance.getNrows() > tmpNumConstraints)
                 {
                     extractModel();
-                    integerCuts.push_back(numConstraintsBefore + index);
+                    integerCuts.push_back(numConstraintsBefore + static_cast<int>(index));
                     cplexConstrs.add(cut3);
                     allowRepairOfConstraint.push_back(false);
                 }
 
-                tmpNumConstraints = cplexInstance.getNrows();
+                tmpNumConstraints = static_cast<int>(cplexInstance.getNrows());
                 IloRange cut4(cplexEnv, -IloInfinity, w + variable - M2 * v, variableValue,
                     fmt::format("IC{}_{}_3", env->solutionStatistics.numberOfIntegerCuts, index).c_str());
                 cplexModel.add(cut4);
@@ -1865,7 +1870,7 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
                 if(cplexInstance.getNrows() > tmpNumConstraints)
                 {
                     extractModel();
-                    integerCuts.push_back(numConstraintsBefore + index);
+                    integerCuts.push_back(numConstraintsBefore + static_cast<int>(index));
                     cplexConstrs.add(cut4);
                     allowRepairOfConstraint.push_back(false);
                 }
@@ -1874,7 +1879,7 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
             index++;
         }
 
-        int tmpNumConstraints = cplexInstance.getNrows();
+        int tmpNumConstraints = static_cast<int>(cplexInstance.getNrows());
         IloRange cut5(
             cplexEnv, 1, expr, IloInfinity, fmt::format("IC{}_4", env->solutionStatistics.numberOfIntegerCuts).c_str());
         cplexModel.add(cut5);
@@ -1882,7 +1887,7 @@ bool MIPSolverCplex::createIntegerCut(IntegerCut& integerCut)
         if(cplexInstance.getNrows() > tmpNumConstraints)
         {
             extractModel();
-            integerCuts.push_back(numConstraintsBefore + index);
+            integerCuts.push_back(numConstraintsBefore + static_cast<int>(index));
             cplexConstrs.add(cut5);
             allowRepairOfConstraint.push_back(allowIntegerCutRepair);
         }
@@ -1908,7 +1913,7 @@ int MIPSolverCplex::getNumberOfExploredNodes()
 {
     try
     {
-        return (cplexInstance.getNnodes());
+        return (static_cast<int>(cplexInstance.getNnodes()));
     }
     catch(IloException& e)
     {
@@ -1921,11 +1926,11 @@ int MIPSolverCplex::getNumberOfOpenNodes()
 {
     try
     {
-        int nodesLeft = cplexInstance.getNnodesLeft();
+        int nodesLeft = static_cast<int>(cplexInstance.getNnodesLeft());
 
         env->solutionStatistics.numberOfOpenNodes = nodesLeft;
 
-        return (cplexInstance.getNnodesLeft());
+        return (static_cast<int>(cplexInstance.getNnodesLeft()));
     }
     catch(IloException& e)
     {

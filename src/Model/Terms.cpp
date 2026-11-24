@@ -192,7 +192,7 @@ void QuadraticTerms::updateConvexity()
         return;
     }
 
-    int numberOfVariables = variableMap.size();
+    int numberOfVariables = static_cast<int>(variableMap.size());
 
     Eigen::SparseMatrix<double> matrix(numberOfVariables, numberOfVariables);
     matrix.setFromTriplets(matrixData->elements.begin(), matrixData->elements.end());
@@ -344,7 +344,7 @@ void QuadraticTerms::computeEigenvectors()
 
     assert(convexity != E_Convexity::NotSet);
 
-    int numberOfVariables = variableMap.size();
+    int numberOfVariables = static_cast<int>(variableMap.size());
 
     Eigen::SparseMatrix<double> matrix(numberOfVariables, numberOfVariables);
     matrix.setFromTriplets(matrixData->elements.begin(), matrixData->elements.end());
@@ -431,7 +431,7 @@ void QuadraticTerms::performLDLFactorization(double maximumFill)
         return;
     }
 
-    int numberOfVariables = variableMap.size();
+    int numberOfVariables = static_cast<int>(variableMap.size());
 
     // The matrix is symmetric with real elements, so the factorization does not need complex arithmetic
     Eigen::SparseMatrix<double> matrix(numberOfVariables, numberOfVariables);

@@ -65,7 +65,7 @@ int Iteration::getSolutionPointWithSmallestDeviationIndex()
     {
         if(solutionPoints.at(i).maxDeviation.value < tmpVal)
         {
-            tmpIdx = i;
+            tmpIdx = static_cast<int>(i);
             tmpVal = solutionPoints.at(i).maxDeviation.value;
         }
     }

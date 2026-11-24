@@ -277,8 +277,8 @@ bool MIPSolverGurobi::finalizeConstraint(std::string name, double valueLHS, doub
             constraintTermVariables.push_back(gurobiModel->getVar(variableIndex));
 
         GRBLinExpr linearExpression;
-        linearExpression.addTerms(
-            constraintTermCoefficients.data(), constraintTermVariables.data(), constraintTermVariables.size());
+        linearExpression.addTerms(constraintTermCoefficients.data(), constraintTermVariables.data(),
+            static_cast<int>(constraintTermVariables.size()));
 
         if(constant != 0.0)
             linearExpression += constant;
@@ -311,7 +311,7 @@ bool MIPSolverGurobi::finalizeConstraint(std::string name, double valueLHS, doub
             GRBQuadExpr quadraticExpression(linearExpression);
             quadraticExpression.addTerms(constraintQuadraticCoefficients.data(),
                 constraintQuadraticFirstVariables.data(), constraintQuadraticSecondVariables.data(),
-                constraintQuadraticCoefficients.size());
+                static_cast<int>(constraintQuadraticCoefficients.size()));
 
             if(valueLHS == valueRHS)
             {
@@ -516,7 +516,7 @@ bool MIPSolverGurobi::addSpecialOrderedSet(E_SOSType type, VectorInteger variabl
 
         assert(variableWeights.size() == variableIndexes.size());
 
-        gurobiModel->addSOS(variables.data(), variableWeights.data(), variables.size(),
+        gurobiModel->addSOS(variables.data(), variableWeights.data(), static_cast<int>(variables.size()),
             (type == E_SOSType::One) ? GRB_SOS_TYPE1 : GRB_SOS_TYPE2);
     }
     catch(GRBException& e)
@@ -600,7 +600,7 @@ bool MIPSolverGurobi::createIntegerCut(IntegerCut& integerCut)
 
                 if(gurobiModel->get(GRB_IntAttr_NumConstrs) > tmpNumConstraints)
                 {
-                    integerCuts.push_back(numConstraintsBefore + index);
+                    integerCuts.push_back(numConstraintsBefore + static_cast<int>(index));
                     allowRepairOfConstraint.push_back(false);
                 }
 
@@ -611,7 +611,7 @@ bool MIPSolverGurobi::createIntegerCut(IntegerCut& integerCut)
 
                 if(gurobiModel->get(GRB_IntAttr_NumConstrs) > tmpNumConstraints)
                 {
-                    integerCuts.push_back(numConstraintsBefore + index);
+                    integerCuts.push_back(numConstraintsBefore + static_cast<int>(index));
                     allowRepairOfConstraint.push_back(false);
                 }
 
@@ -622,7 +622,7 @@ bool MIPSolverGurobi::createIntegerCut(IntegerCut& integerCut)
 
                 if(gurobiModel->get(GRB_IntAttr_NumConstrs) > tmpNumConstraints)
                 {
-                    integerCuts.push_back(numConstraintsBefore + index);
+                    integerCuts.push_back(numConstraintsBefore + static_cast<int>(index));
                     allowRepairOfConstraint.push_back(false);
                 }
 
@@ -633,7 +633,7 @@ bool MIPSolverGurobi::createIntegerCut(IntegerCut& integerCut)
 
                 if(gurobiModel->get(GRB_IntAttr_NumConstrs) > tmpNumConstraints)
                 {
-                    integerCuts.push_back(numConstraintsBefore + index);
+                    integerCuts.push_back(numConstraintsBefore + static_cast<int>(index));
                     allowRepairOfConstraint.push_back(false);
                 }
             }
@@ -647,7 +647,7 @@ bool MIPSolverGurobi::createIntegerCut(IntegerCut& integerCut)
 
         if(gurobiModel->get(GRB_IntAttr_NumConstrs) > tmpNumConstraints)
         {
-            integerCuts.push_back(numConstraintsBefore + index);
+            integerCuts.push_back(numConstraintsBefore + static_cast<int>(index));
             allowRepairOfConstraint.push_back(allowIntegerCutRepair);
         }
 
@@ -1254,7 +1254,7 @@ void MIPSolverGurobi::setSolutionLimit(long limit)
     if(limit > GRB_MAXINT)
         gurobiModel->set(GRB_IntParam_SolutionLimit, GRB_MAXINT);
     else
-        gurobiModel->set(GRB_IntParam_SolutionLimit, limit);
+        gurobiModel->set(GRB_IntParam_SolutionLimit, static_cast<int>(limit));
 }
 
 int MIPSolverGurobi::getSolutionLimit() { return (gurobiModel->get(GRB_IntParam_SolutionLimit)); }
@@ -1377,7 +1377,7 @@ void MIPSolverGurobi::addMIPStart(VectorDouble point)
 
         for(size_t i = 0; i < startVal.size(); i++)
         {
-            GRBVar tmpVar = gurobiModel->getVar(i);
+            GRBVar tmpVar = gurobiModel->getVar(static_cast<int>(i));
             tmpVar.set(GRB_DoubleAttr_Start, startVal.at(i));
         }
     }
@@ -1467,15 +1467,17 @@ double MIPSolverGurobi::getObjectiveValue(int solIdx)
 
             for(size_t i = 0; i < objective.size(); i++)
             {
-                objVal += objective.getCoeff(i) * objective.getVar1(i).get(GRB_DoubleAttr_Xn)
-                    * objective.getVar2(i).get(GRB_DoubleAttr_Xn);
+                objVal += objective.getCoeff(static_cast<int>(i))
+                    * objective.getVar1(static_cast<int>(i)).get(GRB_DoubleAttr_Xn)
+                    * objective.getVar2(static_cast<int>(i)).get(GRB_DoubleAttr_Xn);
             }
 
             auto linexpr = objective.getLinExpr();
 
             for(size_t i = 0; i < linexpr.size(); i++)
             {
-                objVal += linexpr.getCoeff(i) * linexpr.getVar(i).get(GRB_DoubleAttr_Xn);
+                objVal += linexpr.getCoeff(static_cast<int>(i))
+                    * linexpr.getVar(static_cast<int>(i)).get(GRB_DoubleAttr_Xn);
             }
         }
     }

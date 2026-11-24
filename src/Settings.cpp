@@ -666,8 +666,6 @@ std::string Settings::getSettingsAsString(bool hideUnchanged = false, bool hideD
 
         if(!hideDescriptions)
         {
-            std::string name = T.first.second;
-            std::string category = T.first.first;
             std::string subCategory = "";
 
             size_t firstPeriod = name.find('.');
@@ -807,12 +805,12 @@ std::string Settings::getSettingsAsMarkup()
         {
             // This is a first level group
 
-            auto [header, description] = settingGroupDescriptions[std::make_pair(category, "")];
+            auto [groupHeader, groupDescription] = settingGroupDescriptions[std::make_pair(category, "")];
 
-            ss << '\n' << fmt::format("# {}\n", header) << '\n';
+            ss << '\n' << fmt::format("# {}\n", groupHeader) << '\n';
 
-            if(description != "")
-                ss << description << "\n\n";
+            if(groupDescription != "")
+                ss << groupDescription << "\n\n";
 
             currentCategory = category;
             currentSubCategory = "";
@@ -824,12 +822,12 @@ std::string Settings::getSettingsAsMarkup()
         {
             // This is a second level group
 
-            auto [header, description] = settingGroupDescriptions[std::make_pair(category, subCategory)];
+            auto [groupHeader, groupDescription] = settingGroupDescriptions[std::make_pair(category, subCategory)];
 
-            ss << '\n' << fmt::format("## {}\n", header) << '\n';
+            ss << '\n' << fmt::format("## {}\n", groupHeader) << '\n';
 
-            if(Utilities::trim(description) != "")
-                ss << description << "\n\n";
+            if(Utilities::trim(groupDescription) != "")
+                ss << groupDescription << "\n\n";
 
             currentSubCategory = subCategory;
             printTableHeader = true;
@@ -1158,12 +1156,12 @@ bool Settings::readSettingsFromString(std::string options)
         line.erase(std::remove(line.begin(), line.end(), '\n'), line.end());
         line.erase(std::remove(line.begin(), line.end(), '\r'), line.end());
 
-        int equalitySignIndex = line.find('=');
+        std::size_t equalitySignIndex = line.find('=');
 
         std::string key = line.substr(0, equalitySignIndex);
         std::string value = line.substr(equalitySignIndex + 1, line.size());
 
-        int dotIndex = line.find('.');
+        std::size_t dotIndex = line.find('.');
         std::string category = key.substr(0, dotIndex);
         std::string name = key.substr(dotIndex + 1, line.size());
 

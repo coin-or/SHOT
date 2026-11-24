@@ -198,11 +198,13 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                 if(numericConstraintValuesConvex.size() > 0)
                 {
-                    selectedNumericValues.emplace_back(i, j, numericConstraintValuesConvex);
+                    selectedNumericValues.emplace_back(
+                        static_cast<int>(i), static_cast<int>(j), numericConstraintValuesConvex);
                 }
 
                 if(numericConstraintValuesAll.size() > 0)
-                    nonconvexSelectedNumericValues.emplace_back(i, j, numericConstraintValuesAll);
+                    nonconvexSelectedNumericValues.emplace_back(
+                        static_cast<int>(i), static_cast<int>(j), numericConstraintValuesAll);
             }
         }
         else
@@ -244,15 +246,16 @@ void TaskSelectHyperplanesESH::run(std::vector<SolutionPoint> solPoints)
 
                     if(NCV.constraint->properties.convexity != E_Convexity::Convex)
                     {
-                        auto numericConstraintValues = NumericConstraintValues();
-                        numericConstraintValues.push_back(NCV);
-                        nonconvexSelectedNumericValues.emplace_back(i, j, numericConstraintValues);
+                        auto nonconvexValues = NumericConstraintValues();
+                        nonconvexValues.push_back(NCV);
+                        nonconvexSelectedNumericValues.emplace_back(
+                            static_cast<int>(i), static_cast<int>(j), nonconvexValues);
                         continue;
                     }
 
-                    auto numericConstraintValues = NumericConstraintValues();
-                    numericConstraintValues.push_back(NCV);
-                    selectedNumericValues.emplace_back(i, j, numericConstraintValues);
+                    auto selectedValues = NumericConstraintValues();
+                    selectedValues.push_back(NCV);
+                    selectedNumericValues.emplace_back(static_cast<int>(i), static_cast<int>(j), selectedValues);
                 }
             }
         }
