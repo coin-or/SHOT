@@ -74,7 +74,8 @@ introduced, or reproduce a failure in isolation instead of debugging a full
   a summary with lists of warned/failed instances. The numeric part
   selects the MIP+NLP solver combination (`1`=HiGHS+Ipopt, `2`=Gurobi+Ipopt,
   `3`=Cplex+Ipopt, `4`=Cbc+Ipopt, `5`=HiGHS+SHOT-as-NLP,
-  `6`=Gurobi+SHOT-as-NLP, `7`=Cplex+SHOT-as-NLP, `8`=Cbc+SHOT-as-NLP — this
+  `6`=Gurobi+SHOT-as-NLP, `7`=Cplex+SHOT-as-NLP, `8`=Cbc+SHOT-as-NLP,
+  `12`=SCIP+Ipopt, `13`=SCIP+SHOT-as-NLP — this
   is a fixed, hand-registered list in a `switch` statement, not every
   theoretically valid pairing; see “If this doc is stale” below). Add `-v` for verbose
   per-instance solver output:

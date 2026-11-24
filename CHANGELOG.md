@@ -14,6 +14,9 @@ for how to add entries. Changes in versions before 2.0 are described in the
   `Output.h` no longer includes the logger and sinks of spdlog, so that most
   of SHOT compiles faster. Code that uses them includes these headers itself
   ([#339]).
+- `ES_MIPSolver::NotUsed`, and `SHOTpy.MIPSolver.NotUsed`, has the value 5
+  instead of 4, which is now `SCIP`. Code that compares the value of the used
+  MIP solver with 4 uses the name instead.
 
 ### Added
 
@@ -30,6 +33,11 @@ for how to add entries. Changes in versions before 2.0 are described in the
   `2 ** x` ([#337]).
 - SHOTpy has the inverse hyperbolic functions `asinh`, `acosh` and `atanh`,
   which SHOT already read from AMPL and OSiL files ([#341]).
+- SCIP can be used as MIP solver, with the CMake option `HAS_SCIP` (off by
+  default) and `SCIP_DIR`, and selected with `--mip=scip` or
+  `Dual.MIP.Solver=4`. It supports special ordered sets and semicontinuous and
+  semiinteger variables with nonnegative intervals, and is set with the
+  `Subsolver.SCIP` settings. The interface was started by Stefan Vigerske.
 
 ### Changed
 

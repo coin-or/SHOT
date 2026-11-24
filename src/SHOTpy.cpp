@@ -1147,7 +1147,7 @@ PYBIND11_MODULE(SHOTpy, m)
         .value("Gurobi", ES_MIPSolver::Gurobi)
         .value("Cbc", ES_MIPSolver::Cbc)
         .value("Highs", ES_MIPSolver::Highs)
-        .value("Scip", ES_MIPSolver::Scip)
+        .value("SCIP", ES_MIPSolver::SCIP)
         .value("NotUsed", ES_MIPSolver::NotUsed);
 
     // Source of fixed MIP solution point for NLP

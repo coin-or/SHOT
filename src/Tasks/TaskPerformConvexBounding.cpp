@@ -36,6 +36,10 @@
 #include "../MIPSolver/MIPSolverHighs.h"
 #endif
 
+#ifdef HAS_SCIP
+#include "../MIPSolver/MIPSolverSCIP.h"
+#endif
+
 #include "../Results.h"
 #include "../Tasks/TaskCreateMIPProblem.h"
 
@@ -116,6 +120,13 @@ void TaskPerformConvexBounding::run()
     if(env->results->usedMIPSolver == ES_MIPSolver::Highs)
     {
         MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverHighs>(env));
+    }
+#endif
+
+#ifdef HAS_SCIP
+    if(env->results->usedMIPSolver == ES_MIPSolver::SCIP)
+    {
+        MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverSCIP>(env));
     }
 #endif
 

@@ -36,7 +36,7 @@
 #endif
 
 #ifdef HAS_SCIP
-#include "../MIPSolver/MIPSolverScip.h"
+#include "../MIPSolver/MIPSolverSCIP.h"
 #endif
 
 namespace SHOT
@@ -93,11 +93,11 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
 #endif
 
 #ifdef HAS_SCIP
-        if(solver == ES_MIPSolver::Scip)
+        if(solver == ES_MIPSolver::SCIP)
         {
-            env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverScip>(env));
-            env->results->usedMIPSolver = ES_MIPSolver::Scip;
-            env->output->outputDebug(" Scip selected as MIP solver.");
+            env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverSCIP>(env));
+            env->results->usedMIPSolver = ES_MIPSolver::SCIP;
+            env->output->outputDebug(" SCIP selected as MIP solver.");
             solverSelected = true;
         }
 #endif
@@ -146,11 +146,11 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
 #endif
 
 #ifdef HAS_SCIP
-        if(solver == ES_MIPSolver::Scip)
+        if(solver == ES_MIPSolver::SCIP)
         {
-            env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverScip>(env));
-            env->results->usedMIPSolver = ES_MIPSolver::Scip;
-            env->output->outputDebug(" Scip selected as MIP solver.");
+            env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverSCIP>(env));
+            env->results->usedMIPSolver = ES_MIPSolver::SCIP;
+            env->output->outputDebug(" SCIP selected as MIP solver.");
             solverSelected = true;
         }
 #endif
@@ -169,8 +169,8 @@ TaskInitializeDualSolver::TaskInitializeDualSolver(EnvironmentPtr envPtr, bool u
         env->results->usedMIPSolver = ES_MIPSolver::Highs;
         solverSelected = true;
 #elif HAS_SCIP
-        env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverScip>(env));
-        env->results->usedMIPSolver = ES_MIPSolver::Scip;
+        env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverSCIP>(env));
+        env->results->usedMIPSolver = ES_MIPSolver::SCIP;
         solverSelected = true;
 #elif HAS_GUROBI
         env->dualSolver->MIPSolver = MIPSolverPtr(std::make_shared<MIPSolverGurobi>(env));

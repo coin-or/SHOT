@@ -454,7 +454,7 @@ std::string Settings::getConditionalValuesMarkup(const PairString& key)
             case E_SettingCondition::MIPSolverHighs:
                 solvers.push_back("HiGHS");
                 break;
-            case E_SettingCondition::MIPSolverScip:
+            case E_SettingCondition::MIPSolverSCIP:
                 solvers.push_back("SCIP");
                 break;
             case E_SettingCondition::Continuous:

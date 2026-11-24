@@ -744,6 +744,13 @@ std::string Results::getResultsOSrL()
     }
 #endif
 
+#ifdef HAS_SCIP
+    if(dualSolver == ES_MIPSolver::SCIP)
+    {
+        dualSolverName = "SCIP";
+    }
+#endif
+
     otherNode = osrlDocument.NewElement("other");
     otherNode->SetAttribute("name", "DualSolver");
     otherNode->SetAttribute("value", (dualSolverName + " " + env->dualSolver->MIPSolver->getSolverVersion()).c_str());
@@ -1346,6 +1353,9 @@ std::string Results::getResultsTrace()
     case(ES_MIPSolver::Highs):
         ss << "HIGHS";
         break;
+    case(ES_MIPSolver::SCIP):
+        ss << "SCIP";
+        break;
     default:
         ss << "NONE";
         break;
@@ -1580,6 +1590,9 @@ std::string Results::getResultsSol()
         break;
     case(ES_MIPSolver::Highs):
         MIPSolverName = "HiGHS";
+        break;
+    case(ES_MIPSolver::SCIP):
+        MIPSolverName = "SCIP";
         break;
     default:
         break;

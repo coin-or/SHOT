@@ -72,7 +72,7 @@ Options on the command line take precedence over those in `shot_options`.
 |---|---|
 | `--convex` | Assumes the problem is convex (sets `Model.Convexity.AssumeConvex=true`) |
 | `--debug` / `--debug=<directory>` | Enables debug-output mode; see [DebuggingSHOT.md](DebuggingSHOT.md) |
-| `--mip=<cbc\|highs\|cplex\|gurobi>` | Selects the MIP (dual) solver — only the ones the build was compiled with are available |
+| `--mip=<cbc\|highs\|cplex\|gurobi\|scip>` | Selects the MIP (dual) solver — only the ones the build was compiled with are available |
 | `--nlp=<ipopt\|gams\|shot\|uno\|conopt>` | Selects the primal NLP solver |
 | `--tree=<single\|multi>` | Selects single-tree (branch-and-cut) vs. multi-tree dual strategy — single-tree requires solver callback support, currently only available with CPLEX or Gurobi; Cbc and HiGHS are always forced to multi-tree |
 | `--threads=<n>` | Maximum number of threads (`Dual.MIP.NumberOfThreads`) |

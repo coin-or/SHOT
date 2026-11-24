@@ -120,12 +120,16 @@ option(HAS_PYTHON "Is Python available" OFF)
 # HiGHS
 option(HAS_HIGHS "Is HiGHS available" ON)
 option(USE_EXTERNAL_HIGHS "Use precompiled, external HiGHS libraries" OFF)
-
-# SCIP
-option(HAS_SCIP "Is SCIP available" OFF)
 set(HIGHS_EXTERNAL_DIR
     "/opt/highs"
     CACHE STRING "The external directory where HiGHS is located)."
+)
+
+# SCIP
+option(HAS_SCIP "Is SCIP available" OFF)
+set(SCIP_DIR
+    "/opt/scip"
+    CACHE STRING "The base directory where SCIP is located (if available), or the directory of its scip-config.cmake"
 )
 
 # Precompile the third-party and standard headers that most SHOT files include
@@ -413,10 +417,19 @@ if(HAS_HIGHS AND USE_EXTERNAL_HIGHS)
     endif()
 endif()
 
-# SCIP
+# SCIP, found by the CMake package configuration it installs
 if(HAS_SCIP)
-    set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverScip.cpp")
-    set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverScip.h")
+    find_package(SCIP CONFIG HINTS "${SCIP_DIR}" "${SCIP_DIR}/lib/cmake/scip")
+
+    if(NOT SCIP_FOUND)
+        message(WARNING "SCIP not found, setting HAS_SCIP to OFF. Set SCIP_DIR to its installation directory.")
+        set(HAS_SCIP OFF)
+    endif()
+endif()
+
+if(HAS_SCIP)
+    set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverSCIP.cpp")
+    set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverSCIP.h")
 endif()
 
 # Check the backends that were actually found, after optional solvers may
@@ -1201,6 +1214,13 @@ if(HAS_HIGHS)
     add_dependencies(SHOTPrimalStrategy highs::highs)
     target_link_libraries(SHOTPrimalStrategy highs::highs)
 endif(HAS_HIGHS)
+
+# SCIP linking
+if(HAS_SCIP)
+    message("-- SCIP ${SCIP_VERSION} will be used from: ${SCIP_DIR}")
+    target_link_libraries(SHOTDualStrategy ${SCIP_LIBRARIES})
+    target_link_libraries(SHOTPrimalStrategy ${SCIP_LIBRARIES})
+endif(HAS_SCIP)
 
 # Ipopt linking
 if(HAS_IPOPT)

@@ -225,7 +225,7 @@ enum class E_SettingCondition
     MIPSolverGurobi,
     MIPSolverCbc,
     MIPSolverHighs,
-    MIPSolverScip,
+    MIPSolverSCIP,
     Continuous
 };
 
@@ -359,7 +359,7 @@ enum class ES_MIPSolver
     Gurobi,
     Cbc,
     Highs,
-    Scip,
+    SCIP,
     NotUsed // No MIP solver has been used
 };
 

@@ -183,7 +183,7 @@ class TestSettingsWithEnums:
         assert int(SHOTpy.MIPSolver.Gurobi) == 1
         assert int(SHOTpy.MIPSolver.Cbc) == 2
         assert int(SHOTpy.MIPSolver.Highs) == 3
-        assert int(SHOTpy.MIPSolver.Scip) == 4
+        assert int(SHOTpy.MIPSolver.SCIP) == 4
         assert int(SHOTpy.MIPSolver.NotUsed) == 5
 
         # PrimalNLPSolver values

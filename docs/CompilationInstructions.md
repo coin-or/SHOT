@@ -71,7 +71,7 @@ compiling the submodule, configure with `-DUSE_EXTERNAL_HIGHS=on
 
 ## Installing dependencies
 
-SHOT needs at least one MIP solver (Cbc, CPLEX, Gurobi, or HiGHS). Primal NLP
+SHOT needs at least one MIP solver (Cbc, CPLEX, Gurobi, HiGHS, or SCIP). Primal NLP
 subproblems use Ipopt, Uno, CONOPT, or a GAMS NLP solver when one is enabled,
 and SHOT's built-in NLP solver otherwise.
 
@@ -405,6 +405,21 @@ cmake -S . -B build -DUSE_EXTERNAL_HIGHS=on -DHIGHS_EXTERNAL_DIR=/opt/homebrew/o
 If Homebrew's installed version is old, run `brew upgrade highs` first —
 older HiGHS releases may lack APIs `MIPSolverHighs.cpp` relies on.
 
+**SCIP (optional)**: SHOT can also use [SCIP](https://www.scipopt.org) as MIP
+solver. It is off by default; install SCIP 10 or newer, e.g., with
+`brew install scip`, and enable it:
+
+```bash
+cmake -S . -B build -DHAS_SCIP=on -DSCIP_DIR=/opt/homebrew/opt/scip
+```
+
+`SCIP_DIR` is the installation directory of SCIP, or the directory of its
+`scip-config.cmake`. SCIP is then selected with `--mip=scip` or
+`Dual.MIP.Solver=4`. SHOT creates a new SCIP problem for every MIP solve, since
+SCIP keeps the solutions of a changed problem, which would count towards the
+solution limit of the next solve. SCIP runs with one thread, and quadratic
+terms are passed to it as nonlinear constraints of SHOT.
+
 ### Proprietary solvers (GAMS, CPLEX, Gurobi)
 
 These all require your own commercial (or free/academic) license to run,
@@ -537,6 +552,7 @@ Key options (all `option(...)` declarations live at the top of the root
 | `HAS_CPLEX` | `ON` | CPLEX MIP solver |
 | `HAS_GUROBI` | `ON` | Gurobi MIP solver |
 | `HAS_HIGHS` | `ON` | HiGHS MIP solver — like the others, optional; turn off with `-DHAS_HIGHS=off` (see “Getting the source” re: `USE_EXTERNAL_HIGHS`) |
+| `HAS_SCIP` | `OFF` | SCIP MIP solver (see “macOS (Homebrew)”), found by `SCIP_DIR` |
 | `HAS_IPOPT` | `ON` | Ipopt NLP solver |
 | `HAS_UNO` | `OFF` | Uno NLP solver (see “Installing dependencies”) — off by default because building Uno needs a Fortran compiler |
 | `HAS_GAMS` | `ON` | GAMS interface (modeling system + NLP solver) |
@@ -552,7 +568,7 @@ Key options (all `option(...)` declarations live at the top of the root
 | `SIMPLE_OUTPUT_CHARS` | `OFF` | Use only ASCII characters in the console output (always on for MSVC and MinGW) |
 
 `<SOLVER>_DIR` cache variables (`CBC_DIR`, `CPLEX_DIR`, `GUROBI_DIR`,
-`IPOPT_DIR`, `GAMS_DIR`, `CONOPT_DIR`, `UNO_DIR`, `HIGHS_EXTERNAL_DIR`) override where each
+`IPOPT_DIR`, `GAMS_DIR`, `CONOPT_DIR`, `UNO_DIR`, `HIGHS_EXTERNAL_DIR`, `SCIP_DIR`) override where each
 dependency is searched for, as described in “Installing dependencies”.
 
 Also set `-DCMAKE_BUILD_TYPE=<Release|Debug|RelWithDebInfo>` explicitly —

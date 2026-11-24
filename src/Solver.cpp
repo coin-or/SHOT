@@ -668,7 +668,7 @@ void Solver::setMIPSolverCompatibilitySettings()
 #elif defined(HAS_HIGHS)
         solver = ES_MIPSolver::Highs;
 #elif defined(HAS_SCIP)
-        solver = ES_MIPSolver::Scip;
+        solver = ES_MIPSolver::SCIP;
 #elif defined(HAS_CBC)
         solver = ES_MIPSolver::Cbc;
 #else
@@ -1037,7 +1037,7 @@ void Solver::verifySettings()
     unavailableSettingGroups.emplace_back("Subsolver.Highs", "HiGHS");
 #endif
 #ifndef HAS_SCIP
-    unavailableSettingGroups.emplace_back("Subsolver.Scip", "SCIP");
+    unavailableSettingGroups.emplace_back("Subsolver.SCIP", "SCIP");
 #endif
 #ifndef HAS_CONOPT
     unavailableSettingGroups.emplace_back("Subsolver.Conopt", "CONOPT");
@@ -1247,8 +1247,8 @@ std::set<E_SettingCondition> Solver::getSettingConditions(ProblemPtr problem)
     case ES_MIPSolver::Highs:
         conditions.insert(E_SettingCondition::MIPSolverHighs);
         break;
-    case ES_MIPSolver::Scip:
-        conditions.insert(E_SettingCondition::MIPSolverScip);
+    case ES_MIPSolver::SCIP:
+        conditions.insert(E_SettingCondition::MIPSolverSCIP);
         break;
     default:
         break;
@@ -1378,7 +1378,7 @@ std::vector<ES_MIPSolver> Solver::getSupportedMIPSolvers()
     solvers.push_back(ES_MIPSolver::Highs);
 #endif
 #ifdef HAS_SCIP
-    solvers.push_back(ES_MIPSolver::Scip);
+    solvers.push_back(ES_MIPSolver::SCIP);
 #endif
     return solvers;
 }

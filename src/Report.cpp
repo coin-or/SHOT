@@ -423,7 +423,7 @@ void Report::outputOptionsReport()
 #endif
 
 #ifdef HAS_SCIP
-    if(solver == ES_MIPSolver::Scip)
+    if(solver == ES_MIPSolver::SCIP)
         dualSolver = "SCIP";
 #endif
 

@@ -65,7 +65,7 @@ callback receives the context class of the location, and its return value is ign
 | `PrimalCandidateCheck` | `PrimalCandidateCheckContext` | `PrimalSolver::checkPrimalSolutionCandidates`, for each candidate before it is checked | All | `getPoint()`: original | `rejectCandidate()` |
 | `NewPrimalSolution` | `NewPrimalSolutionContext` | `Results::addPrimalSolution`, after a solution has been stored | All | `getPoint()`: original | – |
 | `BoundsUpdated` | `BoundsUpdatedContext` | After a primal, current dual, or global dual bound changes during the solve | All | – | – |
-| `TerminationCheck` | `TerminationCheckContext` | `TaskCheckUserTermination`, once per iteration; the termination checks inside the MIP solvers (Cbc, CPLEX, Gurobi, HiGHS) and the single-tree callbacks | All | – | – |
+| `TerminationCheck` | `TerminationCheckContext` | `TaskCheckUserTermination`, once per iteration; the termination checks inside the MIP solvers (Cbc, CPLEX, Gurobi, HiGHS, SCIP) and the single-tree callbacks | All | – | – |
 | `HyperplaneSelection` | `HyperplaneSelectionContext` | `TaskSelectHyperplanesExternal`, before the first dual solve and before gap checks for multi-tree MILPs; after SHOT selects its own hyperplanes for other iterative models; the single-tree callbacks | Multi-tree, single-tree, NLP | `getSolutionPoints()`: reformulated | `addHyperplane(hyperplane)` |
 | `BoundTightening` | `BoundTighteningContext` | `TaskPerformBoundTightening` in `setProblem()`, after the bound tightening of the original problem and again after that of the reformulated problem | All | – | `setVariableBounds(index, lower, upper)`, `setVariableBounds(lowers, uppers)` |
 

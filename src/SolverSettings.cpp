@@ -232,7 +232,7 @@ void Solver::initializeSettings()
     enumMIPSolver.push_back("Gurobi");
     enumMIPSolver.push_back("Cbc");
     enumMIPSolver.push_back("Highs");
-    enumMIPSolver.push_back("Scip");
+    enumMIPSolver.push_back("SCIP");
 
     // Without any MIP solver, this value is never used, since no problem can be solved
     ES_MIPSolver usedMIPSolver = ES_MIPSolver::Cbc;
@@ -245,7 +245,7 @@ void Solver::initializeSettings()
     // HiGHS before Cbc, as when the MIP solver chosen is not available
     usedMIPSolver = ES_MIPSolver::Highs;
 #elif HAS_SCIP
-    usedMIPSolver = ES_MIPSolver::Scip;
+    usedMIPSolver = ES_MIPSolver::SCIP;
 #elif HAS_CBC
     usedMIPSolver = ES_MIPSolver::Cbc;
 #else
@@ -253,7 +253,7 @@ void Solver::initializeSettings()
 #endif
 
     env->settings->createSetting("Dual.MIP.Solver", static_cast<int>(usedMIPSolver),
-        "Which MIP solver to use. Default: the first available of Gurobi, Cplex, Highs, Scip and Cbc", enumMIPSolver,
+        "Which MIP solver to use. Default: the first available of Gurobi, Cplex, Highs, SCIP and Cbc", enumMIPSolver,
         0);
     enumMIPSolver.clear();
 
@@ -1117,18 +1117,19 @@ void Solver::initializeSettings()
 
     // Subsolver settings: SCIP
 
-    env->settings->createSettingGroup("Subsolver", "Scip", "Scip", "Requires SHOT compiled with SCIP.");
+    env->settings->createSettingGroup("Subsolver", "SCIP", "SCIP", "Requires SHOT compiled with SCIP.");
 
-    env->settings->createSetting("Subsolver.Scip.MIPAllowRestart", true, "Whether MIP restart is permitted");
+    env->settings->createSetting("Subsolver.SCIP.MIPAllowRestart", true, "Whether MIP restart is permitted");
 
-    env->settings->createSetting("Subsolver.Scip.MIPDetectSymmetry", true, "Whether MIP symmetry should be detected");
+    env->settings->createSetting("Subsolver.SCIP.MIPDetectSymmetry", true, "Whether MIP symmetry should be detected");
 
-    VectorString enumScipPresolve;
-    enumScipPresolve.push_back("off");
-    enumScipPresolve.push_back("choose");
-    enumScipPresolve.push_back("on");
-    env->settings->createSetting("Subsolver.Scip.Presolve", 1, "Use presolve", enumScipPresolve, 0);
-    enumScipPresolve.clear();
+    VectorString enumSCIPPresolve;
+    enumSCIPPresolve.push_back("off");
+    enumSCIPPresolve.push_back("fast");
+    enumSCIPPresolve.push_back("default");
+    enumSCIPPresolve.push_back("aggressive");
+    env->settings->createSetting("Subsolver.SCIP.Presolve", 2, "Presolve emphasis", enumSCIPPresolve, 0);
+    enumSCIPPresolve.clear();
 
     // Subsolver settings: CONOPT
 

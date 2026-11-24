@@ -220,6 +220,27 @@ if(HAS_HIGHS)
     set(cpptests ${cpptests} Highs)
 endif()
 
+if(HAS_SCIP)
+    set(SCIP_parts
+        1
+        2
+        3
+        4
+        5
+        6
+        7
+        8
+        9
+        10
+        11
+        12
+        13
+        14
+        15
+    )
+    set(cpptests ${cpptests} SCIP)
+endif()
+
 if(HAS_GAMS)
     set(GAMS_parts
         1
@@ -474,6 +495,12 @@ endif()
 if(HAS_CBC)
     list(APPEND Instance_parts 8)
 endif()
+if(HAS_SCIP AND HAS_IPOPT)
+    list(APPEND Instance_parts 12)
+endif()
+if(HAS_SCIP)
+    list(APPEND Instance_parts 13)
+endif()
 if(Instance_parts)
     set(cpptests ${cpptests} Instance)
 endif()
@@ -536,6 +563,9 @@ if(WIN32)
 endif()
 if(HAS_HIGHS)
     target_link_libraries(${TEST_EXE_NAME} highs::highs)
+endif()
+if(HAS_SCIP)
+    target_link_libraries(${TEST_EXE_NAME} ${SCIP_LIBRARIES})
 endif()
 if(HAS_CBC)
     target_link_libraries(${TEST_EXE_NAME} CBC::CBC)

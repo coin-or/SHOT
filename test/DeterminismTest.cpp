@@ -62,6 +62,9 @@ std::vector<ES_MIPSolver> compiledSolvers()
 #ifdef HAS_HIGHS
     solvers.push_back(ES_MIPSolver::Highs);
 #endif
+#ifdef HAS_SCIP
+    solvers.push_back(ES_MIPSolver::SCIP);
+#endif
     return solvers;
 }
 
@@ -77,6 +80,8 @@ std::string name(ES_MIPSolver mipSolver)
         return "Gurobi";
     case ES_MIPSolver::Highs:
         return "Highs";
+    case ES_MIPSolver::SCIP:
+        return "SCIP";
     default:
         return "unknown";
     }
