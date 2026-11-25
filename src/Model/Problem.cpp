@@ -2813,7 +2813,18 @@ ProblemPtr Problem::createCopy(
         }
     }
 
-    if(keepMonomialTerms || keptSignomialTerms.size() > 0 || keptNonlinearExpressions.size() > 0)
+    // An objective function with only quadratic terms is kept nonlinear if the source problem treats it as such, e.g.
+    // in a reformulated problem for a MIP solver without quadratic objective functions, so that it is not passed to
+    // the MIP solver
+    bool isQuadraticConsideredAsNonlinear = keepQuadraticTerms
+        && this->objectiveFunction->properties.classification
+            >= E_ObjectiveFunctionClassification::QuadraticConsideredAsNonlinear
+        && !this->objectiveFunction->properties.hasMonomialTerms
+        && !this->objectiveFunction->properties.hasSignomialTerms
+        && !this->objectiveFunction->properties.hasNonlinearExpression;
+
+    if(keepMonomialTerms || keptSignomialTerms.size() > 0 || keptNonlinearExpressions.size() > 0
+        || isQuadraticConsideredAsNonlinear)
         destinationObjective = std::make_shared<NonlinearObjectiveFunction>();
     else if(keepQuadraticTerms)
         destinationObjective = std::make_shared<QuadraticObjectiveFunction>();
