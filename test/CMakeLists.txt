@@ -50,7 +50,6 @@ set(Model_parts
     27
     28
     29
-    30
     31
     32
     33
@@ -98,6 +97,11 @@ set(Model_parts
     75
     76
 ) # The different parts of each test (if any)
+
+# Polishing needs an NLP solver that refines the solution beyond the outer approximation of SHOT
+if(HAS_IPOPT)
+    list(APPEND Model_parts 30)
+endif()
 
 set(Settings_parts
     1
@@ -204,7 +208,6 @@ if(HAS_HIGHS)
         2
         3
         4
-        5
         6
         7
         8
@@ -217,6 +220,11 @@ if(HAS_HIGHS)
         15
         16
     )
+    # Integer cuts are added for fixed-integer NLP problems that the NLP solver finds infeasible, which SHOT itself
+    # cannot do for the nonconvex NLP problems of the instance
+    if(HAS_IPOPT)
+        list(APPEND Highs_parts 5)
+    endif()
     set(cpptests ${cpptests} Highs)
 endif()
 
@@ -311,7 +319,6 @@ set(Solver_parts
     27
     28
     29
-    30
     31
     32
     33
@@ -332,11 +339,11 @@ set(Solver_parts
     49
     50
     51
-    53
     54
 )
+# These need the solutions of nonconvex NLP problems, which SHOT itself does not find without an NLP solver
 if(HAS_IPOPT)
-    list(APPEND Solver_parts 46)
+    list(APPEND Solver_parts 30 46 53)
 endif()
 if(HAS_GUROBI)
     list(APPEND Solver_parts 52)
