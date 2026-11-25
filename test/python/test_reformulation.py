@@ -704,6 +704,8 @@ class TestQuadraticDecompositions:
         return problem
 
     def solve(self, method, formulation):
+        import SHOTpy
+
         solver = make_solver(
             {
                 "Model.Reformulation.Quadratics.Strategy": 0,
@@ -716,9 +718,12 @@ class TestQuadraticDecompositions:
         names = auxiliary_variable_names(solver)
         assert solver.solveProblem()
 
+        # Ipopt refines the solution point, otherwise it is only accurate to the tolerance for accepting it
+        tolerance = 1e-6 if SHOTpy.HAS_IPOPT else solver.getDoubleSetting("Primal.Tolerance.NonlinearConstraint")
+
         point = list(solver.getPrimalSolution().point)
         for name in ("c1", "c2"):
-            assert problem.getConstraint(name).calculateNumericValue(point).error <= 1e-6
+            assert problem.getConstraint(name).calculateNumericValue(point).error <= tolerance
 
         return solver, names
 

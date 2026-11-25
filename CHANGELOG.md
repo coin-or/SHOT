@@ -60,6 +60,9 @@ for how to add entries. Changes in versions before 2.0 are described in the
   its bounds is projected to the nearest integer within the bounds. Before, it
   could be moved one step further, e.g., to -1 for the upper bound 0 or to 3
   for the lower bound 2, and a valid solution was then rejected ([#333]).
+- When SHOT itself solves the fixed-integer NLP problems, e.g., in a build
+  without Ipopt, the primal heuristic is no longer disabled with Cbc or HiGHS
+  after an objective function was reformulated into a quadratic one ([#343]).
 
 ## 2.0.0 — 2026-11-11
 
@@ -476,6 +479,7 @@ Changes since SHOT 1.1.
 [#339]: https://github.com/coin-or/SHOT/pull/339
 [#341]: https://github.com/coin-or/SHOT/pull/341
 [#342]: https://github.com/coin-or/SHOT/pull/342
+[#343]: https://github.com/coin-or/SHOT/pull/343
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16
 [1b054e3e]: https://github.com/coin-or/SHOT/commit/1b054e3e
