@@ -54,7 +54,7 @@ Higher rows in this table override lower ones:
 
 Within a priority, the latest write wins. Explicit user choices override
 recommended values, but cannot force a backend to support an unavailable
-feature. For example, selecting single-tree with HiGHS or Cbc is overridden to
+feature. For example, selecting single-tree with HiGHS, SCIP or Cbc is overridden to
 multi-tree. Read the **Non-default options** and selected strategy in the
 terminal report to check the effective configuration.
 
@@ -70,8 +70,8 @@ SHOT problem.osil --mip=highs --nlp=ipopt --tree=multi --threads=1
 ```
 
 Use only backends present in your build. `SHOT --help` lists compiled CLI
-choices. Cbc and HiGHS support multi-tree; CPLEX and Gurobi also support
-single-tree and native quadratic subproblems. Proprietary backends require the
+choices. Cbc, HiGHS and SCIP support multi-tree; CPLEX and Gurobi also support
+single-tree. CPLEX, Gurobi and SCIP solve native quadratic subproblems. Proprietary backends require the
 appropriate installation and license. The NLP solver searches for primal
 solutions; an NLP call is not required in every run.
 

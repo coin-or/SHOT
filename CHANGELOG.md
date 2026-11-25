@@ -14,6 +14,9 @@ for how to add entries. Changes in versions before 2.0 are described in the
   `Output.h` no longer includes the logger and sinks of spdlog, so that most
   of SHOT compiles faster. Code that uses them includes these headers itself
   ([#339]).
+- `ES_MIPSolver::NotUsed`, and `SHOTpy.MIPSolver.NotUsed`, has the value 5
+  instead of 4, which is now `SCIP`. Code that compares the value of the used
+  MIP solver with 4 uses the name instead ([#342]).
 
 ### Added
 
@@ -30,6 +33,13 @@ for how to add entries. Changes in versions before 2.0 are described in the
   `2 ** x` ([#337]).
 - SHOTpy has the inverse hyperbolic functions `asinh`, `acosh` and `atanh`,
   which SHOT already read from AMPL and OSiL files ([#341]).
+- SCIP can be used as MIP solver, with the CMake option `HAS_SCIP` (off by
+  default) and `SCIP_DIR`, and selected with `--mip=scip` or
+  `Dual.MIP.Solver=4`. It supports quadratic objective functions and
+  constraints, also nonconvex ones, which SCIP solves to global optimality,
+  special ordered sets, and semicontinuous and semiinteger variables with
+  nonnegative intervals, and is set with the `Subsolver.SCIP` settings. The
+  interface was started by Stefan Vigerske ([#342]).
 
 ### Changed
 
@@ -468,6 +478,7 @@ Changes since SHOT 1.1.
 [#337]: https://github.com/coin-or/SHOT/pull/337
 [#339]: https://github.com/coin-or/SHOT/pull/339
 [#341]: https://github.com/coin-or/SHOT/pull/341
+[#342]: https://github.com/coin-or/SHOT/pull/342
 [#343]: https://github.com/coin-or/SHOT/pull/343
 [06f753cd]: https://github.com/coin-or/SHOT/commit/06f753cd
 [15695f16]: https://github.com/coin-or/SHOT/commit/15695f16

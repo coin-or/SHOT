@@ -125,6 +125,13 @@ set(HIGHS_EXTERNAL_DIR
     CACHE STRING "The external directory where HiGHS is located)."
 )
 
+# SCIP
+option(HAS_SCIP "Is SCIP available" OFF)
+set(SCIP_DIR
+    "/opt/scip"
+    CACHE STRING "The base directory where SCIP is located (if available), or the directory of its scip-config.cmake"
+)
+
 # Precompile the third-party and standard headers that most SHOT files include
 option(
     SHOT_PRECOMPILE_HEADERS "Precompile the third-party and standard headers to speed up compilation (not with MSVC)"
@@ -410,15 +417,90 @@ if(HAS_HIGHS AND USE_EXTERNAL_HIGHS)
     endif()
 endif()
 
+# SCIP, found in SCIP_DIR by the CMake package configuration it installs, or by its header and library, and otherwise
+# in the default locations
+if(HAS_SCIP)
+    set(_scip_root "${SCIP_DIR}")
+
+    if(EXISTS "${_scip_root}")
+        find_package(
+            SCIP
+            CONFIG
+            QUIET
+            PATHS
+            "${_scip_root}"
+            "${_scip_root}/lib/cmake/scip"
+            NO_DEFAULT_PATH
+        )
+
+        # SCIP's package configuration also requires GMP and MPFR with their headers, which SHOT does not use and the
+        # Windows packages of SCIP do not include
+        if(NOT SCIP_FOUND)
+            find_path(
+                SCIP_HEADER_DIR scip/scip.h
+                PATHS "${_scip_root}/include"
+                NO_DEFAULT_PATH
+            )
+            find_library(
+                SCIP_LIBRARY
+                NAMES scip libscip
+                PATHS "${_scip_root}/lib"
+                NO_DEFAULT_PATH
+            )
+
+            if(SCIP_HEADER_DIR AND SCIP_LIBRARY)
+                file(
+                    STRINGS "${SCIP_HEADER_DIR}/scip/config.h" _scip_version_lines
+                    REGEX "#define SCIP_VERSION_(MAJOR|MINOR|PATCH) "
+                )
+                string(
+                    REGEX REPLACE ".*MAJOR ([0-9]+).*MINOR ([0-9]+).*PATCH ([0-9]+).*" "\\1.\\2.\\3" SCIP_VERSION
+                                  "${_scip_version_lines}"
+                )
+                set(SCIP_INCLUDE_DIRS "${SCIP_HEADER_DIR}")
+                set(SCIP_LIBRARIES "${SCIP_LIBRARY}")
+                set(SCIP_FOUND TRUE)
+
+                # A failed search for the package configuration replaces SCIP_DIR, which is kept for the next run
+                set(SCIP_DIR
+                    "${_scip_root}"
+                    CACHE
+                        STRING
+                        "The base directory where SCIP is located (if available), or the directory of its scip-config.cmake"
+                        FORCE
+                )
+            endif()
+        endif()
+    endif()
+
+    if(NOT SCIP_FOUND)
+        find_package(SCIP CONFIG QUIET)
+    endif()
+
+    if(SCIP_FOUND AND SCIP_VERSION VERSION_LESS 10)
+        message(WARNING "SCIP ${SCIP_VERSION} found, but SHOT requires SCIP 10 or newer, setting HAS_SCIP to OFF.")
+        set(HAS_SCIP OFF)
+    elseif(NOT SCIP_FOUND)
+        message(WARNING "SCIP not found, setting HAS_SCIP to OFF. Set SCIP_DIR to its installation directory.")
+        set(HAS_SCIP OFF)
+    endif()
+endif()
+
+if(HAS_SCIP)
+    set(DUAL_SOURCES ${DUAL_SOURCES} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverSCIP.cpp")
+    set(DUAL_HEADERS ${DUAL_HEADERS} "${PROJECT_SOURCE_DIR}/src/MIPSolver/MIPSolverSCIP.h")
+endif()
+
 # Check the backends that were actually found, after optional solvers may
 # have been disabled by their discovery steps.
 if(NOT
    (HAS_CPLEX
     OR HAS_GUROBI
     OR HAS_CBC
-    OR HAS_HIGHS)
+    OR HAS_HIGHS
+    OR HAS_SCIP)
 )
-    message(FATAL_ERROR "No MIP solver available. Enable HiGHS or install Cbc, CPLEX, or Gurobi.")
+    message(FATAL_ERROR "No MIP solver available. Enable HiGHS or install Cbc, CPLEX, Gurobi, or SCIP.")
 endif()
 
 # Ipopt
@@ -588,6 +670,7 @@ foreach(
     CPLEX
     GUROBI
     HIGHS
+    SCIP
     IPOPT
     UNO
     CONOPT
@@ -623,6 +706,9 @@ if(HAS_IPOPT)
 endif()
 if(HAS_UNO)
     target_include_directories(SHOTBuildSettings SYSTEM INTERFACE "${UNO_INCLUDE_DIR}")
+endif()
+if(HAS_SCIP)
+    target_include_directories(SHOTBuildSettings SYSTEM INTERFACE ${SCIP_INCLUDE_DIRS})
 endif()
 if(HAS_GAMS)
     target_include_directories(SHOTBuildSettings SYSTEM INTERFACE "${GAMS_DIR}/apifiles/C/api")
@@ -1190,6 +1276,13 @@ if(HAS_HIGHS)
     add_dependencies(SHOTPrimalStrategy highs::highs)
     target_link_libraries(SHOTPrimalStrategy highs::highs)
 endif(HAS_HIGHS)
+
+# SCIP linking
+if(HAS_SCIP)
+    message("-- SCIP ${SCIP_VERSION} will be used: ${SCIP_LIBRARIES} (headers in ${SCIP_INCLUDE_DIRS})")
+    target_link_libraries(SHOTDualStrategy ${SCIP_LIBRARIES})
+    target_link_libraries(SHOTPrimalStrategy ${SCIP_LIBRARIES})
+endif(HAS_SCIP)
 
 # Ipopt linking
 if(HAS_IPOPT)

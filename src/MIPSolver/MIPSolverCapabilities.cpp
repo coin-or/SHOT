@@ -24,6 +24,9 @@
 #ifdef HAS_HIGHS
 #include "MIPSolverHighs.h"
 #endif
+#ifdef HAS_SCIP
+#include "MIPSolverSCIP.h"
+#endif
 
 namespace SHOT
 {
@@ -47,6 +50,10 @@ std::optional<MIPSolverCapabilities> getMIPSolverCapabilities(ES_MIPSolver solve
 #ifdef HAS_HIGHS
     case ES_MIPSolver::Highs:
         return MIPSolverHighs::capabilities;
+#endif
+#ifdef HAS_SCIP
+    case ES_MIPSolver::SCIP:
+        return MIPSolverSCIP::capabilities;
 #endif
     default:
         return std::nullopt;

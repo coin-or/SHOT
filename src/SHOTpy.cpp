@@ -1020,6 +1020,12 @@ PYBIND11_MODULE(SHOTpy, m)
     m.attr("HAS_HIGHS") = false;
 #endif
 
+#ifdef HAS_SCIP
+    m.attr("HAS_SCIP") = true;
+#else
+    m.attr("HAS_SCIP") = false;
+#endif
+
     // The same version as that of the installed package, e.g., 2.0.0, or 2.0.0rc1 for a prerelease
     m.attr("__version__") = Solver::getVersion();
     m.def("getVersion", &Solver::getVersion,
@@ -1141,6 +1147,7 @@ PYBIND11_MODULE(SHOTpy, m)
         .value("Gurobi", ES_MIPSolver::Gurobi)
         .value("Cbc", ES_MIPSolver::Cbc)
         .value("Highs", ES_MIPSolver::Highs)
+        .value("SCIP", ES_MIPSolver::SCIP)
         .value("NotUsed", ES_MIPSolver::NotUsed);
 
     // Source of fixed MIP solution point for NLP

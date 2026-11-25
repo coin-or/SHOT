@@ -464,6 +464,14 @@ static int runInstanceTestMain(int argc, char* argv[], InstanceTestScope scope, 
         passed = runInstanceTests(ES_MIPSolver::Gurobi, ES_PrimalNLPSolver::Uno, verbose, "Gurobi + Uno", scope);
         break;
 #endif
+    case 12:
+        std::cout << label << " tests: SCIP + Ipopt\n";
+        passed = runInstanceTests(ES_MIPSolver::SCIP, ES_PrimalNLPSolver::Ipopt, verbose, "SCIP + Ipopt", scope);
+        break;
+    case 13:
+        std::cout << label << " tests: SCIP + SHOT (NLP)\n";
+        passed = runInstanceTests(ES_MIPSolver::SCIP, ES_PrimalNLPSolver::SHOT, verbose, "SCIP + SHOT", scope);
+        break;
     default:
         std::cout << "Test #" << choice << " does not exist!\n";
         return -1;

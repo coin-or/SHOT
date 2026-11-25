@@ -152,6 +152,9 @@ int main(int argc, char* argv[])
 #ifdef HAS_GUROBI
         env->output->outputCritical("   --mip=gurobi             Sets the MIP solver to Gurobi");
 #endif
+#ifdef HAS_SCIP
+        env->output->outputCritical("   --mip=scip               Sets the MIP solver to SCIP");
+#endif
 #ifdef HAS_CONOPT
         env->output->outputCritical("   --nlp=conopt             Sets the primal NLP solver to CONOPT");
 #endif
@@ -438,6 +441,10 @@ int main(int argc, char* argv[])
 #ifdef HAS_GUROBI
         if(argValue == "gurobi")
             solver.updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::Gurobi), E_SettingPriority::UserAPI);
+#endif
+#ifdef HAS_SCIP
+        if(argValue == "scip")
+            solver.updateSetting("Dual.MIP.Solver", static_cast<int>(ES_MIPSolver::SCIP), E_SettingPriority::UserAPI);
 #endif
     }
 

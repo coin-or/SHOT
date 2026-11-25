@@ -232,6 +232,7 @@ void Solver::initializeSettings()
     enumMIPSolver.push_back("Gurobi");
     enumMIPSolver.push_back("Cbc");
     enumMIPSolver.push_back("Highs");
+    enumMIPSolver.push_back("SCIP");
 
     // Without any MIP solver, this value is never used, since no problem can be solved
     ES_MIPSolver usedMIPSolver = ES_MIPSolver::Cbc;
@@ -243,6 +244,8 @@ void Solver::initializeSettings()
 #elif HAS_HIGHS
     // HiGHS before Cbc, as when the MIP solver chosen is not available
     usedMIPSolver = ES_MIPSolver::Highs;
+#elif HAS_SCIP
+    usedMIPSolver = ES_MIPSolver::SCIP;
 #elif HAS_CBC
     usedMIPSolver = ES_MIPSolver::Cbc;
 #else
@@ -250,7 +253,8 @@ void Solver::initializeSettings()
 #endif
 
     env->settings->createSetting("Dual.MIP.Solver", static_cast<int>(usedMIPSolver),
-        "Which MIP solver to use. Default: the first available of Gurobi, Cplex, Highs and Cbc", enumMIPSolver, 0);
+        "Which MIP solver to use. Default: the first available of Gurobi, Cplex, Highs, SCIP and Cbc", enumMIPSolver,
+        0);
     enumMIPSolver.clear();
 
     env->settings->createSetting(
@@ -571,9 +575,12 @@ void Solver::initializeSettings()
         "How to treat quadratic functions", enumQPStrategy, 0);
     enumQPStrategy.clear();
 
-    // Gurobi solves problems with nonconvex quadratic terms
+    // Gurobi and SCIP solve problems with nonconvex quadratic terms
     env->settings->addConditionalValue("Model.Reformulation.Quadratics.Strategy",
         { E_SettingCondition::Nonconvex, E_SettingCondition::MIPSolverGurobi },
+        static_cast<int>(ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained));
+    env->settings->addConditionalValue("Model.Reformulation.Quadratics.Strategy",
+        { E_SettingCondition::Nonconvex, E_SettingCondition::MIPSolverSCIP },
         static_cast<int>(ES_QuadraticProblemStrategy::NonconvexQuadraticallyConstrained));
 
     VectorString enumQPDecomposition;
@@ -1110,6 +1117,22 @@ void Solver::initializeSettings()
     enumHighsPresolve.push_back("on");
     env->settings->createSetting("Subsolver.Highs.Presolve", 1, "Use presolve", enumHighsPresolve, 0);
     enumHighsPresolve.clear();
+
+    // Subsolver settings: SCIP
+
+    env->settings->createSettingGroup("Subsolver", "SCIP", "SCIP", "Requires SHOT compiled with SCIP.");
+
+    env->settings->createSetting("Subsolver.SCIP.MIPAllowRestart", true, "Whether MIP restart is permitted");
+
+    env->settings->createSetting("Subsolver.SCIP.MIPDetectSymmetry", true, "Whether MIP symmetry should be detected");
+
+    VectorString enumSCIPPresolve;
+    enumSCIPPresolve.push_back("off");
+    enumSCIPPresolve.push_back("fast");
+    enumSCIPPresolve.push_back("default");
+    enumSCIPPresolve.push_back("aggressive");
+    env->settings->createSetting("Subsolver.SCIP.Presolve", 2, "Presolve emphasis", enumSCIPPresolve, 0);
+    enumSCIPPresolve.clear();
 
     // Subsolver settings: CONOPT
 

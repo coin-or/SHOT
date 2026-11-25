@@ -71,7 +71,7 @@ compiling the submodule, configure with `-DUSE_EXTERNAL_HIGHS=on
 
 ## Installing dependencies
 
-SHOT needs at least one MIP solver (Cbc, CPLEX, Gurobi, or HiGHS). Primal NLP
+SHOT needs at least one MIP solver (Cbc, CPLEX, Gurobi, HiGHS, or SCIP). Primal NLP
 subproblems use Ipopt, Uno, CONOPT, or a GAMS NLP solver when one is enabled,
 and SHOT's built-in NLP solver otherwise.
 
@@ -405,6 +405,35 @@ cmake -S . -B build -DUSE_EXTERNAL_HIGHS=on -DHIGHS_EXTERNAL_DIR=/opt/homebrew/o
 If Homebrew's installed version is old, run `brew upgrade highs` first —
 older HiGHS releases may lack APIs `MIPSolverHighs.cpp` relies on.
 
+**SCIP (optional)**: SHOT can also use [SCIP](https://www.scipopt.org) as MIP
+solver. It is off by default; install SCIP 10 or newer, e.g., with
+`brew install scip`, and enable it:
+
+```bash
+cmake -S . -B build -DHAS_SCIP=on -DSCIP_DIR=/opt/homebrew/opt/scip
+```
+
+`SCIP_DIR` is the installation directory of SCIP, or the directory of its
+`scip-config.cmake`. SHOT requires SCIP 10 or newer. On Linux and Windows, the
+packages of SCIP's [GitHub releases](https://github.com/scipopt/scip/releases)
+can be used, e.g., `scipoptsuite_10.1.0-1+noble_amd64.deb` for Ubuntu 24.04
+(`-DSCIP_DIR=/usr`) and `scipoptsuite-10.1.0-win-x64.zip` for Windows, whose
+`bin` directory must then be in `PATH`. SCIP's CMake configuration in these
+packages also requires the headers of GMP and MPFR, so SHOT otherwise finds
+SCIP by `include/scip/scip.h` and its library in `SCIP_DIR`. The Linux library
+contains Ipopt 3.14 and exports its symbols, so it cannot be used together
+with another Ipopt version, e.g., Ubuntu's Ipopt 3.11, in the same build;
+configure such a build with `-DHAS_IPOPT=off` or use Ipopt 3.14. It also
+needs `dgemmt_` from OpenBLAS, so on Ubuntu install `libopenblas-dev`, since
+`-lblas` otherwise links the reference BLAS. SCIP is then selected with `--mip=scip` or
+`Dual.MIP.Solver=4`. SHOT creates a new SCIP problem for every MIP solve, since
+SCIP keeps the solutions of a changed problem, which would count towards the
+solution limit of the next solve. SCIP runs with one thread. Quadratic
+objective functions and constraints, also nonconvex ones, are passed to SCIP,
+which solves them to global optimality; the quadratic terms of the objective
+function are given by an auxiliary variable, since SCIP's objective function
+is linear.
+
 ### Proprietary solvers (GAMS, CPLEX, Gurobi)
 
 These all require your own commercial (or free/academic) license to run,
@@ -537,6 +566,7 @@ Key options (all `option(...)` declarations live at the top of the root
 | `HAS_CPLEX` | `ON` | CPLEX MIP solver |
 | `HAS_GUROBI` | `ON` | Gurobi MIP solver |
 | `HAS_HIGHS` | `ON` | HiGHS MIP solver — like the others, optional; turn off with `-DHAS_HIGHS=off` (see “Getting the source” re: `USE_EXTERNAL_HIGHS`) |
+| `HAS_SCIP` | `OFF` | SCIP MIP solver (see “macOS (Homebrew)”), found by `SCIP_DIR` |
 | `HAS_IPOPT` | `ON` | Ipopt NLP solver |
 | `HAS_UNO` | `OFF` | Uno NLP solver (see “Installing dependencies”) — off by default because building Uno needs a Fortran compiler |
 | `HAS_GAMS` | `ON` | GAMS interface (modeling system + NLP solver) |
@@ -552,7 +582,7 @@ Key options (all `option(...)` declarations live at the top of the root
 | `SIMPLE_OUTPUT_CHARS` | `OFF` | Use only ASCII characters in the console output (always on for MSVC and MinGW) |
 
 `<SOLVER>_DIR` cache variables (`CBC_DIR`, `CPLEX_DIR`, `GUROBI_DIR`,
-`IPOPT_DIR`, `GAMS_DIR`, `CONOPT_DIR`, `UNO_DIR`, `HIGHS_EXTERNAL_DIR`) override where each
+`IPOPT_DIR`, `GAMS_DIR`, `CONOPT_DIR`, `UNO_DIR`, `HIGHS_EXTERNAL_DIR`, `SCIP_DIR`) override where each
 dependency is searched for, as described in “Installing dependencies”.
 
 Also set `-DCMAKE_BUILD_TYPE=<Release|Debug|RelWithDebInfo>` explicitly —

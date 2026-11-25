@@ -28,8 +28,8 @@ reformulation settings, or establish that a license is available.
 `capabilities.unboundedVariableBound` holds SHOT's finite default for missing
 variable bounds, available through the same lookup before a solver instance
 exists. Every backend assigns it explicitly: Cbc uses `1e50`; CPLEX, Gurobi,
-and HiGHS use `1e20`. The existing instance getter
-`getUnboundedVariableBoundValue()` reuses this field for Cbc, CPLEX, and Gurobi.
+HiGHS, and SCIP use `1e20`. The existing instance getter
+`getUnboundedVariableBoundValue()` reuses this field for Cbc, CPLEX, Gurobi, and SCIP.
 HiGHS continues to return its native infinity value from the instance getter,
 which is separate from SHOT's finite default.
 
@@ -72,6 +72,13 @@ control partitioning when these mixed functions are reformulated.
 An explicit request to reformulate integer bilinear terms also takes precedence
 over default native quadratic retention.
 
+Gurobi and SCIP support convex and nonconvex quadratic objectives and
+constraints, which they solve to global optimality. SCIP's adapter moves the
+quadratic terms of the objective to a constraint with an auxiliary variable,
+since SCIP's objective function is linear, and keeps the quadratic constraints
+apart from the linear ones, so that the indexes of the linear constraints, e.g.
+of cuts, are not changed.
+
 CPLEX supports nonconvex quadratic objectives globally with linear constraints,
 and convex quadratic constraints with compatible objectives. The combination
 of a nonconvex objective and quadratic constraints is not generally supported.
@@ -101,8 +108,9 @@ is discrete and must not be sent to the continuous NLP strategy.
 | `SignedInterval` | Also `[lowerBound, semiBound]` with negative `semiBound`. |
 
 Semi-integer values must also be integers. Cbc and Gurobi support signed
-intervals through their current adapters. CPLEX and HiGHS currently support
-nonnegative intervals. CPLEX's
+intervals through their current adapters. CPLEX, HiGHS, and SCIP currently
+support nonnegative intervals; SCIP's adapter models the variable as zero or
+at least `semiBound` with a bound disjunction constraint. CPLEX's
 [`IloSemiContVar`](https://www.ibm.com/docs/en/icos/22.1.2?topic=classes-ilosemicontvar)
 requires a nonnegative active lower bound; the previous negative-branch mapping did not produce a supported
 model. HiGHS's adapter also lacks the required negative-branch mapping.

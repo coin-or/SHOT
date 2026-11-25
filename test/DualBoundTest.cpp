@@ -53,6 +53,9 @@
 #ifdef HAS_HIGHS
 #include "../src/MIPSolver/MIPSolverHighs.h"
 #endif
+#ifdef HAS_SCIP
+#include "../src/MIPSolver/MIPSolverSCIP.h"
+#endif
 
 #include <cmath>
 #include <iostream>
@@ -139,6 +142,11 @@ MIPSolverPtr makeBackend(EnvironmentPtr env, ES_MIPSolver mipSolver)
         backend = std::make_shared<MIPSolverHighs>(env);
         break;
 #endif
+#ifdef HAS_SCIP
+    case ES_MIPSolver::SCIP:
+        backend = std::make_shared<MIPSolverSCIP>(env);
+        break;
+#endif
     default:
         break;
     }
@@ -158,6 +166,8 @@ std::string name(ES_MIPSolver mipSolver)
         return "Gurobi";
     case ES_MIPSolver::Highs:
         return "Highs";
+    case ES_MIPSolver::SCIP:
+        return "SCIP";
     default:
         return "unknown";
     }
@@ -847,6 +857,9 @@ std::vector<ES_MIPSolver> compiledSolvers()
 #endif
 #ifdef HAS_HIGHS
     solvers.push_back(ES_MIPSolver::Highs);
+#endif
+#ifdef HAS_SCIP
+    solvers.push_back(ES_MIPSolver::SCIP);
 #endif
     return solvers;
 }

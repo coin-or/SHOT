@@ -71,8 +71,8 @@ ProblemPtr makeLinearProblem(EnvironmentPtr env, E_VariableType type = E_Variabl
 
 bool lookupTest()
 {
-    for(auto backend :
-        { ES_MIPSolver::Cbc, ES_MIPSolver::Cplex, ES_MIPSolver::Gurobi, ES_MIPSolver::Highs, ES_MIPSolver::NotUsed })
+    for(auto backend : { ES_MIPSolver::Cbc, ES_MIPSolver::Cplex, ES_MIPSolver::Gurobi, ES_MIPSolver::Highs,
+            ES_MIPSolver::SCIP, ES_MIPSolver::NotUsed })
     {
         auto caps = getMIPSolverCapabilities(backend);
 
@@ -82,16 +82,17 @@ bool lookupTest()
         if(!caps)
             continue;
 
-        bool quadratic = backend == ES_MIPSolver::Cplex || backend == ES_MIPSolver::Gurobi;
+        bool singleTree = backend == ES_MIPSolver::Cplex || backend == ES_MIPSolver::Gurobi;
+        bool quadratic = singleTree || backend == ES_MIPSolver::SCIP;
 
         if(caps->convexQuadraticObjective != quadratic || caps->nonconvexQuadraticObjective != quadratic
-            || caps->convexQuadraticConstraints != quadratic || caps->singleTree != quadratic
-            || caps->nonconvexQuadraticConstraints != (backend == ES_MIPSolver::Gurobi)
+            || caps->convexQuadraticConstraints != quadratic || caps->singleTree != singleTree
+            || caps->nonconvexQuadraticConstraints != (backend == ES_MIPSolver::Gurobi || backend == ES_MIPSolver::SCIP)
             || caps->nonconvexObjectiveExcludesQuadraticConstraints != (backend == ES_MIPSolver::Cplex)
             || caps->SOS1 != (backend != ES_MIPSolver::Highs) || caps->SOS2 != (backend != ES_MIPSolver::Highs))
             return false;
 
-        auto semi = backend == ES_MIPSolver::Highs || backend == ES_MIPSolver::Cplex
+        auto semi = backend == ES_MIPSolver::Highs || backend == ES_MIPSolver::Cplex || backend == ES_MIPSolver::SCIP
             ? E_SemiVariableSupport::NonnegativeInterval
             : E_SemiVariableSupport::SignedInterval;
 
@@ -246,7 +247,9 @@ bool semiTest()
                         solver.getEnvironment(), type, negative ? -2.5 : 2.5, negative, forceNonzero);
                     bool accepted = solver.setProblem(problem);
 
-                    if(negative && (backend == ES_MIPSolver::Highs || backend == ES_MIPSolver::Cplex))
+                    if(negative
+                        && (backend == ES_MIPSolver::Highs || backend == ES_MIPSolver::Cplex
+                            || backend == ES_MIPSolver::SCIP))
                     {
                         if(accepted)
                             return false;
@@ -376,7 +379,8 @@ bool constructionTest()
 
 bool fallbackTest()
 {
-    for(auto unavailable : { ES_MIPSolver::Cplex, ES_MIPSolver::Gurobi, ES_MIPSolver::Cbc, ES_MIPSolver::Highs })
+    for(auto unavailable :
+        { ES_MIPSolver::Cplex, ES_MIPSolver::Gurobi, ES_MIPSolver::Cbc, ES_MIPSolver::Highs, ES_MIPSolver::SCIP })
     {
         if(Solver::hasMIPSolver(unavailable))
             continue;

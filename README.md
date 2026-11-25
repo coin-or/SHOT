@@ -90,24 +90,24 @@ SHOT builds on Linux, macOS, and natively on Windows x64 with MSVC.
 - through its own Python API ([SHOTpy](https://shotsolver.dev/docs/2.0/SHOTpy_Tutorial.html)), or
 - using its API implemented in C++ ([C++ integration](https://shotsolver.dev/docs/2.0/cpp.html)), both of which support [callbacks](https://shotsolver.dev/docs/2.0/Callbacks.html) for customizing SHOT's behavior (e.g. injecting primal solutions, warm-starting, or adding custom cuts).
 
-SHOT requires a MILP solver: [Cplex](https://www.ibm.com/products/ilog-cplex-optimization-studio), [Gurobi](https://www.gurobi.com), [Cbc](https://www.github.com/coin-or/Cbc) or [HiGHS](https://highs.dev). NLP subproblems can use [Ipopt](https://www.github.com/coin-or/Ipopt), [Uno](https://github.com/cvanaret/Uno), the optional [CONOPT](https://conopt.gams.com) C++ API, or SHOT's built-in NLP solver. If SHOT is interfaced with GAMS, any licensed NLP solver can be used.
+SHOT requires a MILP solver: [Cplex](https://www.ibm.com/products/ilog-cplex-optimization-studio), [Gurobi](https://www.gurobi.com), [Cbc](https://www.github.com/coin-or/Cbc), [HiGHS](https://highs.dev) or [SCIP](https://www.scipopt.org). NLP subproblems can use [Ipopt](https://www.github.com/coin-or/Ipopt), [Uno](https://github.com/cvanaret/Uno), the optional [CONOPT](https://conopt.gams.com) C++ API, or SHOT's built-in NLP solver. If SHOT is interfaced with GAMS, any licensed NLP solver can be used.
 
 SHOT is a [COIN-OR project](https://www.coin-or.org), and won the [COIN-OR Cup 2018](https://web.archive.org/web/20191206234504/https://www.coin-or.org/2018-coin-or-cup-winner/). Project manager is Andreas Lundell. A full list of contributors is available on the [project website](https://shotsolver.dev/team/).
 
 ## Dual bound through polyhedral (outer) approximation
 
-SHOT is based on iteratively creating a tighter polyhedral approximation of the nonlinear feasible set by generating supporting hyperplanes or cutting planes. These linearized problems are then solved with a mixed-integer linear programming (MILP) solver such as CPLEX, Gurobi, Cbc or HiGHS. If CPLEX or Gurobi is used, the subproblems can also include quadratic and bilinear nonlinearities directly; then MIQP or MIQCQP subproblems are solved. The dual strategy can be run either as a multi-tree search (repeatedly re-solving the MIP relaxation) or, with CPLEX or Gurobi, as a single-tree (branch-and-cut) search that adds cuts via callbacks during one search tree; Cbc and HiGHS currently only support the multi-tree strategy.
+SHOT is based on iteratively creating a tighter polyhedral approximation of the nonlinear feasible set by generating supporting hyperplanes or cutting planes. These linearized problems are then solved with a mixed-integer linear programming (MILP) solver such as CPLEX, Gurobi, Cbc, HiGHS or SCIP. If CPLEX, Gurobi or SCIP is used, the subproblems can also include quadratic and bilinear nonlinearities directly; then MIQP or MIQCQP subproblems are solved. The dual strategy can be run either as a multi-tree search (repeatedly re-solving the MIP relaxation) or, with CPLEX or Gurobi, as a single-tree (branch-and-cut) search that adds cuts via callbacks during one search tree; Cbc, HiGHS and SCIP currently only support the multi-tree strategy.
 
 The problem types that can be solved to global optimality depend on which MIP solver is used:
 
-| Problem type | CPLEX | Gurobi | Cbc | HiGHS |
-| --- | --- | --- | --- | --- |
-| Convex MIQP | ✓* | ✓* | ✓ | ✓ |
-| Convex MIQCQP | ✓* | ✓* | ✓ | ✓ |
-| Convex MINLP | ✓ | ✓ | ✓ | ✓ |
-| Nonconvex MIQP | ✓* | ✓* | ? | ? |
-| Nonconvex MIQCQP | ? | ✓* | ? | ? |
-| Nonconvex MINLP | ? | ? | ? | ? |
+| Problem type | CPLEX | Gurobi | Cbc | HiGHS | SCIP |
+| --- | --- | --- | --- | --- | --- |
+| Convex MIQP | ✓* | ✓* | ✓ | ✓ | ✓* |
+| Convex MIQCQP | ✓* | ✓* | ✓ | ✓ | ✓* |
+| Convex MINLP | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Nonconvex MIQP | ✓* | ✓* | ? | ? | ✓* |
+| Nonconvex MIQCQP | ? | ✓* | ? | ? | ✓* |
+| Nonconvex MINLP | ? | ? | ? | ? | ? |
 
 ✓ = solved to global optimality, ? = no guarantee that a solution is found, * = the problem can be handled directly by the subsolver (native quadratic/bilinear support).
 
